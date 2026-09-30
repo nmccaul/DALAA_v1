@@ -61,5 +61,5 @@ written first.
 | D-012 | Does Explain move under Case Chat? | Scott | Scott's view in the meeting: yes. |
 | D-013 | Canvas assignment creation opt-in per activity, or on by default? | Nathan | DAALAA plan says opt-in; simplicity argues for default-on with an off switch. |
 | D-014 | Which attempt is authoritative for a grade push (latest accepted?) | Scott | REVISE complicates "latest". |
-| — | BYU IT: personal tokens OK at multi-instructor scale? Records on Vercel? FERPA? Okta registration? | Scott | Longest lead time — send now. |
+| — | BYU IT: personal tokens OK at multi-instructor scale? Records on Vercel? FERPA? Okta registration? | Nathan | In progress with a BYU Canvas engineer — see `conversations/2026-09-30-byu-canvas-engineer.md`. |
 | — | Classic or New Quizzes at BYU? | Scott | Two different APIs for quiz import. |

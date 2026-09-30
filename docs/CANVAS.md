@@ -41,6 +41,10 @@ real 50-student roster is unproven. Port the design and the rules, not the Pytho
   env. UI shows last 4, added-at, last-verified, Replace. No "show".
 - Failed decrypt → "re-enter your Canvas token", never a 500.
 - Unique `(user_id, kind)`, both NOT NULL (Quizzer's nullable key let rotated tokens stay live).
+- **Fallback only if BYU security review requires it:** session-only tokens
+  (encrypted cookie, no DB) and a minimal NetID + name roster. Worse for teachers;
+  see `conversations/2026-09-30-byu-canvas-engineer.md` → *Fallback options*.
+  Keeping all Canvas calls inside the client module keeps this switch cheap.
 
 ## Course import + roster
 

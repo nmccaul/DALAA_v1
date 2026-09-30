@@ -12,3 +12,4 @@ No code yet. Start here:
 - `docs/CANVAS.md` — Canvas REST API + BYU sign-in design
 - `docs/CONTEXT.md` — the older repos this builds on
 - `docs/meetings/` — meeting summaries
+- `docs/conversations/` — external conversations (BYU Canvas team, etc.)
