@@ -1,4 +1,4 @@
-# Volli v1 — Product Requirements
+# DALAA v1 — Product Requirements
 
 *Draft 2026-09-30. Owner: Nathan McCauley. Stakeholders: Scott Sampson (faculty
 lead), Lucy Levie. Sources: 2026-09-28 team meeting, DAALAA v1 PRD and plans,
@@ -24,7 +24,7 @@ separate stacks, separate setup, no shared Canvas flow.
 
 ## 2. Vision — an Office suite, not an everything-app
 
-Volli is a **suite**: separate, excellent activity tools with a common look and
+DALAA is a **suite**: separate, excellent activity tools with a common look and
 feel and shared plumbing.
 
 - **Office, not Symphony.** Symphony tried to be spreadsheet, word processor, and
@@ -59,6 +59,8 @@ feel and shared plumbing.
 
 ### Non-goals for v1
 
+*v2 and v3 scope is in `ROADMAP.md`.*
+
 - LTI 1.3 (kept possible, not built — see `DECISIONS.md` D-004).
 - Institutions other than BYU; LMSs other than Canvas.
 - Converting an activity from one tool to another (should-have, later).
@@ -78,10 +80,10 @@ there's an exception.**
 3. **Connect Canvas** — the riskiest screen; make it hand-held:
    - A button that opens Canvas's token page in a new tab
      (`byu.instructure.com/profile/settings`), with a 3-step picture guide
-     ("New Access Token" → name it "Volli" → copy).
+     ("New Access Token" → name it "DALAA" → copy).
    - A single paste box. Verify immediately against Canvas; on success show the
      teacher's Canvas name so they know it worked.
-   - Explain plainly what the token lets Volli do and that it can be revoked in
+   - Explain plainly what the token lets DALAA do and that it can be revoked in
      Canvas at any time.
    - Only shown once; afterwards it lives quietly under Settings.
 4. **Pick a course** from the list Canvas returns (never type an id). Importing
@@ -94,7 +96,7 @@ there's an exception.**
 5. **Inside the course → New activity →** pick a tool (flat catalogue, a few
    large cards; never sorted by effort).
 6. **Give it source material** (upload/paste the reading, case, or existing quiz)
-   → Volli generates a **good draft** → teacher edits in place, step by step (the
+   → DALAA generates a **good draft** → teacher edits in place, step by step (the
    Case Writer's coaching style is the model to copy).
 7. **Preview as a student** — same code path students use.
 8. **Schedule:** dates default from the Canvas course; per-section windows only
@@ -114,7 +116,7 @@ there's an exception.**
 
 ## 6. Student flow
 
-Canvas assignment link → Volli → **Sign in with BYU** (once per session) →
+Canvas assignment link → DALAA → **Sign in with BYU** (once per session) →
 activity → feedback. Not embedded in Canvas (that would need LTI). A failed AI
 turn never loses their work; "Save and finish later" always means the same thing.
 
@@ -147,7 +149,7 @@ Canvas specifics: `CANVAS.md`.
 *Open: DAALAA's plan builds QUIZ first because it runs with every AI provider
 down. Decide whether Case Chat or Quiz goes first (D-008).*
 
-## 9. Tool-builder contract (draft — "how the Volli model works")
+## 9. Tool-builder contract (draft — "how the DALAA model works")
 
 The chassis gives you: sign-in, courses and rosters from Canvas, scheduling and
 deadlines, Canvas assignment creation and grade posting, the UI shell, LLM

@@ -1,8 +1,9 @@
-# Volli v1 — working conventions
+# DALAA v1 — working conventions
 
 **Read this before writing code.** Product direction lives in `docs/PRD.md`;
 why things are the way they are lives in `docs/DECISIONS.md`; what already
-exists in the older repos lives in `docs/CONTEXT.md`.
+exists in the older repos lives in `docs/CONTEXT.md`. Business strategy and
+marketing live in `docs/strategy/`.
 
 > If a rule here blocks you, stop and ask. Do not route around it. Most of these
 > were paid for with a real defect in Quizzer, MakeTheCase, or DAALAA.
@@ -11,9 +12,9 @@ exists in the older repos lives in `docs/CONTEXT.md`.
 
 ## What this is
 
-Volli is a **suite of AI-assisted learning activities** that sits beside Canvas
+DALAA is a **suite of AI-assisted learning activities** that sits beside Canvas
 (the umbrella the team has called DALLA/DAALAA — *Dynamic AI-Assisted Learning
-Activities & Assessments*). Canvas keeps the roster and the gradebook; Volli is
+Activities & Assessments*). Canvas keeps the roster and the gradebook; DALAA is
 where the learning happens.
 
 **The model is Microsoft Office, not Lotus Symphony.** Each activity tool
@@ -22,14 +23,15 @@ own workflow. They share one chassis — sign-in, Canvas, courses, scheduling,
 grade posting, reporting — and one look and feel. We are not building one app
 that does everything at a mediocre level.
 
-**v1 audience:** a handful of BYU instructors, pilot Winter 2027.
+**v1 audience:** a handful of BYU instructors, pilot Winter 2027. Versions are
+v1 → v2 → v3 (`docs/ROADMAP.md`); build v1 scope only unless told otherwise.
 
 ---
 
 ## The two product rules that beat everything else
 
 1. **Teacher setup must be as simple as possible.** Measure it: a colleague who
-   has never seen Volli gets from first sign-in to a live activity posting grades
+   has never seen DALAA gets from first sign-in to a live activity posting grades
    to Canvas in **under 60 minutes**, using content they already have.
 2. **The UI must be obvious to navigate.** Three top-level areas at most
    (**Courses · Library · Settings**). The first-run path uses only **Courses**.
@@ -111,7 +113,7 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
   `Link: rel="next"` for pagination and raise rather than truncate;
   `update_grades` is **POST** not PUT and is asynchronous (poll Progress);
   sending `''` for a date *clears* it; `completed` comes back for `concluded`.
-- **No course is ever live in both Quizzer and Volli.**
+- **No course is ever live in both Quizzer and DALAA.**
 
 ---
 

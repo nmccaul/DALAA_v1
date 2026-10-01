@@ -6,7 +6,7 @@
 
 ## Made
 
-### D-001 · Volli is a suite (Office), not an everything-app (Symphony)
+### D-001 · DALAA is a suite (Office), not an everything-app (Symphony)
 *2026-09-28 meeting — Scott, Nathan, Lucy.*
 Separate tools with their own workflows, one common look and feel and shared
 plumbing. Adopt a "greatest hits" approach: build several, promote what works.
@@ -41,7 +41,7 @@ for, and handling teachers' tokens on their behalf is a security liability.
 Revenue, if any, comes from pedagogy (activity/case design, training, seminars)
 or institutional licensing.
 
-### D-009 · Converting activities between tools is a should-have, not v1
+### D-009 · Converting activities between tools is a should-have, not v1 (it is v2)
 *2026-09-28 meeting (Lucy raised; Nathan scoped).* Make a ticket; revisit after
 the chassis ships.
 
@@ -57,7 +57,7 @@ written first.
 |---|---|---|---|
 | D-007 | Stack: adopt DAALAA's TypeScript + Next.js + plain Postgres + Vercel? | Nathan / Scott | Recommended. Old repos are Flask+MySQL (Quizzer) and Vite+Express+MySQL (MakeTheCase). |
 | D-008 | First tool on the chassis: Case Chat or Quiz? | Scott | Case Chat is most proven/active; Quiz runs with AI down (simplest chassis test). |
-| D-011 | How does DAALAA relate to volli_v1? Replace, or port its code? | Scott / Nathan | DAALAA's `CLAUDE.md` still says "six tables, a type never adds a table" — reconcile with D-003 before any agent runs there. |
+| D-011 | How does DAALAA relate to DALAA_v1? Replace, or port its code? | Scott / Nathan | DAALAA's `CLAUDE.md` still says "six tables, a type never adds a table" — reconcile with D-003 before any agent runs there. |
 | D-012 | Does Explain move under Case Chat? | Scott | Scott's view in the meeting: yes. |
 | D-013 | Canvas assignment creation opt-in per activity, or on by default? | Nathan | DAALAA plan says opt-in; simplicity argues for default-on with an off switch. |
 | D-014 | Which attempt is authoritative for a grade push (latest accepted?) | Scott | REVISE complicates "latest". |

@@ -33,8 +33,8 @@ resulting decisions into `../DECISIONS.md`.
 | Data | Source | Can we minimize? |
 |---|---|---|
 | Student names, NetIDs, Canvas user IDs, section enrollments | Canvas roster API | NetID is the identity key; **drop email** unless needed |
-| Grades | Computed by Volli, posted to Canvas | No — core function |
-| Student work: AI chat transcripts, quiz answers, AI feedback | Created in Volli | No — this *is* the product |
+| Grades | Computed by DALAA, posted to Canvas | No — core function |
+| Student work: AI chat transcripts, quiz answers, AI feedback | Created in DALAA | No — this *is* the product |
 | Student work sent to an AI provider (Gemini / Anthropic) | Outbound per turn | Ask what BYU has approved |
 | Instructors' Canvas tokens (full Canvas access *as that instructor*) | Pasted by instructor | Encrypted at rest (AES-256-GCM, key separate from DB), never displayed or logged; only imported courses are touched |
 

@@ -54,7 +54,7 @@ real 50-student roster is unproven. Port the design and the rules, not the Pytho
   `/users?include[]=email`; never overwrite a real value with a blank.
 - Identity ladder `sis_user_id` → `login_id` → `email`; never name. No `login_id` →
   refuse to create.
-- Buckets: add · unchanged · in Volli not Canvas (**flag, never delete**) ·
+- Buckets: add · unchanged · in DALAA not Canvas (**flag, never delete**) ·
   unplaceable (human decides). Match both `concluded` and `completed`.
 - A student in two sections: the player asks which, never guesses.
 

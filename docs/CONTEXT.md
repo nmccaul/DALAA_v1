@@ -2,7 +2,7 @@
 
 *Snapshot 2026-09-30. Local clones live side by side under `~/Desktop/volli/`.*
 
-**These repos are referenced, not copied.** Port specific pieces into `volli_v1`
+**These repos are referenced, not copied.** Port specific pieces into `DALAA_v1`
 when needed, rewritten to our stack, with a comment naming the source file.
 Get Scott's OK before porting from his (`drsamps`) repos. Never copy `.env`
 files or `data/` folders — they may hold secrets or real student output.
@@ -18,7 +18,8 @@ files or `data/` folders — they may hold secrets or real student output.
 
 The umbrella has been spelled DALLA (meeting), DAALAA (repo), and DAILA (Quizzer
 branch). Same idea: *Dynamic AI-Assisted Learning Activities & Assessments*.
-**Volli** is the working product name for this repo.
+**DALAA** is the product name (decided 2026-10-01, S-006). The meeting's DALLA
+and Scott's DAALAA are earlier spellings of the same idea.
 
 ## Meeting notes
 
