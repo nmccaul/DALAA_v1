@@ -82,8 +82,9 @@ describe("canvas connections", () => {
 
   it("builds a working client for a practice connection, and none after disconnecting", async () => {
     await connectPractice(db, prof);
-    const client = await clientFor(db, prof);
-    expect((await client!.coursesTaught()).map((c) => c.course_code)).toContain("BUS M 361");
+    const canvas = await clientFor(db, prof);
+    expect(canvas?.mode).toBe("practice");
+    expect((await canvas!.client.coursesTaught()).map((c) => c.course_code)).toContain("BUS M 361");
     await disconnect(db, prof);
     expect(await clientFor(db, prof)).toBeNull();
   });

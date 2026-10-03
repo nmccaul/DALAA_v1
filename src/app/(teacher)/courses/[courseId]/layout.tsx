@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PracticeTag } from "@/components/practice-tag";
 import { Tabs } from "@/components/tabs";
 import { loadTaughtCourse } from "@/courses/load";
 
@@ -14,7 +15,10 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
           ← All courses
         </Link>
         <header className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-muted">{course.code}</span>
+          <span className="flex items-center gap-2 text-sm font-medium text-muted">
+            {course.code}
+            {course.isPractice && <PracticeTag />}
+          </span>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-balance break-words">
             {course.title}
           </h1>

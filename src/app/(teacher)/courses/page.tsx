@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireActor } from "@/auth/current";
 import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import { listTaughtCourses } from "@/courses/queries";
+import { PracticeTag } from "@/components/practice-tag";
 import { db } from "@/db/client";
 
 export const metadata: Metadata = { title: "Courses" };
@@ -19,14 +20,16 @@ export default async function CoursesPage() {
           title="Add your first course"
           action={
             <>
-              <ButtonLink href="/courses/new">Set up a course</ButtonLink>
-              <span className="self-center text-sm text-muted">Bringing courses in from Canvas is coming soon.</span>
+              <ButtonLink href="/courses/import">Bring in from Canvas</ButtonLink>
+              <ButtonLink href="/courses/new" variant="secondary">
+                Set one up yourself
+              </ButtonLink>
             </>
           }
         >
           <p>
-            Give it a name and paste your class list. Your students can sign in with their NetID as
-            soon as the course exists.
+            Pick a course from Canvas and DALAA brings in its sections and class list. Your students
+            can sign in with their NetID as soon as it&apos;s here.
           </p>
         </EmptyState>
       </>
@@ -35,7 +38,7 @@ export default async function CoursesPage() {
 
   return (
     <>
-      <PageHeader title="Courses" action={<ButtonLink href="/courses/new">Add a course</ButtonLink>} />
+      <PageHeader title="Courses" action={<ButtonLink href="/courses/import">Add a course</ButtonLink>} />
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {courses.map((c) => (
           <li key={c.id}>
@@ -43,7 +46,10 @@ export default async function CoursesPage() {
               href={`/courses/${c.id}`}
               className="flex h-full flex-col gap-1 break-words rounded-panel border border-border bg-surface p-5 transition-colors hover:border-border-strong"
             >
-              <span className="text-sm font-medium text-muted">{c.code}</span>
+              <span className="flex items-center gap-2 text-sm font-medium text-muted">
+                {c.code}
+                {c.isPractice && <PracticeTag />}
+              </span>
               <span className="font-display text-lg font-semibold leading-snug">{c.title}</span>
               <span className="mt-3 text-sm text-muted">
                 {c.term}, {c.students} {c.students === 1 ? "student" : "students"}

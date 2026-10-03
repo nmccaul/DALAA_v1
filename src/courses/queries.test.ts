@@ -38,7 +38,7 @@ describe("listTaughtCourses", () => {
 
     const actor: Actor = { userId: prof, institutionId: inst, netId: "prof", displayName: "prof", isStaff: true, isAdmin: false };
     expect(await listTaughtCourses(db, actor)).toEqual([
-      { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2 },
+      { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2, isPractice: false },
     ]);
   });
 });

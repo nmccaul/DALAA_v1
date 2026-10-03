@@ -29,7 +29,8 @@ function person(n: number) {
     id,
     name: `${first} ${last}`,
     sortable_name: `${last}, ${first}`,
-    login_id: `${first[0]}${last}${n}`.toLowerCase(),
+    // "practice." can never be a real BYU NetID, so practice students never collide with real ones.
+    login_id: `practice.${first[0]}${last}${n}`.toLowerCase(),
     sis_user_id: String(100_000_000 + id),
   };
 }
