@@ -36,6 +36,14 @@ describe("migrate", () => {
     await pg.exec("insert into widgets values (1); insert into gadgets values (1);");
   });
 
+  it("locks its own bookkeeping table with row-level security", async () => {
+    await migrate(db, [first]);
+    const [row] = await db.query<{ on: boolean }>(
+      "select relrowsecurity as on from pg_class where relname = 'schema_migrations'",
+    );
+    expect(row.on).toBe(true);
+  });
+
   it("refuses a migration edited after it was applied", async () => {
     await migrate(db, [first]);
     const edited = m(first.name, "create table widgets (id bigint primary key);");

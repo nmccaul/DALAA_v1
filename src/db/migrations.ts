@@ -62,7 +62,10 @@ export async function migrate(
       name       text primary key,
       checksum   text not null,
       applied_at timestamptz not null default now()
-    )
+    );
+    -- Supabase's REST API can see the public schema; with RLS on and no
+    -- policies it reads nothing here (same rule as every table, D-007).
+    alter table schema_migrations enable row level security;
   `);
 
   const rows = await db.query<{ name: string; checksum: string }>(

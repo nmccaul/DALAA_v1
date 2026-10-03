@@ -19,7 +19,11 @@ npm run dev                  # http://localhost:3000 — /api/health checks the 
 Checks (CI runs the same): `npm run lint`, `npm run typecheck`, `npm test`,
 `npm run build`. Tests need no database — they use PGlite (Postgres in-process).
 
-**Deploying:** Vercel works as is. On any other Node server (e.g. a BYU box),
+**Deploying:** Vercel project `dalaa-v1` (personal account) deploys `main` to
+production and every PR to a preview. Its database is Supabase, added through
+Vercel's Marketplace, which sets `POSTGRES_URL`. Run migrations with
+`DATABASE_URL=<POSTGRES_URL_NON_POOLING> npm run migrate` before merging a PR
+that adds one. On any other Node server (e.g. a BYU box),
 `npm run build`, copy `public/` and `.next/static/` into `.next/standalone/`,
 and run `node .next/standalone/server.js` under PM2 (D-007).
 

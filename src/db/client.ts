@@ -12,14 +12,13 @@
 
 import postgres from "postgres";
 import type { Db } from "./types";
+import { databaseUrl } from "./url";
 
 let pool: postgres.Sql | undefined;
 
 function sql(): postgres.Sql {
   if (!pool) {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error("DATABASE_URL is not set");
-    pool = postgres(url, { prepare: false, max: Number(process.env.DATABASE_POOL_MAX ?? 5) });
+    pool = postgres(databaseUrl(), { prepare: false, max: Number(process.env.DATABASE_POOL_MAX ?? 5) });
   }
   return pool;
 }

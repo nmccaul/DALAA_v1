@@ -6,14 +6,13 @@
  */
 
 import postgres from "postgres";
+import { databaseUrl } from "../src/db/url";
 import { normalizeNetId } from "../src/auth/admit";
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set");
 const [command, rawNetId] = process.argv.slice(2);
 const slug = process.env.INSTITUTION_SLUG ?? "byu";
 
-const sql = postgres(url, { max: 1, prepare: false });
+const sql = postgres(databaseUrl(), { max: 1, prepare: false });
 try {
   const [inst] = await sql<{ id: string }[]>`select id from institutions where slug = ${slug}`;
   if (!inst) throw new Error(`No institution "${slug}" — run migrations first`);
