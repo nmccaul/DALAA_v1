@@ -18,6 +18,13 @@ export type NewCourse = {
   title: string;
   term: string;
   students: RosterRow[];
+  /** Set when the course comes from Canvas (src/canvas/import.ts). */
+  canvas?: {
+    courseId: string;
+    isPractice: boolean;
+    /** Every Canvas section, even empty ones; students refer to them by name. */
+    sections: { name: string; canvasSectionId: string }[];
+  };
 };
 
 export type Created = { courseId: string; studentsAdded: number; alreadyExisted: boolean };
@@ -27,11 +34,20 @@ export async function createCourse(db: Db, actor: Actor, input: NewCourse): Prom
 
   return db.transaction(async (tx) => {
     const [course] = await tx.query<{ id: string }>(
-      `insert into courses (institution_id, code, title, term, created_by, creation_key)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into courses (institution_id, code, title, term, created_by, creation_key, canvas_course_id, is_practice)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        on conflict (creation_key) do nothing
        returning id`,
-      [actor.institutionId, input.code, input.title, input.term, actor.userId, input.creationKey],
+      [
+        actor.institutionId,
+        input.code,
+        input.title,
+        input.term,
+        actor.userId,
+        input.creationKey,
+        input.canvas?.courseId ?? null,
+        input.canvas?.isPractice ?? false,
+      ],
     );
     if (!course) {
       const [existing] = await tx.query<{ id: string; created_by: string }>(
@@ -48,7 +64,15 @@ export async function createCourse(db: Db, actor: Actor, input: NewCourse): Prom
     );
 
     const sectionIds = new Map<string, string>();
+    for (const { name, canvasSectionId } of input.canvas?.sections ?? []) {
+      const [section] = await tx.query<{ id: string }>(
+        "insert into sections (course_id, name, canvas_section_id) values ($1, $2, $3) returning id",
+        [course.id, name, canvasSectionId],
+      );
+      sectionIds.set(name, section.id);
+    }
     for (const name of new Set(input.students.flatMap((s) => (s.section ? [s.section] : [])))) {
+      if (sectionIds.has(name)) continue;
       const [section] = await tx.query<{ id: string }>(
         "insert into sections (course_id, name) values ($1, $2) returning id",
         [course.id, name],

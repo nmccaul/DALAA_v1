@@ -68,6 +68,15 @@ real tokens are approved. Add a case here whenever real Canvas surprises us.
 - Buckets: add · unchanged · in DALAA not Canvas (**flag, never delete**) ·
   unplaceable (human decides). Match both `concluded` and `completed`.
 - A student in two sections: the player asks which, never guesses.
+- **Built** (`src/canvas/import-plan.ts`, `import.ts`, `/courses/import`): active and
+  invited students are added; dropped/inactive are counted, not added; no
+  usable NetID → not added, counted; a student in two sections is added once
+  with no section, counted. The teacher sees those counts after import.
+  Practice courses are flagged `is_practice`, and their Canvas ids are stored
+  as `practice:<user>:<id>` so each teacher gets their own copy. Practice
+  NetIDs start `practice.`, which no real NetID can.
+- **Next:** link a hand-made course to Canvas; re-sync the roster (adds and
+  flags, never deletes).
 
 ## Assignments and grades
 

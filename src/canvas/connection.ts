@@ -107,16 +107,21 @@ export async function disconnect(db: Db, actor: Actor): Promise<void> {
   await db.query("delete from canvas_connections where user_id = $1", [actor.userId]);
 }
 
+export type TeacherCanvas = { client: CanvasClient; mode: "canvas" | "practice" };
+
 /**
  * A Canvas client acting as this teacher, or null if they haven't connected.
  * Throws VaultError if their stored token can't be read (show "reconnect").
  */
-export async function clientFor(db: Db, actor: Actor): Promise<CanvasClient | null> {
-  const [row] = await db.query<{ mode: string; token_ciphertext: string | null }>(
+export async function clientFor(db: Db, actor: Actor): Promise<TeacherCanvas | null> {
+  const [row] = await db.query<{ mode: "canvas" | "practice"; token_ciphertext: string | null }>(
     "select mode, token_ciphertext from canvas_connections where user_id = $1",
     [actor.userId],
   );
   if (!row) return null;
-  if (row.mode === "practice") return practiceClient();
-  return canvasClient({ baseUrl: canvasBaseUrl(), token: openToken(row.token_ciphertext!) });
+  if (row.mode === "practice") return { client: practiceClient(), mode: "practice" };
+  return {
+    client: canvasClient({ baseUrl: canvasBaseUrl(), token: openToken(row.token_ciphertext!) }),
+    mode: "canvas",
+  };
 }
