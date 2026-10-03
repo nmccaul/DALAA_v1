@@ -8,14 +8,22 @@
  */
 
 import postgres from "postgres";
+import type { Db } from "./types";
 
 let pool: postgres.Sql | undefined;
 
-export function db(): postgres.Sql {
+function sql(): postgres.Sql {
   if (!pool) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set");
     pool = postgres(url, { prepare: false, max: 5 });
   }
   return pool;
+}
+
+export function db(): Db {
+  return {
+    query: async <T>(text: string, values: readonly unknown[] = []) =>
+      (await sql().unsafe(text, values as postgres.ParameterOrJSON<never>[])) as unknown as T[],
+  };
 }
