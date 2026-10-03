@@ -2,8 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
 import { Logo } from "@/components/logo";
-import { NavLinks } from "@/components/nav-links";
+import { Tabs } from "@/components/tabs";
 import { signOut } from "../sign-in/actions";
+
+// The three top-level areas, and only three (CLAUDE.md product rule 2).
+const AREAS = [
+  { href: "/courses", label: "Courses" },
+  { href: "/library", label: "Library" },
+  { href: "/settings", label: "Settings" },
+];
 
 /** The teacher shell: logo, the three areas, and who's signed in. Staff only. */
 export default async function TeacherLayout({ children }: LayoutProps<"/">) {
@@ -23,7 +30,7 @@ export default async function TeacherLayout({ children }: LayoutProps<"/">) {
           <Link href="/courses" className="shrink-0" aria-label="DALAA home">
             <Logo />
           </Link>
-          <NavLinks />
+          <Tabs tabs={AREAS} label="Main" />
           <div className="ml-auto hidden items-center gap-3 text-sm sm:flex">
             <span className="max-w-48 truncate text-muted">{actor.displayName}</span>
             <form action={signOut}>

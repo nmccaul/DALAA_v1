@@ -24,9 +24,17 @@ function sql(): postgres.Sql {
   return pool;
 }
 
-export function db(): Db {
+function wrap(conn: postgres.Sql | postgres.TransactionSql): Db {
   return {
     query: async <T>(text: string, values: readonly unknown[] = []) =>
-      (await sql().unsafe(text, values as postgres.ParameterOrJSON<never>[])) as unknown as T[],
+      (await conn.unsafe(text, values as postgres.ParameterOrJSON<never>[])) as unknown as T[],
+    transaction: async <T>(fn: (tx: Db) => Promise<T>) => {
+      if (!("begin" in conn)) return fn(wrap(conn)); // already inside one
+      return (await conn.begin((tx) => fn(wrap(tx)))) as T;
+    },
   };
+}
+
+export function db(): Db {
+  return wrap(sql());
 }

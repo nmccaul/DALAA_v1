@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
-import { listTaughtCourses } from "./queries";
+import { createCourse } from "./create";
+import { getTaughtCourse, listRoster, listTaughtCourses } from "./queries";
 
 describe("listTaughtCourses", () => {
   it("lists only the teacher's courses, counting active students", async () => {
@@ -38,5 +40,43 @@ describe("listTaughtCourses", () => {
     expect(await listTaughtCourses(db, actor)).toEqual([
       { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2 },
     ]);
+  });
+});
+
+describe("getTaughtCourse and listRoster", () => {
+  it("return a course and its roster only to someone who teaches it", async () => {
+    const db = await testDb();
+    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
+    const actorFor = async (netId: string): Promise<Actor> => {
+      const [{ id }] = await db.query<{ id: string }>(
+        "insert into users (institution_id, external_id, display_name) values ($1, $2, $2) returning id",
+        [inst, netId],
+      );
+      return { userId: id, institutionId: inst, netId, displayName: netId, isStaff: true, isAdmin: false };
+    };
+    const prof = await actorFor("prof");
+    const other = await actorFor("other");
+    const { courseId } = await createCourse(db, prof, {
+      creationKey: randomUUID(),
+      code: "C 1",
+      title: "T",
+      term: "W27",
+      students: [
+        { netId: "zed", name: "Zed", section: "002" },
+        { netId: "amy", name: "Amy", section: "001" },
+        { netId: "bob", name: null, section: null },
+      ],
+    });
+
+    expect(await getTaughtCourse(db, prof, courseId)).toMatchObject({ code: "C 1", students: 3 });
+    expect(await getTaughtCourse(db, other, courseId)).toBeNull();
+    expect(await getTaughtCourse(db, prof, "not-a-uuid")).toBeNull();
+
+    expect((await listRoster(db, prof, courseId)).map((r) => [r.section, r.name])).toEqual([
+      ["001", "Amy"],
+      ["002", "Zed"],
+      [null, "bob"],
+    ]);
+    expect(await listRoster(db, other, courseId)).toEqual([]);
   });
 });
