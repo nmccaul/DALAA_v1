@@ -60,6 +60,11 @@ current apps (MakeTheCase, Quizzer) run on BYU's own server at
 `services.byu.edu` (Apache + PM2/mod_wsgi + MySQL), so student data has never
 left BYU before. Hosting on BYU servers ties DALAA to BYU (relevant to #6, IP).
 
+**Update 2026-10-03:** the pre-pilot site runs on Nathan's personal Vercel
+account (project `dalaa-v1`) with a free Supabase database (AWS us-east-1)
+created through Vercel's Marketplace. Fake data only; test sign-in behind a
+password. Revisit with BYU IT before real students.
+
 ### D-016 · Phase 1 is the foundation, without the Canvas API
 *2026-10-03, Nathan.* Phase 1 = project skeleton, teacher setup, the teacher
 home pages and the look and feel (UI shell + design system). No dependency on

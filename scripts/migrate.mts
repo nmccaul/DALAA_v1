@@ -1,12 +1,11 @@
 /** `npm run migrate` — applies `db/migrations/` to DATABASE_URL. */
 
 import postgres from "postgres";
+import { databaseUrl } from "../src/db/url";
 import { loadMigrations, migrate } from "../src/db/migrations";
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error("DATABASE_URL is not set");
 
-const sql = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
+const sql = postgres(databaseUrl(), { max: 1, prepare: false, onnotice: () => {} });
 try {
   const applied = await migrate(
     {
