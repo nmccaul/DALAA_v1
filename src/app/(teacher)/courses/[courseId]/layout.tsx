@@ -30,7 +30,7 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
           <Tabs
             label="Course"
             tabs={[
-              { href: base, label: "Activities", exact: true },
+              { href: base, label: "Activities", exact: true, also: [`${base}/activities`] },
               { href: `${base}/students`, label: "Students" },
               { href: `${base}/results`, label: "Results" },
             ]}
