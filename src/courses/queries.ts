@@ -9,6 +9,9 @@ export type CourseCard = {
   students: number;
   /** From practice Canvas: made-up students (D-019). */
   isPractice: boolean;
+  /** Linked to a Canvas course (imported, or connected later). */
+  canvasLinked: boolean;
+  canvasSyncedAt: Date | null;
 };
 
 /** The teacher's home list: courses they teach, newest first. */
@@ -16,6 +19,7 @@ export async function listTaughtCourses(db: Db, actor: Actor): Promise<CourseCar
   const scope = coursesTaughtBy(actor, "c");
   return db.query<CourseCard>(
     `select c.id, c.code, c.title, c.term, c.is_practice as "isPractice",
+            c.canvas_course_id is not null as "canvasLinked", c.canvas_synced_at as "canvasSyncedAt",
             (select count(*)::int from course_members m
               where m.course_id = c.id and m.role = 'student' and m.status = 'active') as students
        from courses c
@@ -33,6 +37,7 @@ export async function getTaughtCourse(db: Db, actor: Actor, courseId: string): P
   const where = and({ text: "c.id = $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
   const [course] = await db.query<CourseCard>(
     `select c.id, c.code, c.title, c.term, c.is_practice as "isPractice",
+            c.canvas_course_id is not null as "canvasLinked", c.canvas_synced_at as "canvasSyncedAt",
             (select count(*)::int from course_members m
               where m.course_id = c.id and m.role = 'student' and m.status = 'active') as students
        from courses c
@@ -49,7 +54,7 @@ export type RosterEntry = {
   status: "active" | "flagged";
 };
 
-/** Students in a course the actor teaches, by section then name. */
+/** Students in a course the actor teaches: current ones first, then by section and name. */
 export async function listRoster(db: Db, actor: Actor, courseId: string): Promise<RosterEntry[]> {
   if (!UUID.test(courseId)) return [];
   const where = and(
@@ -63,7 +68,7 @@ export async function listRoster(db: Db, actor: Actor, courseId: string): Promis
        join users u on u.id = m.user_id
        left join sections s on s.id = m.section_id
       where ${where.text}
-      order by s.name nulls last, u.display_name`,
+      order by m.status = 'flagged', s.name nulls last, u.display_name`,
     where.values,
   );
 }

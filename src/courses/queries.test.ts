@@ -38,7 +38,7 @@ describe("listTaughtCourses", () => {
 
     const actor: Actor = { userId: prof, institutionId: inst, netId: "prof", displayName: "prof", isStaff: true, isAdmin: false };
     expect(await listTaughtCourses(db, actor)).toEqual([
-      { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2, isPractice: false },
+      { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2, isPractice: false, canvasLinked: false, canvasSyncedAt: null },
     ]);
   });
 });
@@ -78,5 +78,31 @@ describe("getTaughtCourse and listRoster", () => {
       [null, "bob"],
     ]);
     expect(await listRoster(db, other, courseId)).toEqual([]);
+  });
+});
+
+describe("listRoster order", () => {
+  it("lists students no longer on the class list last", async () => {
+    const db = await testDb();
+    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
+    const [{ id: profId }] = await db.query<{ id: string }>(
+      "insert into users (institution_id, external_id, display_name) values ($1, 'prof', 'prof') returning id",
+      [inst],
+    );
+    const prof: Actor = { userId: profId, institutionId: inst, netId: "prof", displayName: "prof", isStaff: true, isAdmin: false };
+    const { courseId } = await createCourse(db, prof, {
+      creationKey: randomUUID(),
+      code: "C",
+      title: "T",
+      term: "W",
+      students: [
+        { netId: "aaa", name: "Aaa", section: "001" },
+        { netId: "zzz", name: "Zzz", section: "001" },
+      ],
+    });
+    await db.query(
+      "update course_members set status = 'flagged' where user_id = (select id from users where external_id = 'aaa')",
+    );
+    expect((await listRoster(db, prof, courseId)).map((r) => r.netId)).toEqual(["zzz", "aaa"]);
   });
 });

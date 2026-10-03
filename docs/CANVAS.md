@@ -75,8 +75,15 @@ real tokens are approved. Add a case here whenever real Canvas surprises us.
   Practice courses are flagged `is_practice`, and their Canvas ids are stored
   as `practice:<user>:<id>` so each teacher gets their own copy. Practice
   NetIDs start `practice.`, which no real NetID can.
-- **Next:** link a hand-made course to Canvas; re-sync the roster (adds and
-  flags, never deletes).
+- **Sync with Canvas** (`src/canvas/sync.ts`, Students tab): adds new
+  students, reactivates returning ones, moves section changes, flags students
+  who left. Never deletes. A two-section student keeps whatever section DALAA
+  has. Records `canvas_synced_at`. A practice course syncs only with practice
+  Canvas, and a real one only with real Canvas.
+- **Connect to Canvas** for a hand-made course (`/courses/[id]/canvas`):
+  links it to a Canvas course the teacher teaches and isn't already in DALAA,
+  adopts hand-made sections with the same name, then syncs. Students match on
+  NetID, so their accounts and work carry over.
 
 ## Assignments and grades
 

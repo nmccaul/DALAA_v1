@@ -3,13 +3,13 @@
  * roster, and the teacher's own membership, in one transaction.
  *
  * Students are keyed on NetID so connecting Canvas later links this course
- * instead of duplicating anyone. An existing account is reused; a real name
- * is never replaced, only a placeholder (the NetID) is filled in.
+ * instead of duplicating anyone (upsertStudent).
  */
 
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { RosterRow } from "./roster";
+import { upsertStudent } from "./students";
 
 export type NewCourse = {
   /** Client-generated; a retry with the same key returns the same course. */
@@ -83,22 +83,13 @@ export async function createCourse(db: Db, actor: Actor, input: NewCourse): Prom
     let studentsAdded = 0;
     for (const student of input.students) {
       if (student.netId === actor.netId) continue; // the teacher isn't their own student
-      const [user] = await tx.query<{ id: string }>(
-        `insert into users (institution_id, external_id, display_name)
-         values ($1, $2, coalesce($3, $2))
-         on conflict (institution_id, external_id) do update
-           set display_name = case when users.display_name = users.external_id
-                                   then coalesce($3, users.display_name)
-                                   else users.display_name end
-         returning id`,
-        [actor.institutionId, student.netId, student.name],
-      );
+      const userId = await upsertStudent(tx, actor.institutionId, student.netId, student.name);
       const added = await tx.query(
         `insert into course_members (course_id, user_id, role, section_id)
          values ($1, $2, 'student', $3)
          on conflict (course_id, user_id) do nothing
          returning user_id`,
-        [course.id, user.id, student.section ? sectionIds.get(student.section) : null],
+        [course.id, userId, student.section ? sectionIds.get(student.section) : null],
       );
       studentsAdded += added.length;
     }
