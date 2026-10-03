@@ -133,6 +133,14 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
 
 ---
 
+## Code layout and commands
+
+- `src/app/` — Next.js 16 App Router. **Next 16 differs from older docs:** read
+  `node_modules/next/dist/docs/` before using an API you're unsure of (`AGENTS.md`).
+- `src/db/` — database access (`client.ts` is the only pool). `db/migrations/` —
+  plain SQL; see its README.
+- Before committing: `npm run lint && npm run typecheck && npm test`.
+
 ## Working style
 
 - Match surrounding code: naming, comment density, idiom.
