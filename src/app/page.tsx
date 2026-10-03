@@ -1,18 +1,23 @@
+import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import { Logo } from "@/components/logo";
 import { signOut } from "./sign-in/actions";
 
-// Placeholder until the UI shell (Courses · Library · Settings) lands — ROADMAP Phase 1, PR 3.
+/** Teachers go to their courses. Students land here until activities exist. */
 export default async function Home() {
   const actor = await requireActor();
+  if (actor.isStaff) redirect("/courses");
+
   return (
-    <main className="mx-auto flex max-w-xl flex-1 flex-col justify-center gap-3 px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Welcome, {actor.displayName}</h1>
-      <p className="text-lg opacity-80">
-        Signed in as {actor.netId}
-        {actor.isAdmin ? " · admin" : actor.isStaff ? " · instructor" : ""}
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-4">
+      <Logo height={32} />
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Hi, {actor.displayName}</h1>
+      <p className="text-muted">
+        You&apos;re signed in. When your instructor shares an activity, open its link from Canvas and
+        it will bring you straight to it.
       </p>
       <form action={signOut}>
-        <button className="text-sm underline">Sign out</button>
+        <button className="text-sm text-muted underline hover:text-text">Sign out</button>
       </form>
     </main>
   );
