@@ -101,6 +101,11 @@ BYU have an approved provider or agreement (e.g., Gemini via Google Workspace,
 Azure OpenAI, Anthropic)?
 - Answer:
 
+**B4.** If records must stay at BYU: could DALAA run on a BYU server the way
+MakeTheCase and Quizzer do (`services.byu.edu`)? Who administers that server,
+can it run **PostgreSQL**, and can a student developer get deploy access?
+- Answer:
+
 ### C. Sign-in
 
 **C1.** Can we register as a **BYU Okta OIDC client** for students and staff?
