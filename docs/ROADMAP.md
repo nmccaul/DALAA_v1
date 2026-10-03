@@ -22,13 +22,13 @@ BYU's security review or a student's rights require (privacy baseline, extension
 Teacher setup, teacher home pages, and the look and feel — independent of BYU
 approvals. Built as small sequential PRs:
 
-1. **Skeleton** (#13) — Next.js + TypeScript, Postgres migrations, tests, CI.
-2. **Data model + sign-in** — users, staff allowlist, courses, sections,
+1. ✅ **Skeleton** (#13) — Next.js + TypeScript, Postgres migrations, tests, CI.
+2. ✅ **Data model + sign-in** — users, staff allowlist, courses, sections,
    memberships, the one scope builder (D-018); dev stand-in login behind the
    sign-in seam (Okta later, #14).
-3. **UI shell + design system** (#15) — Courses · Library · Settings, tokens,
+3. ✅ **UI shell + design system** (#15) — Courses · Library · Settings, tokens,
    empty states, one primary action per screen.
-4. **Manual course setup** — create a course, paste/upload a NetID roster
+4. ✅ **Manual course setup** — create a course, paste/upload a NetID roster
    (D-017), course home (Activities · Students · Results).
 
 Canvas API work (#17–#22) and the first tool (#49) follow.
