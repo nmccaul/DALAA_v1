@@ -87,6 +87,14 @@ the one scope builder. Staff accounts come only from an admin-managed allowlist
 of NetIDs, never from sign-in alone. Core tables carry `institution_id` now
 (one value, BYU) so v3 multi-institution doesn't need a painful migration.
 
+### D-019 · Build the Canvas flow against a practice Canvas first
+*2026-10-03, Nathan.* Canvas Free-for-Teacher is gone and Canvas Lite has no
+API tokens, so DALAA serves its own practice Canvas (same API shape, fake data)
+and the real client runs against it. Switching to BYU Canvas changes only the
+base URL and token. In parallel: ask Scott for teacher access to his practice
+course (24795) to smoke-test against real BYU Canvas, and ask BYU IT for a
+developer key so "Connect Canvas" can be one click instead of a pasted token.
+
 ### D-009 · Converting activities between tools is a should-have, not v1 (it is v2)
 *2026-09-28 meeting (Lucy raised; Nathan scoped).* Make a ticket; revisit after
 the chassis ships.
