@@ -6,7 +6,7 @@ Decks, one-pagers, slides, and copy. Name files `YYYY-MM-DD-short-name.ext`.
 
 | Asset | Source | Live |
 |---|---|---|
-| Pitch deck (7 slides) | `pitch-deck/project/` (one HTML file per slide + `deck.json`) | https://claude.ai/artifact/XTxRDK4A9StesD7HFvUweb (private until shared) |
+| Pitch deck (7 slides: cover, problem, market, example Case Chat, students, teachers, close; indigo brand, Outfit + Geist) | `pitch-deck/project/` (one HTML file per slide + `deck.json`; images are artifact assets) | https://claude.ai/artifact/XTxRDK4A9StesD7HFvUweb (private until shared) |
 | Logo: "dalaa" indigo dialogue (current, 2026-10-03) | `brand/2026-10-03-dalaa-indigo-dialogue-logo.png` (original); app-ready files in `public/brand/` | In the app (favicon, icons) |
 | Wordmark candidate: "dalaa" teal parrot (superseded) | `brand/2026-09-30-dalaa-teal-parrot-wordmark.png` | Not final — name undecided (strategy S-006) |
 
