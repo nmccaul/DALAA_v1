@@ -50,7 +50,8 @@ real tokens are approved. Add a case here whenever real Canvas surprises us.
 - Verify against `GET /api/v1/users/self` before storing. AES-256-GCM; key only in
   env. UI shows last 4, added-at, last-verified, Replace. No "show".
 - Failed decrypt → "re-enter your Canvas token", never a 500.
-- Unique `(user_id, kind)`, both NOT NULL (Quizzer's nullable key let rotated tokens stay live).
+- One row per teacher (`canvas_connections`, primary key `user_id`): a new token replaces the old (Quizzer's nullable key let rotated tokens stay live). `mode` is `canvas` (encrypted token required) or `practice` (no token); a CHECK enforces it.
+- Built: `src/canvas/vault.ts` (AES-256-GCM, `CANVAS_TOKEN_KEY`), `src/canvas/connection.ts` (the only place a teacher's client is built), `/canvas/connect`. Production and previews share a database, so they share one key.
 - **Fallback only if BYU security review requires it:** session-only tokens
   (encrypted cookie, no DB) and a minimal NetID + name roster. Worse for teachers;
   see `conversations/2026-09-30-byu-canvas-engineer.md` → *Fallback options*.

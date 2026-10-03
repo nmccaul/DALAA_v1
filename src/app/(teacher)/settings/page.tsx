@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requireActor } from "@/auth/current";
-import { Button, PageHeader } from "@/components/ui";
+import { Button, ButtonLink, PageHeader } from "@/components/ui";
+import { getConnection, type ConnectionSummary } from "@/canvas/connection";
+import { db } from "@/db/client";
+import { disconnectCanvasAction } from "../canvas/connect/actions";
 import { signOut } from "../../sign-in/actions";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -26,6 +29,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 export default async function SettingsPage() {
   const actor = await requireActor();
+  const canvas = await getConnection(db(), actor);
   return (
     <>
       <PageHeader title="Settings" />
@@ -43,12 +47,53 @@ export default async function SettingsPage() {
           </form>
         </Section>
         <Section title="Canvas">
-          <p className="text-muted">
-            Not connected. When you first bring in a course from Canvas, DALAA will walk you through
-            connecting your account.
-          </p>
+          <CanvasStatus connection={canvas} />
         </Section>
       </div>
     </>
+  );
+}
+
+const date = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
+
+function CanvasStatus({ connection }: { connection: ConnectionSummary | null }) {
+  if (!connection) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-muted">Not connected. You&apos;ll be asked to connect when you first bring in a course from Canvas.</p>
+        <ButtonLink href="/canvas/connect" variant="secondary">Connect Canvas</ButtonLink>
+      </div>
+    );
+  }
+  const disconnectButton = (
+    <form action={disconnectCanvasAction}>
+      <Button variant="secondary">Disconnect</Button>
+    </form>
+  );
+  if (connection.mode === "practice") {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p>Using <strong>practice Canvas</strong>: made-up courses and students.</p>
+        <div className="flex flex-wrap gap-3">
+          <ButtonLink href="/canvas/connect" variant="secondary">Connect your real Canvas</ButtonLink>
+          {disconnectButton}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <dl className="flex flex-col gap-3">
+        <Row label="Connected as">{connection.canvasUserName}</Row>
+        <Row label="Token">
+          ending in <span className="font-mono" translate="no">{connection.tokenLast4}</span>, added{" "}
+          {date.format(connection.addedAt)}
+        </Row>
+      </dl>
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink href="/canvas/connect" variant="secondary">Replace token</ButtonLink>
+        {disconnectButton}
+      </div>
+    </div>
   );
 }
