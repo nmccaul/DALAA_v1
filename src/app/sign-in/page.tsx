@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentActor } from "@/auth/current";
 import { devPasswordRequired, devSignInEnabled } from "@/auth/dev";
+import { Logo } from "@/components/logo";
+import { Button, inputStyles } from "@/components/ui";
 import { devSignIn } from "./actions";
+
+export const metadata: Metadata = { title: "Sign in" };
 
 const MESSAGES: Record<string, string> = {
   "not-on-roster":
@@ -11,46 +16,44 @@ const MESSAGES: Record<string, string> = {
   disabled: "Sign-in isn't set up on this site yet.",
 };
 
-const field = "rounded-md border border-current/25 bg-transparent px-3 py-2";
-
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
   if (await currentActor()) redirect("/");
   const { error } = await searchParams;
   const message = typeof error === "string" ? MESSAGES[error] : undefined;
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Sign in to DALAA</h1>
+    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4">
+      <Logo height={32} />
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Sign in</h1>
       {message && (
-        <p role="alert" className="rounded-md bg-red-500/10 px-3 py-2 text-sm">
+        <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {message}
         </p>
       )}
       {devSignInEnabled() ? (
         <form action={devSignIn} className="flex flex-col gap-4">
-          <p className="text-sm opacity-70">
-            Test sign-in — BYU sign-in replaces this before real students use DALAA.
+          <p className="text-sm text-muted">
+            This is a test sign-in. BYU sign-in replaces it before real students use DALAA.
           </p>
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-2">
             <span className="font-medium">NetID</span>
-            <input name="netId" required autoFocus autoComplete="username" className={field} />
+            <input name="netId" required autoFocus autoComplete="username" spellCheck={false} autoCapitalize="none" className={inputStyles} />
           </label>
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-2">
             <span className="font-medium">Your name</span>
-            <input name="name" autoComplete="name" placeholder="First sign-in only" className={field} />
+            <span className="-mt-1 text-sm text-muted">Only needed the first time.</span>
+            <input name="name" autoComplete="name"  className={inputStyles} />
           </label>
           {devPasswordRequired() && (
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-2">
               <span className="font-medium">Test-site password</span>
-              <input name="password" type="password" required className={field} />
+              <input name="password" type="password" required className={inputStyles} />
             </label>
           )}
-          <button className="rounded-md bg-foreground px-4 py-2 font-medium text-background">
-            Sign in
-          </button>
+          <Button>Sign in</Button>
         </form>
       ) : (
-        <p>{MESSAGES.disabled}</p>
+        <p className="text-muted">{MESSAGES.disabled}</p>
       )}
     </main>
   );

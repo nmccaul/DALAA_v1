@@ -1,25 +1,79 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * DALAA design tokens. One place for color, type and shape; components use
+ * the semantic utilities (bg-surface, text-muted, bg-accent...), never raw hex.
+ * Contrast is checked: body text >= 4.5:1, input borders >= 3:1, white on
+ * accent >= 5.3:1 in both themes. Brand colors: docs/strategy/marketing/README.md.
+ *
+ * Shape rule: controls (buttons, inputs) are 8px; containers (cards, panels) 12px.
+ * Indigo is rare on purpose: it marks the one primary action on a screen.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --text: #0d102a;
+  --muted: #5a5f78;
+  --border: #e2e4ee;
+  --border-strong: #80859f;
+  --accent: #404df6;
+  --accent-hover: #3341e3;
+  --accent-soft: #eceefe;
+  --accent-text: #3341e3;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0b0d1e;
+    --surface: #14172c;
+    --text: #eceef8;
+    --muted: #a2a7c2;
+    --border: #272b47;
+    --border-strong: #62678a;
+    --accent: #4b57f0;
+    --accent-hover: #3f4be6;
+    --accent-soft: #1e2350;
+    --accent-text: #9aa2ff;
+    --danger: #ff8a80;
+    --danger-soft: #3a1717;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-outfit);
+  --radius-control: 8px;
+  --radius-panel: 12px;
+}
+
+html {
+  /* keep keyboard focus clear of the sticky 64px header */
+  scroll-padding-top: 5rem;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
 }
