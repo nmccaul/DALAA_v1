@@ -5,6 +5,9 @@
  * `prepare: false` because Supabase's pooled URL (port 6543, transaction mode)
  * can't hold prepared statements across transactions. It costs little and keeps
  * the same code working against a direct or BYU-hosted Postgres.
+ *
+ * DATABASE_POOL_MAX (default 5) caps connections per server instance; keep it
+ * small on serverless, where every instance opens its own pool.
  */
 
 import postgres from "postgres";
@@ -16,7 +19,7 @@ function sql(): postgres.Sql {
   if (!pool) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set");
-    pool = postgres(url, { prepare: false, max: 5 });
+    pool = postgres(url, { prepare: false, max: Number(process.env.DATABASE_POOL_MAX ?? 5) });
   }
   return pool;
 }
