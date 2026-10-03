@@ -130,9 +130,10 @@ turn never loses their work; "Save and finish later" always means the same thing
   the chassis; the chassis never branches on tool name.
 - **Shared results shape**: per attempt × criterion → status, weight, evidence.
   This is what powers class analytics across tools.
-- **Stack (proposed, confirm — D-007):** TypeScript, Next.js, plain Postgres,
-  Vercel — the DAALAA choice; vendor-neutral Postgres so the DB can move to BYU
-  infrastructure by changing a connection string.
+- **Stack (D-007):** TypeScript, Next.js, Supabase Postgres, Vercel — built
+  portable (no Supabase Auth, plain SQL migrations, standalone Node build) so
+  production can move to a BYU server. Production hosting is decided with BYU IT
+  before the pilot (D-015).
 
 Canvas specifics: `CANVAS.md`.
 

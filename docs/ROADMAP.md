@@ -1,6 +1,6 @@
 # Roadmap — v1, v2, v3
 
-*Updated 2026-10-01. Mirrors the GitHub project board (iterations v1 / v2 / v3).
+*Updated 2026-10-03. Mirrors the GitHub project board (iterations v1 / v2 / v3).
 Dates are placeholders. Nothing past v1 is committed: v2 and v3 items get built
 when the pilot shows a need, not because they're listed.*
 
@@ -16,6 +16,24 @@ BYU's security review or a student's rights require (privacy baseline, extension
 ---
 
 ## v1 — BYU pilot
+
+### Phase 1 — foundation, no Canvas API (D-016)
+
+Teacher setup, teacher home pages, and the look and feel — independent of BYU
+approvals. Built as small sequential PRs:
+
+1. **Skeleton** (#13) — Next.js + TypeScript, Postgres migrations, tests, CI.
+2. **Data model + sign-in** — users, staff allowlist, courses, sections,
+   memberships, the one scope builder (D-018); dev stand-in login behind the
+   sign-in seam (Okta later, #14).
+3. **UI shell + design system** (#15) — Courses · Library · Settings, tokens,
+   empty states, one primary action per screen.
+4. **Manual course setup** — create a course, paste/upload a NetID roster
+   (D-017), course home (Activities · Students · Results).
+
+Canvas API work (#17–#22) and the first tool (#49) follow.
+
+### Everything in v1
 
 | Area | In v1 | Board |
 |---|---|---|
