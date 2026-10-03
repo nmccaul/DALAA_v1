@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentActor } from "@/auth/current";
 import { devPasswordRequired, devSignInEnabled } from "@/auth/dev";
@@ -23,7 +24,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-4">
-      <Logo height={32} />
+      <Link href="/" aria-label="DALAA home" className="self-start">
+        <Logo height={32} />
+      </Link>
       <h1 className="font-display text-3xl font-semibold tracking-tight">Sign in</h1>
       {message && (
         <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">

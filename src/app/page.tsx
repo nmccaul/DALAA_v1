@@ -1,11 +1,18 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { requireActor } from "@/auth/current";
+import { currentActor } from "@/auth/current";
+import { Landing } from "@/components/landing";
 import { Logo } from "@/components/logo";
 import { signOut } from "./sign-in/actions";
 
-/** Teachers go to their courses. Students land here until activities exist. */
+export const metadata: Metadata = {
+  title: { absolute: "DALAA: AI learning activities that show how students think" },
+};
+
+/** Visitors see the landing page. Teachers go to their courses; students land here until activities exist. */
 export default async function Home() {
-  const actor = await requireActor();
+  const actor = await currentActor();
+  if (!actor) return <Landing />;
   if (actor.isStaff) redirect("/courses");
 
   return (
