@@ -35,6 +35,16 @@ real 50-student roster is unproven. Port the design and the rules, not the Pytho
   fixture-tested.
 - Base URL `https://byu.instructure.com` from env.
 
+## Practice Canvas (D-019)
+
+`src/canvas/practice/` answers the Canvas endpoints DALAA uses, from made-up
+data, at `/practice-canvas`. The real client talks to it unchanged; only base
+URL and token differ (`practice-*` tokens). It carries BYU's awkward cases:
+a cross-listed section, a concluded ("completed") and an inactive student, a
+student in two sections, a student with no visible NetID, and a 230-student
+course that pages. Used for tests, local work, and demos before (and after)
+real tokens are approved. Add a case here whenever real Canvas surprises us.
+
 ## Token vault
 
 - Verify against `GET /api/v1/users/self` before storing. AES-256-GCM; key only in
