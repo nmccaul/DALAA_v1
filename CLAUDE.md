@@ -137,9 +137,42 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
 
 - `src/app/` — Next.js 16 App Router. **Next 16 differs from older docs:** read
   `node_modules/next/dist/docs/` before using an API you're unsure of (`AGENTS.md`).
-- `src/db/` — database access (`client.ts` is the only pool). `db/migrations/` —
+- `src/db/` — database access (`client.ts` is the only pool, `url.ts` the only
+  place the URL is read, `scope.ts` the one scope builder). `db/migrations/` —
   plain SQL; see its README.
-- Before committing: `npm run lint && npm run typecheck && npm test`.
+- `src/auth/` — sign-in rules (`admit.ts`, shared with Okta later), session
+  cookie, the dev stand-in. `src/courses/` — course creation, roster parsing,
+  queries; `upsertStudent` is the one way a student account is made.
+- `src/canvas/` — the only code that talks to Canvas (`client.ts`), the token
+  vault, `connection.ts` (the only place a teacher's client is built), import
+  and sync. `practice/` is the fake Canvas (D-019).
+- `src/tools/catalog.ts` — the activity tools. Descriptions only until the first
+  tool is built (#49); then it becomes the registry.
+- `src/components/` — shared UI (`ui.tsx`, `tabs.tsx`) and the landing page.
+  Design tokens live in `src/app/globals.css`; never hard-code colors.
+- Local setup and deploying: `README.md`.
+- Before committing: `npm run lint && npm run typecheck && npm test`. Check UI
+  changes in a real browser in light, dark and 390px mobile.
+
+## Working rules learned the hard way
+
+- **Every PR targets `main`**, even when it builds on an unmerged one (say so in
+  the description). Stacked PRs got merged out of order and one never reached
+  `main`.
+- **A PR that adds a migration:** apply it to production first
+  (`DATABASE_URL=<POSTGRES_URL_NON_POOLING> npm run migrate`, README), then
+  merge. Only additive migrations can go first; anything else needs a plan.
+  Production and preview deployments share one database and one
+  `CANVAS_TOKEN_KEY`.
+- **Every new table gets `enable row level security`.** Supabase's REST API can
+  read the public schema otherwise.
+- **Practice Canvas stays obviously fake:** practice NetIDs start `practice.`
+  (no real NetID can), practice courses are flagged `is_practice`, and practice
+  Canvas ids are stored per teacher (`practice:<user>:<id>`). Keep all three.
+- **Visual previews of unbuilt features say so** (`PreviewNote`), and marketing
+  copy makes no claim we can't back: no uncited statistics, no BYU approval
+  until it's granted. Landing screenshots in `public/landing/` are real
+  captures; retake them when the UI changes.
 
 ## Working style
 

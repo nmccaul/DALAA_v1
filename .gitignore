@@ -44,3 +44,6 @@ next-env.d.ts
 .agents/
 skills-lock.json
 .claude/skills/supabase
+
+# Local database from `npm run db:local`
+/.pgdata

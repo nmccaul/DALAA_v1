@@ -31,7 +31,25 @@ approvals. Built as small sequential PRs:
 4. ✅ **Manual course setup** — create a course, paste/upload a NetID roster
    (D-017), course home (Activities · Students · Results).
 
-Canvas API work (#17–#22) and the first tool (#49) follow.
+All four shipped (Oct 3, 2026), plus the logo, the landing page and hosting at
+dalaa-v1.vercel.app.
+
+### Phase 2 — Canvas and the first tool
+
+Done: Canvas client and practice Canvas (D-019), Connect Canvas with an
+encrypted token vault, bring in a course, roster sync and connecting a
+hand-made course (#17–#19). A visual preview of choosing a tool (no data).
+
+Next, roughly in order:
+1. **Onboarding so a colleague can start without us:** add professors in the
+   app (#94), getting-started checklist (#95), Canvas token picture guide
+   (#96), share with students (#97), help page (#98).
+2. **The first tool (#49)**, once Scott chooses Case Chat or Quiz (#4): the
+   activity contract (#37), AI layer and cost ledger (#38, #39), authoring
+   (#43), student shell (#44), results (#45, #46).
+3. **Canvas assignments and grades (#20–#22)**, which need activities.
+4. **Real BYU sign-in (#14)** and the BYU IT answers (#9, #10) before any real
+   student uses DALAA.
 
 ### Everything in v1
 
