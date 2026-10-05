@@ -22,7 +22,12 @@ describe("vault", () => {
 
   it("refuses tampered ciphertext or a different key, as a VaultError", () => {
     const sealed = sealToken("7~abcd1234");
-    const tampered = sealed.slice(0, -2) + (sealed.endsWith("A") ? "BB" : "AA");
+    // Flip a real byte of the ciphertext. (Editing the last base64 characters
+    // isn't enough: they can hold only padding bits and decode unchanged.)
+    const [version, iv, tag, body] = sealed.split(".");
+    const bytes = Buffer.from(body, "base64url");
+    bytes[0] ^= 0xff;
+    const tampered = [version, iv, tag, bytes.toString("base64url")].join(".");
     expect(() => openToken(tampered)).toThrow(VaultError);
     const original = process.env.CANVAS_TOKEN_KEY;
     process.env.CANVAS_TOKEN_KEY = randomBytes(32).toString("base64");
