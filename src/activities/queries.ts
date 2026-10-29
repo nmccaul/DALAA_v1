@@ -58,7 +58,7 @@ export type StudentAssignment = {
   /** NULL: no due date. */
   dueAt: Date | null;
   status: AssignmentStatus;
-  /** The grade and what it was out of; NULL until graded, never 0 for "not graded yet". */
+  /** The score that counts (the teacher's if they changed it) and what it was out of; NULL until graded, never 0 for "not graded yet". */
   score: number | null;
   maxScore: number | null;
 };
@@ -76,7 +76,7 @@ export async function listStudentAssignments(db: Db, actor: Actor): Promise<Stud
                  when t.status = 'completed' then 'submitted'
                  when t.id is not null then 'in_progress'
                  else 'not_started' end as status,
-            case when r.status = 'graded' then r.score::float8 end as score,
+            case when r.status = 'graded' then coalesce(r.teacher_score, r.score)::float8 end as score,
             case when r.status = 'graded' then r.max_score::float8 end as "maxScore"
        from activities a
        join courses c on c.id = a.course_id

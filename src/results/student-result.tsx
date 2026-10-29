@@ -4,7 +4,7 @@
  * runs the page refreshes itself until the grade is in.
  */
 
-import type { Result } from "./store";
+import { countedScore, type Result } from "./store";
 import { RefreshWhileGrading } from "./refresh-while-grading";
 
 const points = (n: number) => `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${n === 1 ? "point" : "points"}`;
@@ -33,8 +33,11 @@ export function StudentResult({ result }: { result: Result | null }) {
     <section aria-label="Your grade" className="flex flex-col gap-4 rounded-panel border border-border bg-surface px-4 py-4">
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-xl font-semibold">
-          Your grade: {result.score.toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
+          Your grade: {countedScore(result).toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
         </h2>
+        {result.teacherScore !== null && (
+          <p className="text-sm text-muted">Your teacher set this grade. The scores below are from the first grading.</p>
+        )}
         <p className="max-w-[65ch]">{result.feedback}</p>
       </div>
       <ul className="flex flex-col gap-3">

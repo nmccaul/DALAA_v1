@@ -41,7 +41,18 @@ export type GradedResult = z.infer<typeof GradedResult>;
 
 export type Result =
   | { status: "grading" | "failed" }
-  | ({ status: "graded"; score: number; maxScore: number; gradedAt: Date } & GradedResult);
+  | ({
+      status: "graded";
+      /** The grader's total. */
+      score: number;
+      maxScore: number;
+      /** The teacher's own score, which counts instead; NULL when they haven't changed it. */
+      teacherScore: number | null;
+      gradedAt: Date;
+    } & GradedResult);
+
+/** The score that counts: the teacher's when they've set one, else the grader's. */
+export const countedScore = (result: { score: number; teacherScore: number | null }) => result.teacherScore ?? result.score;
 
 /** Total points earned and possible, from the criteria. */
 export function totals(result: GradedResult): { score: number; maxScore: number } {
@@ -100,13 +111,15 @@ export async function getResult(db: Db, attemptId: string): Promise<Result | nul
     status: Result["status"];
     score: number | null;
     maxScore: number | null;
+    teacherScore: number | null;
     criteria: GradedResult["criteria"] | null;
     touchpoints: GradedResult["touchpoints"] | null;
     position: string | null;
     feedback: string | null;
     gradedAt: Date | null;
   }>(
-    `select status, score::float8 as score, max_score::float8 as "maxScore", criteria, touchpoints, position, feedback,
+    `select status, score::float8 as score, max_score::float8 as "maxScore",
+            teacher_score::float8 as "teacherScore", criteria, touchpoints, position, feedback,
             graded_at as "gradedAt"
        from results where attempt_id = $1`,
     [attemptId],
@@ -117,6 +130,7 @@ export async function getResult(db: Db, attemptId: string): Promise<Result | nul
     status: "graded",
     score: row.score!,
     maxScore: row.maxScore!,
+    teacherScore: row.teacherScore,
     gradedAt: row.gradedAt!,
     criteria: row.criteria!,
     touchpoints: row.touchpoints!,
