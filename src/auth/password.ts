@@ -15,6 +15,7 @@
  */
 
 import { timingSafeEqual } from "node:crypto";
+import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { admit, normalizeNetId, type Admission } from "./admit";
 
@@ -22,6 +23,8 @@ import { admit, normalizeNetId, type Admission } from "./admit";
 export type PasswordProvider = {
   verify(email: string, password: string): Promise<boolean>;
   create(email: string, password: string): Promise<"created" | "exists" | "weak">;
+  /** This email signs in with this password from now on: made already confirmed, or its password replaced. */
+  setPassword(email: string, password: string): Promise<"set" | "weak">;
 };
 
 export type PasswordRefusal = "bad-email" | "not-school-email" | "password" | "account-exists" | "weak-password";
@@ -62,8 +65,29 @@ export function testTeacherLoginId(): string | null {
   return normalizeEmail(process.env.TEST_TEACHER_EMAIL ?? "");
 }
 
+/** The shared logins (D-023, D-029). Nobody sets a password for these; it lives in env. */
+export function isSharedLogin(email: string): boolean {
+  return [process.env.TEST_TEACHER_EMAIL, process.env.TEST_STUDENT_EMAIL].some(
+    (shared) => normalizeEmail(shared ?? "") === email,
+  );
+}
+
+function supabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export function passwordSignInAvailable(): boolean {
-  return Boolean(testTeacherLoginId() || (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY));
+  return Boolean(testTeacherLoginId() || supabaseConfigured());
+}
+
+/**
+ * The email "Sign in without Canvas" would set a password for, or null when it
+ * can't be offered: no Supabase to hold it, no email, or a shared login.
+ */
+export async function passwordSettingEmail(db: Db, userId: string): Promise<string | null> {
+  if (!supabaseConfigured()) return null;
+  const email = await accountEmail(db, userId);
+  return email && !isSharedLogin(email) ? email : null;
 }
 
 export async function signInWithPassword(
@@ -82,7 +106,7 @@ export async function signInWithPassword(
     return admit(db, institutionId, { netId: email, displayName: "Test Teacher", email });
   }
 
-  if (!isSchoolEmail(email)) return { ok: false, reason: "not-school-email" };
+  // Any domain: only a school email can sign up, but anyone may have set a password (D-029).
   if (!(await provider.verify(email, form.password))) return { ok: false, reason: "password" };
   return admitByEmail(db, institutionId, email);
 }
@@ -105,12 +129,47 @@ export async function createAccount(
   return admitByEmail(db, institutionId, email);
 }
 
+export type SetPasswordRefusal = "no-email" | "shared-login" | "email-elsewhere" | "mismatch" | "weak-password";
+
 /**
- * A proven school email → the account it belongs to: the one whose login ID is
- * this email, else the only one with this email (two: don't guess), else a new
- * student account with no courses yet (D-024).
+ * "Sign in without Canvas" (D-029): the signed-in person gives the email on
+ * their own account a password. The session proves who they are, so the form
+ * never takes an email. Refused when that email would sign in to some other
+ * account, so a password never moves an email to a different DALAA user.
  */
-async function admitByEmail(db: Db, institutionId: string, email: string): Promise<Admission> {
+export async function setOwnPassword(
+  db: Db,
+  actor: Actor,
+  form: { password: string; confirm: string },
+  provider: PasswordProvider,
+): Promise<{ ok: true; email: string } | { ok: false; reason: SetPasswordRefusal }> {
+  const email = await accountEmail(db, actor.userId);
+  if (!email) return { ok: false, reason: "no-email" };
+  if (isSharedLogin(email)) return { ok: false, reason: "shared-login" };
+  if ((await loginIdForEmail(db, actor.institutionId, email)) !== actor.netId) {
+    return { ok: false, reason: "email-elsewhere" };
+  }
+  if (form.password !== form.confirm) return { ok: false, reason: "mismatch" };
+  if (form.password.length < MIN_PASSWORD) return { ok: false, reason: "weak-password" };
+  if ((await provider.setPassword(email, form.password)) === "weak") return { ok: false, reason: "weak-password" };
+  return { ok: true, email };
+}
+
+/** The email an account signs in with: its email, else its login ID when that is one. */
+export async function accountEmail(db: Db, userId: string): Promise<string | null> {
+  const [row] = await db.query<{ email: string | null; external_id: string }>(
+    "select email, external_id from users where id = $1",
+    [userId],
+  );
+  if (!row) return null;
+  return normalizeEmail(row.email ?? "") ?? normalizeEmail(row.external_id);
+}
+
+/**
+ * Whose login an email is: the account whose login ID is this email, else the
+ * only one with this email (two: don't guess), else this email as a new login ID.
+ */
+async function loginIdForEmail(db: Db, institutionId: string, email: string): Promise<string> {
   const owners = await db.query<{ external_id: string }>(
     `select external_id from users
       where institution_id = $1 and (external_id = $2 or lower(email) = $2)
@@ -118,7 +177,11 @@ async function admitByEmail(db: Db, institutionId: string, email: string): Promi
       limit 2`,
     [institutionId, email],
   );
-  const loginId =
-    owners[0]?.external_id === email || owners.length !== 1 ? email : owners[0].external_id;
+  return owners[0]?.external_id === email || owners.length !== 1 ? email : owners[0].external_id;
+}
+
+/** A proven email → the account it belongs to, or a new student account with no courses yet (D-024). */
+async function admitByEmail(db: Db, institutionId: string, email: string): Promise<Admission> {
+  const loginId = await loginIdForEmail(db, institutionId, email);
   return admit(db, institutionId, { netId: loginId, email }, { newStudent: true });
 }
