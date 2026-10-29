@@ -142,3 +142,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Browser check (local, practice Canvas): linked hand-made BUS M 361 to practice 1101, picked "Case: Harbor Bikes", saw "Saved …". Light and 390px look right; dark mode not checked (couldn't toggle it from the CLI browser).
 - Note: the local `natetest` account is now on practice Canvas and its hand-made BUS M 361 is linked to practice 1101.
 - **Nathan:** VERIFY IN MORNING: the same pick against real gitgrade course 42 after "Connect with Canvas" (needs the OAuth round trip from T16a).
+
+## 2026-10-29 09:32 UTC · T17 AI-drafted settings · partial (T17a done, T17b blocked)
+- `src/tools/study-chat/draft.ts`: `draftSettings(db, model, ctx, { content, contentName, mode | "suggest" })` → `{ ok, settings }` validated by `StudyChatSettings` through `generateStructured` (ledger purpose `draft`). The field guidance reaches the model through the schema's own `description`s, so the prompt only carries the rules, the mode's seed + hints (or the list of all modes for "suggest"), and the material fenced in `<material>` tags.
+- A draft that misses the schema (bad JSON, or e.g. no way to end the chat) gets one more try, then a plain refusal: a bad draft is never returned. Provider errors aren't retried here (the SDK already retries). The teacher's chosen mode overrides the model's.
+- Tests: `draft.test.ts` (8, mock model). 269 green. `scripts/draft-smoke.mts` makes one real draft from the practice Harbor Bikes page.
+- Real draft still blocked: AI Gateway still answers `customer_verification_required` (checked this pass). **Nathan:** after adding the card, run `npx tsx --env-file=.env.local scripts/ai-smoke.mts` and `scripts/draft-smoke.mts`; if `GRADER_MODEL`'s provider rejects parts of the JSON schema (strict mode), the fix is a looser model-facing schema in `draft.ts` re-validated by `StudyChatSettings`.
