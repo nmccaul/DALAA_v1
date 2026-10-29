@@ -11,7 +11,7 @@ Statuses: `[ ]` todo · `[x]` done · `[!]` blocked
 ## A. Foundations
 
 - [x] **T01 Decisions + docs.** Add D-020… to `docs/DECISIONS.md` (dated 2026-10-29, Nathan): LTI 1.3 now for gitgrade, alongside REST for BYU (amends D-004); Study Chat is the first tool, with modes; Supabase Auth as an identity provider into `admit()` (admin-created, pre-confirmed accounts, `byu.edu` only); shared test teacher login (test-only, remove before pilot); students may sign up themselves and accounts link by email (amends the "sign-in never creates a student" rule); login IDs may be emails on non-BYU Canvas; AI through Vercel AI Gateway (Gemini/OpenAI per env). Update `docs/ROADMAP.md` (LTI pulled into now), `docs/PRD.md`, the Canvas section of `CLAUDE.md`, and `.env.example` (new var names, empty values). **Done when:** docs committed; `.env.example` lists every var in `ralph/PLAN.md` "Env".
-- [ ] **T02 Identity accepts email login IDs.** `normalizeNetId` (`src/auth/admit.ts`) accepts lowercased emails as well as NetIDs; tests for both plus rejects. **Done when:** tests pass.
+- [x] **T02 Identity accepts email login IDs.** `normalizeNetId` (`src/auth/admit.ts`) accepts lowercased emails as well as NetIDs; tests for both plus rejects. **Done when:** tests pass.
 - [ ] **T03 Dependencies + iframe cookie.** Add `jose`, `ai`, `@supabase/supabase-js`, and any zod the AI SDK needs. The session cookie in `src/auth/current.ts` is `SameSite=None; Secure` in production (lax locally). **Done when:** lint/typecheck/tests pass.
 
 ## B. LTI core
