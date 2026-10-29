@@ -389,3 +389,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - 408 tests green on Node 22; lint and typecheck clean. No migration.
 - Browser check (Node 22 dev server, local DB, `natetest`): Students tab shows "Login ID" and "last matched Canvas Oct 29, 2026, 3:28 AM" for a 09:28 UTC sync (America/Denver), light 1280, dark 390, light 390.
 - **Nathan:** the server's first paint is UTC for a blink before the browser fixes it; on a BYU deployment (no `CANVAS_BASE_URL`) every label says NetID again.
+
+## 2026-10-29 18:45 UTC · T35 CHECKPOINT E (deploy) · blocked
+- Lint, typecheck and 408 tests green on Node 22. The only new migration, `20261029181438_student_view.sql`, is additive (nullable column). It's applied to production.
+- PR #106 (T33–T34 + ralph logs) opened and merged into `main`; `feat/study-chat-lti` pulled `main` again.
+- No production deploy started from the merge in 5 minutes, and `vercel deploy --prod` was refused: `api-deployments-free-per-day` (over 100 deployments today, "try again in 24 hours"). Every push to this branch also makes a preview deploy, and those count against the same limit.
+- Production (`dalaa-v1-f734rtpqm`, from before T33) smoke-tests fine: `/api/health` db up, `/api/lti/jwks` one RSA key with no private parts, `/` 200. Old code ignores the new column, so it's safe as is.
+- Didn't write `DONE` to `ralph/STATUS` because T36–T38 were added while this pass was running.
+- **Nathan:** once the limit resets, redeploy `main` to production (`vercel -Q ~/.vercel-dalaa deploy --prod` or Redeploy in the dashboard) to ship T33/T34, or let T38 do it. Fewer pushes per pass (or turning off branch previews) would keep the loop under the limit.
