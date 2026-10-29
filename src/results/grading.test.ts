@@ -96,6 +96,22 @@ describe("listCourseGrades", () => {
   });
 });
 
+describe("listCourseGrades and Canvas Student View", () => {
+  it("keeps Student View users, marked and listed last", async () => {
+    const { db, prof, course, activity, student } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const sv = await student("a1b2c3", "Test Student");
+    await db.query("update course_members set student_view = true where user_id = $1", [sv.userId]);
+    await student("zed", "Zed");
+    const [row] = await listCourseGrades(db, prof, course);
+    expect(row.activityId).toBe(a);
+    expect(row.students.map((s) => [s.name, s.studentView])).toEqual([
+      ["Zed", false],
+      ["Test Student", true],
+    ]);
+  });
+});
+
 describe("setTeacherScore", () => {
   it("keeps the grader's score, makes the teacher's count, and can put the grader's back", async () => {
     const { db, prof, course, activity, student, attempt, grade } = await setup();

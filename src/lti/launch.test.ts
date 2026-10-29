@@ -187,6 +187,21 @@ describe("LTI launch sign-in", () => {
     expect(await loadActor(db, user.id)).toMatchObject({ isStaff: false });
   });
 
+  it("marks Canvas's Student View user (TestUser role) on the membership, and only it", async () => {
+    await launch({ roles: TEACHER, loginId: "teacher@example.edu", context: "ctx-sv" });
+    await launch({ roles: [...LEARNER, "http://purl.imsglobal.org/vocab/lti/system/person#TestUser"], loginId: "a1b2c3", name: "Test Student", context: "ctx-sv" });
+    await launch({ loginId: "real@example.edu", name: "Test Student", context: "ctx-sv" });
+    const rows = await db.query(
+      `select u.external_id, m.role, m.student_view from course_members m join users u on u.id = m.user_id
+         join lti_contexts x on x.course_id = m.course_id where x.context_id = 'ctx-sv' order by u.external_id`,
+    );
+    expect(rows).toEqual([
+      { external_id: "a1b2c3", role: "student", student_view: true },
+      { external_id: "real@example.edu", role: "student", student_view: false },
+      { external_id: "teacher@example.edu", role: "instructor", student_view: false },
+    ]);
+  });
+
   it("links to an existing account by email instead of making a second (D-024)", async () => {
     const [{ id }] = await db.query<{ id: string }>(
       `insert into users (institution_id, external_id, display_name, email)

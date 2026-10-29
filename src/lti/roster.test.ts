@@ -2,7 +2,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { NrpsMember } from "@/canvas/client";
 import { createCourse } from "@/courses/create";
-import { listRoster } from "@/courses/queries";
+import { getTaughtCourse, listRoster } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
@@ -38,13 +38,32 @@ describe("planFromMembers", () => {
     ]);
     expect(plan.sections).toEqual([]);
     expect(plan.students).toEqual([
-      { netId: "amy@school.edu", name: "AMY", canvasSectionId: null, email: "amy@school.edu" },
-      { netId: "bonetid", name: "BO", canvasSectionId: null, email: "bo@school.edu" },
+      { netId: "amy@school.edu", name: "AMY", canvasSectionId: null, email: "amy@school.edu", studentView: false },
+      { netId: "bonetid", name: "BO", canvasSectionId: null, email: "bo@school.edu", studentView: false },
     ]);
     expect(plan.skipped).toEqual({ notEnrolled: 2, noNetId: 2, inTwoSections: 0 });
     expect([...plan.subs]).toEqual([
       ["amy@school.edu", "sub-Amy@School.edu"],
       ["bonetid", "sub-bo@school.edu"],
+    ]);
+  });
+});
+
+const TEST_USER = "http://purl.imsglobal.org/vocab/lti/system/person#TestUser";
+/** Canvas's Student View user as NRPS lists it: no email, an opaque login ID, the TestUser role. */
+const studentView = (id: string): NrpsMember => ({
+  user_id: `sub-${id}`,
+  name: "Test Student",
+  roles: [`${ROLE}Learner`, TEST_USER],
+  message: [{ [CUSTOM]: { login_id: id } }],
+});
+
+describe("planFromMembers and Canvas Student View", () => {
+  it("marks the TestUser role, not the name", () => {
+    const plan = planFromMembers([studentView("a1b2c3"), learner("test@school.edu", { name: "Test Student" })]);
+    expect(plan.students.map((s) => [s.netId, s.studentView])).toEqual([
+      ["a1b2c3", true],
+      ["test@school.edu", false],
     ]);
   });
 });
@@ -131,6 +150,21 @@ describe("syncLtiRoster", () => {
     expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true, added: 0, flagged: 0 });
     // Grades for Amy go to the platform id Canvas gave her (src/lti/users.ts).
     expect(await ltiSubs(db, platform.id, [existing])).toEqual(new Map([[existing, "sub-Amy@School.edu"]]));
+  });
+
+  it("keeps Canvas Student View users, marked, and leaves them out of the student count", async () => {
+    const id = await ltiCourse();
+    pages[MEMBERS] = { members: [learner("amy@school.edu"), studentView("a1b2c3")] };
+    expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true, added: 2 });
+    expect((await listRoster(db, prof, id)).map((r) => [r.netId, r.studentView])).toEqual([
+      ["amy@school.edu", false],
+      ["a1b2c3", true],
+    ]);
+    expect(await getTaughtCourse(db, prof, id)).toMatchObject({ students: 1 });
+    // A sync that no longer lists it flags it like anyone else; nothing is deleted.
+    pages[MEMBERS] = { members: [learner("amy@school.edu")] };
+    expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true, flagged: 1 });
+    expect(await roster(id)).toEqual(["a1b2c3:flagged", "amy@school.edu:active"]);
   });
 
   it("raises instead of truncating a class list with too many pages", async () => {

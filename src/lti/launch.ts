@@ -10,7 +10,9 @@
  *   instructor's launch creates it; a student who arrives first is told to wait.
  * - Membership follows the Canvas role in that course: Instructor or TA →
  *   instructor (staff for that course without the allowlist, D-020),
- *   Learner → student. Anything else is refused.
+ *   Learner → student. Anything else is refused. Canvas's Student View user
+ *   (role TestUser) is a student marked `student_view`, so teachers' lists can
+ *   set it aside.
  * - A Deep Linking launch (a teacher adding DALAA as a Canvas assignment) goes
  *   to the picker (src/lti/deep-link.ts); a Resource Link launch carrying an
  *   `activity_id` opens that assignment and remembers its Canvas link.
@@ -43,6 +45,15 @@ export function courseRole(roles: readonly string[]): CourseRole | null {
     return "instructor";
   }
   return has("Learner") ? "student" : null;
+}
+
+/**
+ * Whether Canvas says this is its Student View user: the hidden test student
+ * it makes for a teacher. Canvas marks it with the LIS TestUser role, in
+ * launches and in the class list alike; the name ("Test Student") is not proof.
+ */
+export function isStudentView(roles: readonly string[]): boolean {
+  return roles.includes("http://purl.imsglobal.org/vocab/lti/system/person#TestUser");
 }
 
 /** The login ID the launch vouches for: `login_id`, else the email. */
@@ -96,9 +107,10 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
 
     // Canvas is the authority on who is in its course and in what role.
     await tx.query(
-      `insert into course_members (course_id, user_id, role) values ($1, $2, $3)
-       on conflict (course_id, user_id) do update set role = excluded.role, status = 'active'`,
-      [courseId, userId, role],
+      `insert into course_members (course_id, user_id, role, student_view) values ($1, $2, $3, $4)
+       on conflict (course_id, user_id) do update
+         set role = excluded.role, status = 'active', student_view = excluded.student_view`,
+      [courseId, userId, role, isStudentView(claims.roles)],
     );
 
     if (deepLinking) {

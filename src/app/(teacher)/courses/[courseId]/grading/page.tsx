@@ -91,6 +91,7 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
                     <span className="font-medium break-words">{s.name}</span>
                     <span className="text-sm text-muted break-all" translate="no">
                       {s.loginId}
+                      {s.studentView && <span translate="yes"> · Student View</span>}
                       {s.flagged && <span translate="yes"> · Not on the latest class list</span>}
                     </span>
                   </div>

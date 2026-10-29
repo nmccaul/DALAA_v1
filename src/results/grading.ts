@@ -15,6 +15,8 @@ export type StudentGrade = {
   loginId: string;
   /** No longer on the class list; listed only when they have an attempt. */
   flagged: boolean;
+  /** Canvas's Student View test user: kept here, labelled, so grading can be tried with it. */
+  studentView: boolean;
   status: AssignmentStatus;
   /** NULL until they've started. */
   attemptId: string | null;
@@ -39,7 +41,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * Each published assignment in a course the actor teaches (soonest due
  * first), with every student on the class list and anyone flagged off it who
- * has an attempt, by name.
+ * has an attempt, by name; Canvas's Student View users last.
  */
 export async function listCourseGrades(db: Db, actor: Actor, courseId: string): Promise<AssignmentGrades[]> {
   if (!UUID.test(courseId)) return [];
@@ -47,6 +49,7 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
   const rows = await db.query<Omit<AssignmentGrades, "students"> & StudentGrade>(
     `select a.id as "activityId", a.title, a.points::float8 as points,
             u.id as "userId", u.display_name as name, u.external_id as "loginId", m.status = 'flagged' as flagged,
+            m.student_view is true as "studentView",
             case when r.status = 'graded' then 'graded'
                  when t.status = 'completed' then 'submitted'
                  when t.id is not null then 'in_progress'
@@ -64,7 +67,7 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
        left join results r on r.attempt_id = t.id
        left join disputes d on d.attempt_id = t.id and d.status = 'open'
       where ${where.text} and (m.status = 'active' or t.id is not null)
-      order by a.due_at asc nulls last, a.created_at desc, a.id, u.display_name, u.external_id`,
+      order by a.due_at asc nulls last, a.created_at desc, a.id, m.student_view is true, u.display_name, u.external_id`,
     where.values,
   );
   const byActivity = new Map<string, AssignmentGrades>();

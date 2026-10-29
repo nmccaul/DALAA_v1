@@ -21,7 +21,8 @@ export async function listTaughtCourses(db: Db, actor: Actor): Promise<CourseCar
     `select c.id, c.code, c.title, c.term, c.is_practice as "isPractice",
             c.canvas_course_id is not null as "canvasLinked", c.canvas_synced_at as "canvasSyncedAt",
             (select count(*)::int from course_members m
-              where m.course_id = c.id and m.role = 'student' and m.status = 'active') as students
+              where m.course_id = c.id and m.role = 'student' and m.status = 'active'
+                and m.student_view is not true) as students
        from courses c
       where ${scope.text}
       order by c.created_at desc, c.code`,
@@ -53,7 +54,8 @@ export async function getTaughtCourse(db: Db, actor: Actor, courseId: string): P
     `select c.id, c.code, c.title, c.term, c.is_practice as "isPractice",
             c.canvas_course_id is not null as "canvasLinked", c.canvas_synced_at as "canvasSyncedAt",
             (select count(*)::int from course_members m
-              where m.course_id = c.id and m.role = 'student' and m.status = 'active') as students
+              where m.course_id = c.id and m.role = 'student' and m.status = 'active'
+                and m.student_view is not true) as students
        from courses c
       where ${where.text}`,
     where.values,
@@ -66,9 +68,11 @@ export type RosterEntry = {
   name: string;
   section: string | null;
   status: "active" | "flagged";
+  /** Canvas's Student View test user: listed apart, never deleted. */
+  studentView: boolean;
 };
 
-/** Students in a course the actor teaches: current ones first, then by section and name. */
+/** Students in a course the actor teaches: current ones first, Canvas Student View after, then by section and name. */
 export async function listRoster(db: Db, actor: Actor, courseId: string): Promise<RosterEntry[]> {
   if (!UUID.test(courseId)) return [];
   const where = and(
@@ -76,13 +80,14 @@ export async function listRoster(db: Db, actor: Actor, courseId: string): Promis
     coursesTaughtBy(actor, "c"),
   );
   return db.query<RosterEntry>(
-    `select u.external_id as "netId", u.display_name as name, s.name as section, m.status
+    `select u.external_id as "netId", u.display_name as name, s.name as section, m.status,
+            m.student_view is true as "studentView"
        from course_members m
        join courses c on c.id = m.course_id
        join users u on u.id = m.user_id
        left join sections s on s.id = m.section_id
       where ${where.text}
-      order by m.status = 'flagged', s.name nulls last, u.display_name`,
+      order by m.status = 'flagged', m.student_view is true, s.name nulls last, u.display_name`,
     where.values,
   );
 }
