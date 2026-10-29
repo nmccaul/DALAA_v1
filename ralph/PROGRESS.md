@@ -1,5 +1,11 @@
 # Progress
 
+## Final summary (2026-10-29 16:28 UTC, end of the overnight run)
+All tasks T01–T28 are done; production (https://dalaa-v1.vercel.app) runs the full Study Chat loop as an LTI 1.3 tool on gitgrade: launch from Canvas (with a new-tab fallback), roster sync over NRPS, a Study Chat drafted by AI from a Canvas page/upload/paste with 10 modes, deep linking to add it as a Canvas assignment, the student chat with limits, AI grading with evidence quotes, teacher scores and disputes, sending grades back over AGS with the push rules, and a Feedback button with mark-up and an admin list. Outside Canvas: Supabase email sign-in, school-domain signup, the shared test teacher.
+- **Start here:** `docs/TESTING-GITGRADE.md` walks the whole loop in course 42.
+- **Not yet exercised on production:** a real launch from gitgrade, deep linking, the Canvas page picker (OAuth), a real grade, and a real AGS send. Every "VERIFY IN MORNING" note below is covered by the guide.
+- **Decisions waiting on Nathan** (search "**Nathan:**" below): extra credit, students seeing the Feedback button in Canvas, touchpoint names visible to students, dispute deadline, teachers reading the chat from Grading (worth a task), UTC due times, test-teacher sign-in rate limit, Node 22 as the shell default.
+
 One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI key 10000000000013 + deployment, API key 10000000000014, test course 42, env vars, AI Gateway key. See ralph/PLAN.md.
 
 ## 2026-10-29 06:23 UTC · T01 Decisions + docs · done
@@ -338,3 +344,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Pure model in `src/feedback/annotate.ts` (marks in the picture's own pixels, `undo`, `drawMarks`, `flatten` that steps JPEG quality 0.8/0.6/0.4 to stay under 3 MB, else keeps the unmarked one); `dataUrlBytes` moved there from the button. 8 tests in `annotate.test.ts` with a recording fake context (no jsdom/testing-library in the repo, so no component render test). `ReportContext.annotated` is optional (older reports lack it); store test checks it round-trips. Admin report page says "The reporter marked up this picture."
 - Cmd/Ctrl+Shift+F and `window.dispatchEvent(new Event("open-feedback"))` open the panel (`useEffectEvent`, React 19.2). No new library. No migration. 385 tests green on Node 22.
 - Browser check (Node 22 dev server, local DB, `natetest`): light 1280 circled and boxed, undid a third mark, sent; the row had `annotated: true` and a 36 KB JPEG, and the admin page showed the marks. Dark 390: opened via the event, drew, Escape kept the panel. Real touch wasn't emulated (mouse only). Local test report deleted afterwards.
+
+## 2026-10-29 16:28 UTC · T28 CHECKPOINT C (deploy) + morning test guide · done
+- New `docs/TESTING-GITGRADE.md`: teacher launch from course 42 → sync → create from the Harbor Bikes page → add via "DALAA Study Chat" → Student View chat, finish, dispute → resolve, send grades → gradebook checks, plus outside-Canvas sign-in. Button labels checked against the code. Final summary added at the top of this file.
+- Lint, typecheck and 385 tests green on Node 22. Five migrations since checkpoint B, all additive (`teacher_scores` adds checks only on its own new nullable columns), applied to production first.
+- PR #104 opened and merged; production deploy `dalaa-v1-r4ae25e7d` Ready. Smoke: `/api/health` db up, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200, and the new `POST /api/feedback` answers 401 signed out.
+- Surprise: the env pull "failed" because `nvm use 22` puts a PATH without the global `vercel` first; pull before switching Node. `ralph/STATUS` is now `DONE`.
