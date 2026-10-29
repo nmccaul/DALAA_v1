@@ -148,3 +148,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - A draft that misses the schema (bad JSON, or e.g. no way to end the chat) gets one more try, then a plain refusal: a bad draft is never returned. Provider errors aren't retried here (the SDK already retries). The teacher's chosen mode overrides the model's.
 - Tests: `draft.test.ts` (8, mock model). 261 green. `scripts/draft-smoke.mts` makes one real draft from the practice Harbor Bikes page.
 - Real draft still blocked: AI Gateway still answers `customer_verification_required` (checked this pass). **Nathan:** after adding the card, run `npx tsx --env-file=.env.local scripts/ai-smoke.mts` and `scripts/draft-smoke.mts`; if `GRADER_MODEL`'s provider rejects parts of the JSON schema (strict mode), the fix is a looser model-facing schema in `draft.ts` re-validated by `StudyChatSettings`.
+
+## 2026-10-29 09:38 UTC · T18 Teacher: assignments + type picker · done
+- Course tabs are now Assignments · Grading · Students (`layout.tsx`); `/results` moved to `/grading` (still an empty state until T24). The course page lists assignments (type, points, due date or "No due date", "N submitted · N graded" when published, "Draft, students can't see it" otherwise) with one "Create assignment" button; the picker page and its copy say "assignment" / "type".
+- New `src/activities/queries.ts` `listCourseActivities` (through the scope builder; soonest due first, undated last) + test. Submitted/graded are 0 in SQL until attempts exist; T21 now carries a note to replace them.
+- Additive migration `20261029093339_activity_due.sql`: `activities.due_at timestamptz` (NULL = no due date). Applied locally; goes to production at the next checkpoint.
+- Browser check with 3 temporary assignments on natetest's BUS M 361 (removed after): light desktop, dark 390px, and the dark mobile picker all look right.
+- Reminder: run tests on Node 22 (PATH=~/.nvm/versions/node/v22.23.3/bin); the default node 20 fails the PDF tests.
