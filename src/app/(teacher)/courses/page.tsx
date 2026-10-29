@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireActor } from "@/auth/current";
+import { loginIdLabel } from "@/auth/login-id";
 import { ButtonLink, EmptyState, PageHeader } from "@/components/ui";
 import { listTaughtCourses } from "@/courses/queries";
 import { PracticeTag } from "@/components/practice-tag";
@@ -29,7 +30,7 @@ export default async function CoursesPage() {
         >
           <p>
             Pick a course from Canvas and DALAA brings in its sections and class list. Your students
-            can sign in with their NetID as soon as it&apos;s here.
+            can sign in with their {loginIdLabel().noun} as soon as it&apos;s here.
           </p>
         </EmptyState>
       </>

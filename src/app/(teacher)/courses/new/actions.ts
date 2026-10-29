@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import { loginIdLabel } from "@/auth/login-id";
 import { createCourse } from "@/courses/create";
 import { parseRoster, type RosterProblem } from "@/courses/roster";
 import { db } from "@/db/client";
@@ -42,7 +43,7 @@ export async function setUpCourse(_prev: SetUpState, form: FormData): Promise<Se
   if (!fields.term) errors.term = "Add the term, like Winter 2027.";
   const parsed = parseRoster(roster);
   if (roster && parsed.rows.length === 0 && parsed.problems.length === 0) {
-    errors.roster = "We couldn't find any NetIDs in that list.";
+    errors.roster = `We couldn't find any ${loginIdLabel().plural} in that list.`;
   }
   if (Object.keys(errors).length > 0) return { fields, errors };
 

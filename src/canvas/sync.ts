@@ -186,9 +186,9 @@ export async function applyPlan(
     if (!member) {
       // An instructor of this course isn't also made a student of it.
       const inserted = await tx.query(
-        `insert into course_members (course_id, user_id, role, section_id) values ($1, $2, 'student', $3)
+        `insert into course_members (course_id, user_id, role, section_id, student_view) values ($1, $2, 'student', $3, $4)
          on conflict (course_id, user_id) do nothing returning user_id`,
-        [courseId, userId, section ?? null],
+        [courseId, userId, section ?? null, student.studentView ?? null],
       );
       if (inserted.length) counts.added++;
       continue;
@@ -196,9 +196,10 @@ export async function applyPlan(
     if (member.status === "flagged") counts.returned++;
     else if (section !== undefined && section !== member.section_id) counts.moved++;
     await tx.query(
-      `update course_members set status = 'active', section_id = coalesce($3, section_id)
+      `update course_members set status = 'active', section_id = coalesce($3, section_id),
+                                 student_view = coalesce($4, student_view)
         where course_id = $1 and user_id = $2`,
-      [courseId, member.user_id, section ?? null],
+      [courseId, member.user_id, section ?? null, student.studentView ?? null],
     );
   }
 

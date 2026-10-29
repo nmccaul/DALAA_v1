@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requireActor } from "@/auth/current";
+import { loginIdLabel } from "@/auth/login-id";
 import { passwordSettingEmail } from "@/auth/password";
+import { LocalTime } from "@/components/local-time";
 import { SetPassword } from "@/components/set-password";
 import { Button, ButtonLink, PageHeader } from "@/components/ui";
 import { getConnection, type ConnectionSummary } from "@/canvas/connection";
@@ -40,7 +42,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         <Section title="Your account">
           <dl className="flex flex-col gap-3">
             <Row label="Name">{actor.displayName}</Row>
-            <Row label="NetID">
+            <Row label={loginIdLabel().title}>
               <span translate="no">{actor.netId}</span>
             </Row>
             <Row label="Access">{actor.isAdmin ? "Instructor and DALAA admin" : "Instructor"}</Row>
@@ -69,8 +71,6 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     </>
   );
 }
-
-const date = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 function CanvasStatus({ connection }: { connection: ConnectionSummary | null }) {
   if (!connection) {
@@ -103,7 +103,7 @@ function CanvasStatus({ connection }: { connection: ConnectionSummary | null }) 
         <Row label="Connected as">{connection.canvasUserName}</Row>
         <Row label="Token">
           ending in <span className="font-mono" translate="no">{connection.tokenLast4}</span>, added{" "}
-          {date.format(connection.addedAt)}
+          <LocalTime value={connection.addedAt} style="date" />
         </Row>
       </dl>
       <div className="flex flex-wrap gap-3">

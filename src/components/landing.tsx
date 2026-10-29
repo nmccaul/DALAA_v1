@@ -7,6 +7,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { loginIdLabel } from "@/auth/login-id";
 import { Logo } from "@/components/logo";
 import { buttonStyles } from "@/components/ui";
 import { isLive, TOOLS } from "@/tools/catalog";
@@ -201,7 +202,7 @@ export function Landing() {
             <ol className="flex flex-col gap-5">
               {[
                 ["Connect Canvas", "Paste a Canvas access token once. DALAA reads your courses; nothing changes in Canvas until you ask."],
-                ["Bring in a course", "Pick it from your list. Sections and class list come with it, and students sign in with their NetID."],
+                ["Bring in a course", `Pick it from your list. Sections and class list come with it, and students sign in with their ${loginIdLabel().noun}.`],
                 ["Choose what students do", "Pick a tool and give it your reading or case. DALAA drafts the activity for you to edit."],
               ].map(([title, body]) => (
                 <li key={title} className="flex flex-col gap-1">

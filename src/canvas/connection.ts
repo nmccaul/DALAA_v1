@@ -10,6 +10,7 @@ import { randomBytes } from "node:crypto";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { CanvasError, canvasClient, type CanvasClient } from "./client";
+import { canvasBaseUrl } from "./institution";
 import { exchangeCode, oauthApp, refreshAccessToken, type OAuthTokens } from "./oauth";
 import { PRACTICE_TOKEN, practiceCanvas } from "./practice/server";
 import { openToken, sealToken } from "./vault";
@@ -22,11 +23,6 @@ export type ConnectionSummary = {
   addedAt: Date;
   verifiedAt: Date;
 };
-
-/** Where real Canvas is. One institution in v1 (D-018). */
-export function canvasBaseUrl(): string {
-  return process.env.CANVAS_BASE_URL || "https://byu.instructure.com";
-}
 
 /**
  * Practice Canvas runs in-process: the real client code (URLs, headers,

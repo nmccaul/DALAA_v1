@@ -1,5 +1,6 @@
 import { currentActor } from "@/auth/current";
-import { beginOAuth, canvasBaseUrl, connectReturnPath } from "@/canvas/connection";
+import { beginOAuth, connectReturnPath } from "@/canvas/connection";
+import { canvasBaseUrl } from "@/canvas/institution";
 import { authorizeUrl, oauthApp, oauthRedirectUri } from "@/canvas/oauth";
 import { db } from "@/db/client";
 import { appUrl } from "@/lti/config";

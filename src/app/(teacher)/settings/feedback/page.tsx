@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import { LocalTime } from "@/components/local-time";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { db } from "@/db/client";
 import { kindLabel } from "@/feedback/report";
 import { listReports } from "@/feedback/store";
-import { when } from "./when";
 
 export const metadata: Metadata = { title: "Feedback reports" };
 
@@ -35,7 +35,7 @@ export default async function FeedbackReportsPage() {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
                   <span className="font-medium text-text">{kindLabel(r.kind)}</span>
                   <span>{r.reporter}</span>
-                  <span>{when.format(r.createdAt)}</span>
+                  <span><LocalTime value={r.createdAt} /></span>
                   {r.status === "resolved" && <span className="rounded-control bg-accent-soft px-2 py-0.5">Resolved</span>}
                   {r.hasScreenshot && <span>Has a picture</span>}
                 </div>

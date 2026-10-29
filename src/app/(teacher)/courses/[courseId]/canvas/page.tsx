@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { loginIdLabel } from "@/auth/login-id";
 import { clientFor } from "@/canvas/connection";
 import { listImportable, type ImportableCourse } from "@/canvas/import";
 import { Button, EmptyState } from "@/components/ui";
@@ -31,7 +32,7 @@ export default async function LinkCanvasPage({ params }: PageProps<"/courses/[co
       <div className="flex max-w-2xl flex-col gap-2">
         <h2 className="font-display text-xl font-semibold">Connect this course to Canvas</h2>
         <p className="text-muted">
-          Pick its Canvas course. Students are matched by NetID, so nobody gets a second account. Anyone on your list
+          Pick its Canvas course. Students are matched by {loginIdLabel().noun}, so nobody gets a second account. Anyone on your list
           who isn&apos;t in Canvas is marked, never removed, and their work stays.
         </p>
       </div>

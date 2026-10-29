@@ -19,6 +19,8 @@ export type PlannedStudent = {
   canvasSectionId: number | null;
   /** Links to an existing account holding it (D-024). REST rosters don't carry one. */
   email?: string | null;
+  /** Canvas's Student View test user (NRPS says so). REST rosters don't say: undefined. */
+  studentView?: boolean;
 };
 
 export type ImportPlan = {

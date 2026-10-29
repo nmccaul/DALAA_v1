@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { requireActor } from "@/auth/current";
+import { LocalTime } from "@/components/local-time";
 import { Button, PageHeader, inputStyles } from "@/components/ui";
 import { db } from "@/db/client";
 import { kindLabel } from "@/feedback/report";
 import { getReport } from "@/feedback/store";
 import { resolveReportAction } from "../actions";
-import { when } from "../when";
 
 export const metadata: Metadata = { title: "Feedback report" };
 
@@ -20,8 +20,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
     </div>
   );
 }
-
-const clock = new Intl.DateTimeFormat("en-US", { timeStyle: "medium" });
 
 /** One report: what they wrote, the picture, the page, the console and errors, the commit. Admins only. */
 export default async function FeedbackReportPage({ params, searchParams }: PageProps<"/settings/feedback/[id]">) {
@@ -36,7 +34,10 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
   return (
     <>
       <Link href="/settings/feedback" className="text-sm text-muted hover:text-text">← All feedback reports</Link>
-      <PageHeader title={kindLabel(report.kind)} description={`From ${report.reporter}, ${when.format(report.createdAt)}`} />
+      <PageHeader
+        title={kindLabel(report.kind)}
+        description={<>From {report.reporter}, <LocalTime value={report.createdAt} /></>}
+      />
       <div className="flex max-w-4xl flex-col gap-6">
         <p className="whitespace-pre-wrap rounded-panel border border-border bg-surface p-5">{report.note}</p>
 
@@ -66,7 +67,7 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
         <LogList title={`Errors thrown — ${context.errors?.length ?? 0}`}>
           {context.errors?.map((e, i) => (
             <li key={i}>
-              <span className="text-muted">{clock.format(e.t)}</span> {e.message}
+              <span className="text-muted"><LocalTime value={e.t} style="clock" /></span> {e.message}
               {e.stack && <pre className="mt-1 overflow-x-auto text-xs text-muted">{e.stack}</pre>}
             </li>
           ))}
@@ -74,7 +75,7 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
         <LogList title={`Console warnings and errors — ${context.console?.length ?? 0}`}>
           {context.console?.map((c, i) => (
             <li key={i}>
-              <span className="text-muted">{clock.format(c.t)} {c.level}</span> {c.text}
+              <span className="text-muted"><LocalTime value={c.t} style="clock" /> {c.level}</span> {c.text}
             </li>
           ))}
         </LogList>

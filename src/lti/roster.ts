@@ -7,6 +7,7 @@
  * - Identity is the login ID, as in a launch: the `login_id` custom field when
  *   Canvas includes it, else the email (D-025). No login ID, no account.
  * - Only Learners become students; instructors and TAs are left alone.
+ *   Canvas's Student View user is a student marked `student_view`.
  * - NRPS has no sections, so a student's section is never changed here.
  */
 
@@ -17,7 +18,7 @@ import { applyPlan, taughtCourse, type SyncResult } from "@/canvas/sync";
 import { upsertStudent } from "@/courses/students";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { courseRole } from "./launch";
+import { courseRole, isStudentView } from "./launch";
 import { toPlatform, type PlatformRow } from "./registration";
 import { NRPS_SCOPE, serviceToken, type ServiceDeps } from "./services";
 import { rememberLtiUser } from "./users";
@@ -56,7 +57,13 @@ export function planFromMembers(members: NrpsMember[]): ImportPlan & { subs: Map
     }
     seen.add(netId);
     const email = m.email?.trim().toLowerCase() || null;
-    students.push({ netId, name: m.name?.trim() || netId, canvasSectionId: null, email });
+    students.push({
+      netId,
+      name: m.name?.trim() || netId,
+      canvasSectionId: null,
+      email,
+      studentView: isStudentView(m.roles ?? []),
+    });
     if (m.user_id) subs.set(netId, m.user_id);
   }
   return { sections: [], students, skipped: { notEnrolled, noNetId, inTwoSections: 0 }, subs };

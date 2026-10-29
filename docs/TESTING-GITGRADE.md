@@ -115,6 +115,5 @@ reports show up under DALAA **Settings → Feedback reports**.
 
 ## Known gaps (not bugs)
 - Teachers can't read a student's chat from the Grading tab yet.
-- Due times show in UTC.
 - No extra credit: a teacher score can't exceed the points.
 - The new-tab page from step 1.3 is plain on purpose.

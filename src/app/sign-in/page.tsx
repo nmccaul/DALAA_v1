@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentActor } from "@/auth/current";
 import { devPasswordRequired, devSignInEnabled } from "@/auth/dev";
+import { loginIdLabel, type LoginIdLabel } from "@/auth/login-id";
 import { MIN_PASSWORD, passwordSignInAvailable, schoolDomains } from "@/auth/password";
 import { Logo } from "@/components/logo";
 import { Button, inputStyles } from "@/components/ui";
@@ -10,21 +11,22 @@ import { createStudentAccount, devSignIn, passwordSignIn } from "./actions";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-const MESSAGES: Record<string, string> = {
-  "not-on-roster":
-    "We couldn't find you. Students: ask your instructor to add you to the course. Instructors: ask the DALAA team to add your NetID.",
-  "bad-netid": "That doesn't look like a NetID.",
+const messages = (loginId: LoginIdLabel): Record<string, string> => ({
+  "not-on-roster": `We couldn't find you. Students: ask your instructor to add you to the course. Instructors: ask the DALAA team to add your ${loginId.noun}.`,
+  "bad-netid": `That doesn't look like a ${loginId.noun}.`,
   password: "That email and password don't match.",
   "bad-email": "That doesn't look like an email address.",
   "not-school-email": "Use your school email address.",
   "account-exists": "There's already an account for that email. Sign in instead.",
   "weak-password": `Choose a longer password (at least ${MIN_PASSWORD} characters).`,
   disabled: "Sign-in isn't set up on this site yet.",
-};
+});
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
   if (await currentActor()) redirect("/");
   const { error, mode } = await searchParams;
+  const loginId = loginIdLabel();
+  const MESSAGES = messages(loginId);
   const message = typeof error === "string" ? MESSAGES[error] : undefined;
   const creating = mode === "create";
   const domains = schoolDomains();
@@ -64,13 +66,13 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         ))}
       {devSignInEnabled() && !creating && (
         <details className="flex flex-col gap-4" open={!passwordSignInAvailable()}>
-          <summary className="cursor-pointer text-sm text-muted">Test sign-in with a NetID</summary>
+          <summary className="cursor-pointer text-sm text-muted">Test sign-in with a {loginId.noun}</summary>
           <form action={devSignIn} className="mt-4 flex flex-col gap-4">
             <p className="text-sm text-muted">
               This is a test sign-in. BYU sign-in replaces it before real students use DALAA.
             </p>
             <label className="flex flex-col gap-2">
-              <span className="font-medium">NetID</span>
+              <span className="font-medium">{loginId.title}</span>
               <input name="netId" required autoComplete="username" spellCheck={false} autoCapitalize="none" className={inputStyles} />
             </label>
             <label className="flex flex-col gap-2">
@@ -84,7 +86,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
                 <input name="password" type="password" required className={inputStyles} />
               </label>
             )}
-            <Button variant="secondary">Sign in with NetID</Button>
+            <Button variant="secondary">Sign in with {loginId.noun}</Button>
           </form>
         </details>
       )}

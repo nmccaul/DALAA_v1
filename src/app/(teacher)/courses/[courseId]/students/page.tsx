@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { loginIdLabel } from "@/auth/login-id";
 import { db } from "@/db/client";
+import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { listRoster } from "@/courses/queries";
@@ -19,7 +22,6 @@ const SYNC_ERRORS: Record<string, string> = {
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const dateTime = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 
 export default async function CourseStudentsPage({
   params,
@@ -31,13 +33,18 @@ export default async function CourseStudentsPage({
     const v = q[key];
     return typeof v === "string" && Number(v) > 0 ? Number(v) : 0;
   };
-  const roster = await listRoster(db(), actor, course.id);
+  const everyone = await listRoster(db(), actor, course.id);
+  // Canvas's Student View test users are set aside unless asked for; never deleted.
+  const studentViews = everyone.filter((s) => s.studentView).length;
+  const showStudentView = q.studentview === "1";
+  const roster = showStudentView ? everyone : everyone.filter((s) => !s.studentView);
   const fromLti = await isLtiCourse(db(), course.id);
   const hasSections = roster.some((s) => s.section);
+  const loginId = loginIdLabel();
 
   // After "Bring in" (PR #81): how many were added, and why anyone wasn't.
   const importNotes = [
-    count("nonetid") && `${plural(count("nonetid"), "student wasn't", "students weren't")} added because Canvas didn't share their NetID.`,
+    count("nonetid") && `${plural(count("nonetid"), "student wasn't", "students weren't")} added because Canvas didn't share their ${loginId.noun}.`,
     count("twosections") && `${plural(count("twosections"), "student is", "students are")} in two sections in Canvas, so they're listed without a section.`,
     count("dropped") && `${count("dropped")} who dropped the course in Canvas ${count("dropped") === 1 ? "wasn't" : "weren't"} added.`,
   ].filter(Boolean) as string[];
@@ -78,9 +85,11 @@ export default async function CourseStudentsPage({
       {course.canvasLinked || fromLti ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">
-            {course.canvasSyncedAt
-              ? `Class list last matched Canvas ${dateTime.format(course.canvasSyncedAt)}.`
-              : "Class list from Canvas."}
+            {course.canvasSyncedAt ? (
+              <>Class list last matched Canvas <LocalTime value={course.canvasSyncedAt} />.</>
+            ) : (
+              "Class list from Canvas."
+            )}
           </p>
           <form action={fromLti ? ltiSyncAction : syncAction}>
             <input type="hidden" name="courseId" value={course.id} />
@@ -96,9 +105,9 @@ export default async function CourseStudentsPage({
         </div>
       )}
 
-      {roster.length === 0 ? (
+      {roster.length === 0 && studentViews === 0 ? (
         <EmptyState title="No students yet">
-          <p>Students you add will appear here and can sign in with their NetID.</p>
+          <p>Students you add will appear here and can sign in with their {loginId.noun}.</p>
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-panel border border-border bg-surface">
@@ -106,22 +115,43 @@ export default async function CourseStudentsPage({
             <thead className="border-b border-border text-muted">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">Name</th>
-                <th scope="col" className="px-4 py-3 font-medium">NetID</th>
+                <th scope="col" className="px-4 py-3 font-medium">{loginId.title}</th>
                 {hasSections && <th scope="col" className="px-4 py-3 font-medium">Section</th>}
                 <th scope="col" className="px-4 py-3 font-medium"><span className="sr-only">Status</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
+              {roster.length === 0 && (
+                <tr>
+                  <td colSpan={hasSections ? 4 : 3} className="px-4 py-3 text-muted">
+                    No students yet besides Canvas Student View.
+                  </td>
+                </tr>
+              )}
               {roster.map((s) => (
                 <tr key={s.netId}>
                   <td className="px-4 py-3 font-medium">{s.name}</td>
                   <td className="px-4 py-3 text-muted" translate="no">{s.netId}</td>
                   {hasSections && <td className="px-4 py-3 tabular-nums text-muted">{s.section ?? "None"}</td>}
-                  <td className="px-4 py-3 text-muted">{s.status === "flagged" ? "Not on the latest class list" : ""}</td>
+                  <td className="px-4 py-3 text-muted">
+                    {[s.studentView && "Canvas Student View", s.status === "flagged" && "Not on the latest class list"]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {studentViews > 0 && (
+            <p className="border-t border-border px-4 py-3 text-sm">
+              <Link
+                href={showStudentView ? `/courses/${course.id}/students` : `/courses/${course.id}/students?studentview=1`}
+                className="font-medium text-accent-text hover:underline"
+              >
+                {showStudentView ? "Hide Canvas Student View" : `Show Canvas Student View (${studentViews})`}
+              </Link>
+            </p>
+          )}
         </div>
       )}
     </div>
