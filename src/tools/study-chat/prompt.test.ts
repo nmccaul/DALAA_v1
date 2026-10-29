@@ -21,6 +21,7 @@ describe("the chat prompt", () => {
       "at most 12 messages",
       'What the student read before the chat ("Case: Harbor Bikes")',
       content.body,
+      "Don't make up facts or figures",
     ]) {
       expect(prompt).toContain(part);
     }

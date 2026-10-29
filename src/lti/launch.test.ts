@@ -170,11 +170,12 @@ describe("LTI launch sign-in", () => {
     expect(u).toBe(1);
   });
 
-  it("a student joins the course and goes home, without becoming staff", async () => {
+  it("a student joins the course and lands on its assignments, without becoming staff", async () => {
     const res = await launch({ loginId: "sam@example.edu", email: "sam@example.edu", name: "Sam" });
     expect(res.status).toBe(303);
-    expect(await landsOn(res)).toBe("/");
     const [user] = await db.query<{ id: string }>("select id from users where external_id = 'sam@example.edu'");
+    const [{ course_id }] = await db.query<{ course_id: string }>("select course_id from course_members where user_id = $1", [user.id]);
+    expect(await landsOn(res)).toBe(`/?course=${course_id}`);
     expect(signedInAs()).toBe(user.id);
     const [m] = await db.query("select role from course_members where user_id = $1", [user.id]);
     expect(m).toEqual({ role: "student" });

@@ -37,6 +37,9 @@ export type TakenActivity = {
 /** Where a student takes an activity (src/app/activities/[activityId]). */
 export const takePath = (activityId: string) => `/activities/${activityId}`;
 
+/** The student home (src/app/page.tsx), showing one course's assignments. */
+export const studentHomePath = (courseId: string) => `/?course=${courseId}`;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ATTEMPT_COLUMNS = `id, activity_id as "activityId", status, ended_by as "endedBy",
@@ -91,4 +94,26 @@ export async function completeAttempt(db: Db, attemptId: string, endedBy: EndedB
   );
   const [row] = await db.query<Attempt>(`select ${ATTEMPT_COLUMNS} from attempts where id = $1`, [attemptId]);
   return row;
+}
+
+/** A finished attempt with what its grader needs: whose it is and the activity's settings. Server-only callers. */
+export type FinishedAttempt = {
+  attempt: Attempt;
+  userId: string;
+  activity: { id: string; courseId: string; tool: string; settings: Record<string, unknown> };
+};
+
+/** A completed attempt for its grader; null while it's in progress or for a made-up id. */
+export async function getFinishedAttempt(db: Db, attemptId: string): Promise<FinishedAttempt | null> {
+  if (!UUID.test(attemptId)) return null;
+  const [row] = await db.query<Attempt & { userId: string; courseId: string; tool: string; settings: Record<string, unknown> }>(
+    `select t.id, t.activity_id as "activityId", t.status, t.ended_by as "endedBy", t.started_at as "startedAt",
+            t.completed_at as "completedAt", t.user_id as "userId", a.course_id as "courseId", a.tool, a.settings
+       from attempts t join activities a on a.id = t.activity_id
+      where t.id = $1 and t.status = 'completed'`,
+    [attemptId],
+  );
+  if (!row) return null;
+  const { userId, courseId, tool, settings, ...attempt } = row;
+  return { attempt, userId, activity: { id: attempt.activityId, courseId, tool, settings } };
 }

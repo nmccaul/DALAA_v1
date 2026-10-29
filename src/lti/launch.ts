@@ -16,7 +16,7 @@
  *   `activity_id` opens that assignment and remembers its Canvas link.
  */
 
-import { takePath } from "@/attempts/store";
+import { studentHomePath, takePath } from "@/attempts/store";
 import { normalizeNetId } from "@/auth/admit";
 import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
@@ -105,7 +105,7 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
         ? `/courses/${courseId}${activityId ? `/activities/${activityId}` : ""}`
         : activityId
           ? takePath(activityId)
-          : "/";
+          : studentHomePath(courseId);
     return { ok: true as const, userId, courseId, role, path };
   });
 }

@@ -51,7 +51,8 @@ async function openChat(db: Db, actor: Actor, activityId: string): Promise<Chat 
   return { activity, settings: parsed.data };
 }
 
-async function doneTurns(db: Db, attemptId: string): Promise<Exchange[]> {
+/** The finished exchanges of an attempt, in the order they happened. */
+export async function doneTurns(db: Db, attemptId: string): Promise<Exchange[]> {
   return db.query<Exchange>(
     "select message, reply from chat_turns where attempt_id = $1 and status = 'done' order by sent_at, id",
     [attemptId],

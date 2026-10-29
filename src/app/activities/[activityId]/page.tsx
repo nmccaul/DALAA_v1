@@ -7,6 +7,9 @@ import { screensFor } from "@/tools/screens";
 
 export const metadata: Metadata = { title: "Assignment" };
 
+/** A tool may grade a finished attempt after the page is sent (`after`); that call needs the time. */
+export const maxDuration = 120;
+
 /** One assignment for a student of its course: the tool's own student screen (src/tools/screens.ts). */
 export default async function TakeActivityPage({ params }: PageProps<"/activities/[activityId]">) {
   const { activityId } = await params;

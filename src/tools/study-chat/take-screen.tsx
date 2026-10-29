@@ -1,14 +1,21 @@
+import { after } from "next/server";
+import { graderModel } from "@/ai/models";
 import { db } from "@/db/client";
+import { getResult } from "@/results/store";
+import { StudentResult } from "@/results/student-result";
 import type { TakeScreenProps } from "@/tools/screens";
 import { readChat } from "./chat";
 import { ChatRoom } from "./chat-room";
+import { gradeAttempt } from "./grade";
 import { StudyChatSettings } from "./schema";
 import { ENDED } from "./student-messages";
 import { studentView } from "./student-view";
 
 /**
- * A student's Study Chat: directions, the material, then the chat. The
- * browser gets `studentView` and the finished exchanges, nothing else.
+ * A student's Study Chat: directions, the material, then the chat, and once
+ * it has ended, the grade. The browser gets `studentView`, the finished
+ * exchanges and the student's own result, nothing else. An ended chat with no
+ * grade yet (or a failed one) is graded after the page is sent.
  */
 export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   const parsed = StudyChatSettings.safeParse(activity.settings);
@@ -18,6 +25,9 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   }
   const view = studentView(parsed.data);
   const { attempt } = chat;
+  const ended = attempt?.status === "completed" ? attempt : null;
+  const result = ended ? await getResult(db(), ended.id) : null;
+  if (ended && result?.status !== "graded") after(() => gradeAttempt(db(), graderModel(), ended.id));
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,8 +53,9 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
         view={view}
         initialTurns={chat.turns}
         startedAt={attempt?.startedAt.toISOString() ?? null}
-        ended={attempt?.status === "completed" && attempt.endedBy ? ENDED[attempt.endedBy] : null}
+        ended={ended?.endedBy ? ENDED[ended.endedBy] : null}
       />
+      {ended && <StudentResult result={result} />}
     </div>
   );
 }
