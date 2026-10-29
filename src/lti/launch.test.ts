@@ -87,6 +87,8 @@ describe("LTI launch sign-in", () => {
     email?: string;
     name?: string;
     membershipsUrl?: string;
+    lineItemsUrl?: string;
+    sub?: string;
   }) {
     const login = await beginLogin(
       db,
@@ -115,11 +117,14 @@ describe("LTI launch sign-in", () => {
           service_versions: ["2.0"],
         },
       }),
+      ...(opts.lineItemsUrl && {
+        "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint": { scope: [], lineitems: opts.lineItemsUrl },
+      }),
     })
       .setProtectedHeader({ alg: "RS256", kid: "k" })
       .setIssuer(CANVAS_CLOUD_ISSUER)
       .setAudience(reg.clientId)
-      .setSubject("opaque-sub")
+      .setSubject(opts.sub ?? "opaque-sub")
       .setIssuedAt()
       .setExpirationTime("5m")
       .sign(platformKey);
@@ -240,5 +245,30 @@ describe("LTI launch sign-in", () => {
     expect(await stored()).toBe(url(1));
     await launch({ context: "ctx-nrps", roles: LEARNER, loginId: "nrps.student", membershipsUrl: url(2) });
     expect(await stored()).toBe(url(2));
+  });
+
+  it("remembers the gradebook URL and each user's platform id for sending grades", async () => {
+    const url = (n: number) => `https://canvas.example.edu/api/lti/courses/${n}/line_items`;
+    const ctx = async () =>
+      (await db.query<{ memberships_url: string | null; lineitems_url: string | null }>(
+        "select memberships_url, lineitems_url from lti_contexts where context_id = 'ctx-ags'",
+      ))[0];
+    const subOf = async (loginId: string) =>
+      (await db.query<{ sub: string }>(
+        "select l.sub from lti_users l join users u on u.id = l.user_id where u.external_id = $1",
+        [loginId],
+      )).map((r) => r.sub);
+    await launch({ context: "ctx-ags", roles: TEACHER, loginId: "ags.teacher", sub: "t-1", lineItemsUrl: url(1), membershipsUrl: "https://canvas.example.edu/nrps" });
+    expect(await ctx()).toEqual({ memberships_url: "https://canvas.example.edu/nrps", lineitems_url: url(1) });
+    await launch({ context: "ctx-ags", roles: LEARNER, loginId: "ags.student", sub: "s-1" });
+    expect(await ctx()).toEqual({ memberships_url: "https://canvas.example.edu/nrps", lineitems_url: url(1) });
+    await launch({ context: "ctx-ags", roles: LEARNER, loginId: "ags.student", sub: "s-2", lineItemsUrl: url(2) });
+    expect((await ctx()).lineitems_url).toBe(url(2));
+    expect(await subOf("ags.teacher")).toEqual(["t-1"]);
+    expect(await subOf("ags.student")).toEqual(["s-2"]);
+    // The sub moves to whichever account Canvas last launched with it.
+    await launch({ context: "ctx-ags", roles: LEARNER, loginId: "ags.renamed", sub: "s-2" });
+    expect(await subOf("ags.student")).toEqual([]);
+    expect(await subOf("ags.renamed")).toEqual(["s-2"]);
   });
 });

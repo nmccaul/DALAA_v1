@@ -10,6 +10,7 @@ import { loadToolKey, type ToolKey } from "./keys";
 import { ensurePlatform, envRegistration, type Platform } from "./registration";
 import { isLtiCourse, planFromMembers, syncLtiRoster } from "./roster";
 import { forgetServiceTokens } from "./services";
+import { ltiSubs } from "./users";
 
 const ROLE = "http://purl.imsglobal.org/vocab/lis/v2/membership#";
 const CUSTOM = "https://purl.imsglobal.org/spec/lti/claim/custom";
@@ -41,6 +42,10 @@ describe("planFromMembers", () => {
       { netId: "bonetid", name: "BO", canvasSectionId: null, email: "bo@school.edu" },
     ]);
     expect(plan.skipped).toEqual({ notEnrolled: 2, noNetId: 2, inTwoSections: 0 });
+    expect([...plan.subs]).toEqual([
+      ["amy@school.edu", "sub-Amy@School.edu"],
+      ["bonetid", "sub-bo@school.edu"],
+    ]);
   });
 });
 
@@ -124,6 +129,8 @@ describe("syncLtiRoster", () => {
     expect(users.map((u) => u.id)).toEqual([existing]);
     expect(await roster(id)).toEqual(["amy:active"]);
     expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true, added: 0, flagged: 0 });
+    // Grades for Amy go to the platform id Canvas gave her (src/lti/users.ts).
+    expect(await ltiSubs(db, platform.id, [existing])).toEqual(new Map([[existing, "sub-Amy@School.edu"]]));
   });
 
   it("raises instead of truncating a class list with too many pages", async () => {
