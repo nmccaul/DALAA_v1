@@ -231,10 +231,11 @@ export function ChatRoom({
   );
 }
 
-function Bubble({ text, from, mine = false }: { text: string; from?: string; mine?: boolean }) {
+/** One message; the student's own (`mine`) sits on the right, labeled `from` or "You". */
+export function Bubble({ text, from, mine = false }: { text: string; from?: string; mine?: boolean }) {
   return (
     <div className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
-      <span className="text-xs text-muted">{mine ? "You" : from}</span>
+      <span className="text-xs text-muted">{from ?? (mine ? "You" : "")}</span>
       <p
         className={`max-w-[85%] rounded-panel px-4 py-2 leading-relaxed whitespace-pre-wrap break-words ${
           mine ? "bg-accent text-white" : "border border-border bg-surface"

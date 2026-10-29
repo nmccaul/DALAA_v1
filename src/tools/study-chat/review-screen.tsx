@@ -9,6 +9,7 @@ import { MaterialForm, RemoveGuideForm } from "./forms";
 import { canvasGuideHref, GuidePanel } from "./guide-panel";
 import { MODES } from "./modes";
 import { StudyChatSettings } from "./schema";
+import { TrialPanel } from "./trial-panel";
 
 /** Why a saved change won't reach some students (D-031); NULL when nobody has started. Exported for tests. */
 export function startedNote(started: number): string | null {
@@ -49,6 +50,7 @@ export async function StudyChatReview({ actor, activity, addToCanvas }: ReviewSc
         initial={parsed.data}
         addToCanvas={addToCanvas}
       />
+      <TrialPanel activityId={activity.id} persona={parsed.data.persona.name} />
     </div>
   );
 }

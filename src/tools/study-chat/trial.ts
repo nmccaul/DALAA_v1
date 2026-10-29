@@ -36,6 +36,15 @@ export const TRIAL_MAX_TURNS = 12;
 /** A trial row this old belongs to a request that died; the next trial takes it over. */
 const STALE_TRIAL_MINUTES = 10;
 
+/** Why the trial stopped, for the teacher. */
+export function trialEnding(trial: Pick<Trial, "endedBy" | "turns">): string {
+  const n = trial.turns.length;
+  const after = `Ended after ${n} ${n === 1 ? "message" : "messages"} from the sample student`;
+  if (trial.endedBy === "turns") return `${after}: it reached the chat's message limit.`;
+  if (trial.endedBy === "question") return `${after}: they answered the chat's question.`;
+  return `${after}: a sample student stops at ${TRIAL_MAX_TURNS}.`;
+}
+
 /** The student model is the cheap chat model; the grader is the real one. */
 export type TrialModels = { student: LanguageModel; reply: LanguageModel; check: LanguageModel; grader: LanguageModel };
 

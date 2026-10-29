@@ -9,7 +9,7 @@ import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
 import { answering, draft } from "./test-fixtures";
-import { runTrial, TRIAL_BUSY, TRIAL_FAILED, TRIAL_MAX_TURNS, type TrialModels } from "./trial";
+import { runTrial, trialEnding, TRIAL_BUSY, TRIAL_FAILED, TRIAL_MAX_TURNS, type TrialModels } from "./trial";
 
 const GUIDE = "ANSWER KEY: the winter cash squeeze sinks a second store.";
 const READING = "Harbor Bikes sells bikes in a beach town.";
@@ -163,5 +163,20 @@ describe("trying a Study Chat with a sample student", () => {
     const id = await activity(draft());
     expect(await runTrial(db, models(), student, id, "strong")).toEqual({ ok: false, reason: "We couldn't find that activity." });
     expect(await db.query("select 1 from sample_trials")).toEqual([]);
+  });
+});
+
+describe("trialEnding", () => {
+  const turns = (n: number) => Array.from({ length: n }, () => ({ message: "m", reply: "r" }));
+  it("says how many messages the sample student sent and why it stopped", () => {
+    expect(trialEnding({ endedBy: "turns", turns: turns(6) })).toBe(
+      "Ended after 6 messages from the sample student: it reached the chat's message limit.",
+    );
+    expect(trialEnding({ endedBy: "question", turns: turns(1) })).toBe(
+      "Ended after 1 message from the sample student: they answered the chat's question.",
+    );
+    expect(trialEnding({ endedBy: "cap", turns: turns(TRIAL_MAX_TURNS) })).toBe(
+      `Ended after ${TRIAL_MAX_TURNS} messages from the sample student: a sample student stops at ${TRIAL_MAX_TURNS}.`,
+    );
   });
 });

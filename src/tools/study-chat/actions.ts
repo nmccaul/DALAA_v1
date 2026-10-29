@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { setActivityGuide } from "@/activities/store";
-import { graderModel } from "@/ai/models";
+import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
@@ -10,6 +10,7 @@ import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
+import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
 
@@ -104,4 +105,22 @@ export async function removeGuideAction(_prev: FormState, form: FormData): Promi
   const removed = await setActivityGuide(db(), actor, activityId, null);
   if (!removed.ok) return { error: removed.reason };
   redirect(keepPicker(reviewPath(courseId, activityId), pickerRequest(form.get(PICKER_PARAM))));
+}
+
+export type TrialState = { error?: string; trial?: Trial & { ending: string } };
+
+/** The review screen's "Try it with a sample student": runs one trial of the saved settings. */
+export async function trialAction(_prev: TrialState, form: FormData): Promise<TrialState> {
+  const actor = await requireActor();
+  const choice = String(form.get("level") ?? "");
+  if (!(TRIAL_LEVELS as readonly string[]).includes(choice)) return { error: "Pick a struggling or a strong student." };
+  const chat = chatModel();
+  const outcome = await runTrial(
+    db(),
+    { student: chat, reply: chat, check: chat, grader: graderModel() },
+    actor,
+    String(form.get("activityId") ?? ""),
+    choice as TrialLevel,
+  );
+  return outcome.ok ? { trial: { ...outcome.trial, ending: trialEnding(outcome.trial) } } : { error: outcome.reason };
 }
