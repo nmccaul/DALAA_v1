@@ -5,6 +5,7 @@
  * Only a course's teachers create, read or publish its activities.
  */
 
+import { getTaughtGuide } from "@/content/guide";
 import { getTaughtCourse } from "@/courses/queries";
 import { and, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -122,5 +123,25 @@ export async function updateActivity(
     "update activities set title = $2, settings = $3::text::jsonb, points = $4, updated_at = now() where id = $1",
     [activity.id, changes.title, JSON.stringify(changes.settings), changes.points],
   );
+  return { ok: true };
+}
+
+/**
+ * Attaches an AI-only guide from the same course (src/content/guide.ts), or
+ * removes it with NULL. Doing it twice changes nothing. Like other edits it
+ * reaches attempts already under way: the guide isn't in their settings copy (D-031).
+ */
+export async function setActivityGuide(
+  db: Db,
+  actor: Actor,
+  activityId: string,
+  guideId: string | null,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const activity = await getTaughtActivity(db, actor, activityId);
+  if (!activity) return { ok: false, reason: "That assignment isn't one of yours." };
+  if (guideId !== null && !(await getTaughtGuide(db, actor, activity.courseId, guideId))) {
+    return { ok: false, reason: "We couldn't find that guide. Add it again." };
+  }
+  await db.query("update activities set guide_id = $2, updated_at = now() where id = $1", [activity.id, guideId]);
   return { ok: true };
 }

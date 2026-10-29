@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
+import { setActivityGuide } from "@/activities/store";
 import { getTakenActivity } from "@/attempts/store";
 import { aiGuide, getTaughtGuide, saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
@@ -175,6 +176,29 @@ describe("the AI-only guide", () => {
     expect(
       await createStudyChat(db, model, prof, course, { ...request, guideId: elsewhere.content.id, creationKey: randomUUID() }),
     ).toEqual({ ok: false, reason: "We couldn't find that guide. Add it again." });
+  });
+
+  it("is added and removed after drafting, by the course's teachers only", async () => {
+    const other = await saveGuide(db, prof, course, randomUUID(), { kind: "paste", name: "Argument map", text: "Map." });
+    if (!other.ok) throw new Error(other.reason);
+    expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
+    expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
+    expect(await aiGuide(db, activity)).toEqual({ name: "Argument map", body: "Map." });
+
+    expect(await setActivityGuide(db, prof, activity, null)).toEqual({ ok: true });
+    expect(await aiGuide(db, activity)).toBeNull();
+
+    const refused = { ok: false, reason: "That assignment isn't one of yours." };
+    expect(await setActivityGuide(db, student, activity, guideId)).toEqual(refused);
+    expect(await setActivityGuide(db, student, activity, null)).toEqual(refused);
+    const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
+    if (!elsewhere.ok) throw new Error(elsewhere.reason);
+    expect(await setActivityGuide(db, prof, activity, elsewhere.content.id)).toEqual({
+      ok: false,
+      reason: "We couldn't find that guide. Add it again.",
+    });
+    expect(await setActivityGuide(db, prof, activity, "not-a-guide")).toMatchObject({ ok: false });
+    expect(await aiGuide(db, activity)).toBeNull();
   });
 
   it("is fenced apart from the reading in the draft prompt", () => {

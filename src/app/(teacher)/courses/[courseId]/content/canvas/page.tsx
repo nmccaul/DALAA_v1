@@ -26,12 +26,19 @@ const PROBLEMS: Record<CourseContentProblem, { title: string; body: string }> = 
 /**
  * Course content from Canvas (T16c): pick one page or file and it's saved to
  * the course. Whoever sent the teacher here (?next=) gets it back as ?content=.
+ * With ?for=guide it's saved as a guide only the AI reads and comes back as
+ * ?guide=; with &activity= too, it's attached to that activity.
  */
 export default async function CanvasContentPage({ params, searchParams }: PageProps<"/courses/[courseId]/content/canvas">) {
   const { actor, course } = await loadTaughtCourse((await params).courseId);
   const q = await searchParams;
   const next = typeof q.next === "string" && q.next ? connectReturnPath(q.next) : "";
-  const here = `/courses/${course.id}/content/canvas${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const guide = q.for === "guide" ? { activityId: typeof q.activity === "string" ? q.activity : "" } : null;
+  const hereQuery = new URLSearchParams();
+  if (next) hereQuery.set("next", next);
+  if (guide) hereQuery.set("for", "guide");
+  if (guide?.activityId) hereQuery.set("activity", guide.activityId);
+  const here = `/courses/${course.id}/content/canvas${hereQuery.size ? `?${hereQuery}` : ""}`;
   const saved = typeof q.content === "string" ? await getContent(db(), actor, course.id, q.content) : null;
   const back = next || `/courses/${course.id}`;
 
@@ -83,7 +90,7 @@ export default async function CanvasContentPage({ params, searchParams }: PagePr
   } else {
     const item = (pick: string, title: string, detail: string) => (
       <li key={pick}>
-        <PickForm courseId={course.id} creationKey={randomUUID()} pick={pick} next={next} here={here}>
+        <PickForm courseId={course.id} creationKey={randomUUID()} pick={pick} next={next} here={here} guide={guide}>
           <span className="break-words font-medium">{title}</span>
           <span className="text-sm text-muted">{detail}</span>
         </PickForm>
@@ -117,7 +124,12 @@ export default async function CanvasContentPage({ params, searchParams }: PagePr
       </Link>
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Use a Canvas page or file</h2>
-        <p className="text-muted">Pick what students should study. DALAA keeps a copy of its text for this course.</p>
+        <p className="text-muted">
+          {guide
+            ? "Pick the guide only the AI reads: an answer key or teaching note. Students never see it."
+            : "Pick what students should study."}{" "}
+          DALAA keeps a copy of its text for this course.
+        </p>
       </div>
       {saved && (
         <p role="status" className="rounded-control border border-border bg-accent-soft px-4 py-3 text-sm">

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Button, inputStyles } from "@/components/ui";
 import { PICKER_PARAM } from "@/lti/picker";
-import { draftAction, saveMaterialAction, type FormState } from "./actions";
+import { draftAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
 
 function Problem({ state }: { state: FormState }) {
@@ -21,26 +21,31 @@ export function PickerField({ addToCanvas }: { addToCanvas: string | null }) {
 
 /**
  * Paste the material, or upload it. A chosen file wins over pasted text. With
- * `guideFor` (the saved material's id) it takes the AI-only guide instead.
+ * `guideFor` (the saved material's id, on create) or `guideOf` (an activity's
+ * id, on its review) it takes the AI-only guide instead.
  */
 export function MaterialForm({
   courseId,
   creationKey,
   addToCanvas,
   guideFor = null,
+  guideOf = null,
 }: {
   courseId: string;
   creationKey: string;
   addToCanvas: string | null;
   guideFor?: string | null;
+  guideOf?: string | null;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveMaterialAction, {});
-  const id = (name: string) => (guideFor ? `guide-${name}` : name);
+  const guide = Boolean(guideFor || guideOf);
+  const id = (name: string) => (guide ? `guide-${name}` : name);
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="creationKey" value={creationKey} />
       {guideFor ? <input type="hidden" name="guideFor" value={guideFor} /> : null}
+      {guideOf ? <input type="hidden" name="guideOf" value={guideOf} /> : null}
       <PickerField addToCanvas={addToCanvas} />
       <div className="flex flex-col gap-2">
         <label htmlFor={id("file")} className="font-medium">
@@ -54,20 +59,36 @@ export function MaterialForm({
         <label htmlFor={id("name")} className="font-medium">
           Title
         </label>
-        <input id={id("name")} name="name" placeholder={guideFor ? "Harbor Bikes teaching note" : "Case: Harbor Bikes"} autoComplete="off" className={inputStyles} />
+        <input id={id("name")} name="name" placeholder={guide ? "Harbor Bikes teaching note" : "Case: Harbor Bikes"} autoComplete="off" className={inputStyles} />
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor={id("text")} className="font-medium">
-          {guideFor ? "Text only the AI reads" : "Text students will read"}
+          {guide ? "Text only the AI reads" : "Text students will read"}
         </label>
         <textarea id={id("text")} name="text" rows={8} className={inputStyles} />
       </div>
       <Problem state={state} />
       <div>
-        <Button variant={guideFor ? "secondary" : undefined} disabled={pending}>
-          {pending ? "Reading…" : guideFor ? "Add this guide" : "Use this material"}
+        <Button variant={guide ? "secondary" : undefined} disabled={pending}>
+          {pending ? "Reading…" : guide ? "Add this guide" : "Use this material"}
         </Button>
       </div>
+    </form>
+  );
+}
+
+/** Takes the AI-only guide off an activity, from its review screen. */
+export function RemoveGuideForm({ courseId, activityId, addToCanvas }: { courseId: string; activityId: string; addToCanvas: string | null }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(removeGuideAction, {});
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="courseId" value={courseId} />
+      <input type="hidden" name="activityId" value={activityId} />
+      <PickerField addToCanvas={addToCanvas} />
+      <button disabled={pending} className="text-sm text-muted underline hover:text-text">
+        {pending ? "Removing…" : "Remove"}
+      </button>
+      <Problem state={state} />
     </form>
   );
 }
