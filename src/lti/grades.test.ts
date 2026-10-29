@@ -117,7 +117,7 @@ describe("previewGrades / sendGrades", () => {
     }
     return id;
   }
-  const send = (opts = { includeLowered: false }, clientKey = randomUUID()) => sendGrades(db, prof, activity, clientKey, opts, deps());
+  const send = (opts: { includeLowered: boolean; onlyIfClean?: boolean } = { includeLowered: false }, clientKey = randomUUID()) => sendGrades(db, prof, activity, clientKey, opts, deps());
   const categories = async () => {
     const p = await previewGrades(db, prof, activity, deps());
     if (!p.ok || !p.plan.ok) throw new Error(JSON.stringify(p));
@@ -156,6 +156,19 @@ describe("previewGrades / sendGrades", () => {
     expect(await send(undefined, clientKey)).toEqual(first);
     expect(posted).toHaveLength(1);
     expect(await sendGrades(db, prof, activity, "not-a-uuid", { includeLowered: false }, deps())).toEqual({ ok: false, reason: "bad_key" });
+  });
+
+  it("one click sends the clean case, and stops for a decision without recording a push", async () => {
+    await student("ana", { score: 8 });
+    await student("ben");
+    expect(await send({ includeLowered: false, onlyIfClean: true })).toMatchObject({ ok: true, summary: { sent: 1 } });
+
+    await student("cy", { score: 6, sub: null });
+    const clientKey = randomUUID();
+    expect(await send({ includeLowered: false, onlyIfClean: true }, clientKey)).toEqual({ ok: false, reason: "needs_preview" });
+    expect(posted).toHaveLength(1);
+    // The preview's confirm reuses the key: nothing was recorded under it.
+    expect(await send({ includeLowered: false }, clientKey)).toMatchObject({ ok: true, summary: { sent: 0, skipped: { not_in_canvas: 1 } } });
   });
 
   it("reports a score changed in Canvas and never overwrites it", async () => {

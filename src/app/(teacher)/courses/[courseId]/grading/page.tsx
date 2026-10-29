@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { Button, EmptyState, inputStyles } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
+import { isLtiCourse } from "@/lti/roster";
 import { listCourseGrades, type StudentGrade } from "@/results/grading";
-import { resolveDisputeAction, setScoreAction } from "./actions";
+import { resolveDisputeAction, sendGradesAction, setScoreAction } from "./actions";
+import { REFUSAL, readSummary, summaryLines } from "./push-text";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
@@ -23,6 +26,8 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
   const q = await searchParams;
   const assignments = await listCourseGrades(db(), actor, course.id);
   const error = typeof q.error === "string" ? ERRORS[q.error] : undefined;
+  const fromCanvas = await isLtiCourse(db(), course.id);
+  const pushError = typeof q.pusherror === "string" ? (REFUSAL[q.pusherror as keyof typeof REFUSAL] ?? REFUSAL.unavailable) : null;
 
   const disputed = assignments.reduce((n, a) => n + a.students.filter((s) => s.disputeId !== null).length, 0);
 
@@ -47,9 +52,31 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
       )}
       {assignments.map((a) => (
         <section key={a.activityId} className="flex flex-col gap-3" aria-labelledby={`grades-${a.activityId}`}>
-          <h2 id={`grades-${a.activityId}`} className="font-display text-xl font-semibold break-words">
-            {a.title} <span className="text-base font-normal text-muted">· {pointsFormat.format(a.points)} points</span>
-          </h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 id={`grades-${a.activityId}`} className="scroll-mt-4 font-display text-xl font-semibold break-words">
+              {a.title} <span className="text-base font-normal text-muted">· {pointsFormat.format(a.points)} points</span>
+            </h2>
+            {fromCanvas && a.students.some((s) => s.status === "graded") && (
+              <form action={sendGradesAction}>
+                <input type="hidden" name="courseId" value={course.id} />
+                <input type="hidden" name="activityId" value={a.activityId} />
+                <input type="hidden" name="clientKey" value={randomUUID()} />
+                <Button>Send grades to Canvas</Button>
+              </form>
+            )}
+          </div>
+          {q.pushed === a.activityId && (
+            <div
+              role={pushError ? "alert" : "status"}
+              className={`rounded-panel border px-4 py-3 text-sm ${pushError ? "border-danger text-danger" : "border-border-strong bg-accent-soft"}`}
+            >
+              {pushError ? (
+                <p>{pushError}</p>
+              ) : (
+                summaryLines(readSummary(q)).map((line) => <p key={line}>{line}</p>)
+              )}
+            </div>
+          )}
           {a.students.length === 0 ? (
             <p className="text-muted">No students on the class list yet.</p>
           ) : (

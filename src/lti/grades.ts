@@ -46,7 +46,7 @@ export type PushSummary = {
 
 export type SendResult =
   | { ok: true; summary: PushSummary }
-  | { ok: false; reason: GradesRefusal | "points_mismatch" | "in_progress" | "bad_key" };
+  | { ok: false; reason: GradesRefusal | "points_mismatch" | "in_progress" | "bad_key" | "needs_preview" };
 
 type Context = PlatformRow & {
   activity_id: string;
@@ -168,13 +168,15 @@ async function storedSummary(db: Db, activityId: string, clientKey: string): Pro
 /**
  * Sends new and raised scores (and lowered ones when `includeLowered`). The
  * same `clientKey` again returns the first push's summary and sends nothing.
+ * With `onlyIfClean` (the one-click button) it sends nothing and answers
+ * "needs_preview" when the teacher has something to decide first.
  */
 export async function sendGrades(
   db: Db,
   actor: Actor,
   activityId: string,
   clientKey: string,
-  opts: { includeLowered: boolean },
+  opts: { includeLowered: boolean; onlyIfClean?: boolean },
   deps: ServiceDeps = {},
 ): Promise<SendResult> {
   if (!UUID.test(clientKey)) return { ok: false, reason: "bad_key" };
@@ -186,6 +188,7 @@ export async function sendGrades(
   if (typeof prepared === "string") return { ok: false, reason: prepared };
   const { ctx, client, plan } = prepared;
   if (!plan.ok) return { ok: false, reason: "points_mismatch" };
+  if (opts.onlyIfClean && needsPreview(plan)) return { ok: false, reason: "needs_preview" };
   const lines = linesToSend(plan, opts);
 
   let lineItem = prepared.lineItem;
@@ -243,6 +246,10 @@ export async function sendGrades(
       status,
     ]);
   }
-  await db.query("update grade_pushes set summary = $2, finished_at = now() where id = $1", [push.id, JSON.stringify(summary)]);
+  // Through text: postgres.js would otherwise send the JSON string as a JSON string.
+  await db.query("update grade_pushes set summary = $2::text::jsonb, finished_at = now() where id = $1", [
+    push.id,
+    JSON.stringify(summary),
+  ]);
   return { ok: true, summary };
 }
