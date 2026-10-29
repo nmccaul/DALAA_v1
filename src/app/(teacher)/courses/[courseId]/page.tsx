@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { listCourseActivities } from "@/activities/queries";
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
@@ -45,7 +46,9 @@ export default async function CourseAssignmentsPage({ params }: PageProps<"/cour
                   </span>
                 )}
                 <div className="flex min-w-0 flex-col">
-                  <span className="font-medium break-words">{a.title}</span>
+                  <Link href={`/courses/${course.id}/activities/${a.id}`} className="font-medium break-words hover:underline">
+                    {a.title}
+                  </Link>
                   <span className="text-sm text-muted">
                     {tool?.name ?? a.tool}
                     {a.points !== null && ` · ${pointsFormat.format(a.points)} ${a.points === 1 ? "point" : "points"}`}
