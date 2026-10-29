@@ -62,7 +62,7 @@ export async function admit(db: Db, institutionId: string, identity: Identity): 
   return student ? { ok: true, userId: student.id } : { ok: false, reason: "not-on-roster" };
 }
 
-/** The Actor for a signed-in user id, with staff status read fresh. */
+/** The Actor for a signed-in user id, with staff status read fresh. Admin comes only from the allowlist. */
 export async function loadActor(db: Db, userId: string): Promise<Actor | null> {
   const [row] = await db.query<{
     id: string;
@@ -73,7 +73,13 @@ export async function loadActor(db: Db, userId: string): Promise<Actor | null> {
     is_admin: boolean;
   }>(
     `select u.id, u.institution_id, u.external_id, u.display_name,
-            (s.external_id is not null) as is_staff,
+            (s.external_id is not null
+             -- D-020: teaching a course Canvas launched (LTI) makes them staff
+             -- without the allowlist; Canvas has already said who teaches it.
+             or exists (select 1 from course_members cm
+                          join lti_contexts lc on lc.course_id = cm.course_id
+                         where cm.user_id = u.id and cm.role = 'instructor'
+                           and cm.status = 'active')) as is_staff,
             coalesce(s.is_admin, false)  as is_admin
        from users u
        left join staff_allowlist s
