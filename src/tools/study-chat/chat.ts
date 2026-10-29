@@ -13,7 +13,7 @@ import type { LanguageModel } from "ai";
 import { z } from "zod";
 import { completeAttempt, getAttempt, getTakenActivity, startAttempt, type Attempt, type TakenActivity } from "@/attempts/store";
 import { getStudentWork, saveStudentWork, type SaveWorkResult, type StudentWork, type WorkInput } from "@/attempts/work";
-import { generateStructured, streamReply } from "@/ai/call";
+import { generateStructured, streamReply, type AiCallContext } from "@/ai/call";
 import { aiGuide } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -67,26 +67,26 @@ function timeIsUp(settings: StudyChatSettings, attempt: Attempt): boolean {
 }
 
 /**
- * Asks the check model whether the student has answered the chat's question.
- * A failed check means "not yet": it must never end a chat by accident. Nor
- * does it end while the AI's last reply is waiting on the student: ending
- * there leaves the AI's own question hanging (feedback ad893b84).
+ * Asks the check model whether the student has answered `question`. A failed
+ * check means "not yet": it must never end a chat by accident. Nor does it
+ * end while the AI's last reply is waiting on the student: ending there
+ * leaves the AI's own question hanging (feedback ad893b84). Also run by the
+ * sample-student trial (trial.ts).
  */
-async function questionAnswered(
+export async function questionAnswered(
   db: Db,
   model: LanguageModel,
-  actor: Actor,
-  chat: Chat,
+  ctx: AiCallContext,
+  question: string | null,
   turns: readonly Exchange[],
 ): Promise<boolean> {
-  const question = chat.settings.completion.question;
   if (question === null) return false;
   const transcript = turns.map((t) => `Student: ${t.message}\nAI: ${t.reply}`).join("\n\n");
   try {
     const { answered, awaitingStudent } = await generateStructured(
       db,
       model,
-      { purpose: "chat.check", userId: actor.userId, courseId: chat.activity.courseId },
+      ctx,
       z.object({ answered: z.boolean(), awaitingStudent: z.boolean() }),
       {
         system:
@@ -119,7 +119,10 @@ async function finishTurn(
   const { maxTurns } = chat.settings.completion;
   if (maxTurns !== null && turns.length >= maxTurns) return completeAttempt(db, attempt.id, "turns");
   if (timeIsUp(chat.settings, attempt)) return completeAttempt(db, attempt.id, "time");
-  if (await questionAnswered(db, models.check, actor, chat, turns)) return completeAttempt(db, attempt.id, "question");
+  const ctx = { purpose: "chat.check", userId: actor.userId, courseId: chat.activity.courseId };
+  if (await questionAnswered(db, models.check, ctx, chat.settings.completion.question, turns)) {
+    return completeAttempt(db, attempt.id, "question");
+  }
   return attempt;
 }
 

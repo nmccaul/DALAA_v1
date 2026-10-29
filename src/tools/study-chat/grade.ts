@@ -12,7 +12,7 @@
 
 import { NoObjectGeneratedError, type LanguageModel } from "ai";
 import { z } from "zod";
-import { generateStructured } from "@/ai/call";
+import { generateStructured, type AiCallContext } from "@/ai/call";
 import { getAttempt, getFinishedAttempt } from "@/attempts/store";
 import { getStudentWork, type StudentWork } from "@/attempts/work";
 import { aiGuide, type Guide } from "@/content/guide";
@@ -196,12 +196,30 @@ export async function gradeAttempt(db: Db, model: LanguageModel, attemptId: stri
   }
 
   const ctx = { purpose: "grade", userId: finished.userId, courseId: finished.activity.courseId };
-  const prompt = gradePrompt(settings, turns, await aiGuide(db, finished.activity.id), await getStudentWork(db, attemptId));
+  const graded = await gradeTurns(db, model, ctx, settings, turns, await aiGuide(db, finished.activity.id), await getStudentWork(db, attemptId));
+  if (graded) await saveGrade(db, attemptId, graded);
+  else await failGrading(db, attemptId);
+  return getResult(db, attemptId);
+}
+
+/**
+ * Asks the grader about a transcript with at least one exchange, up to twice.
+ * NULL when no answer fit the rubric. Saves nothing: `gradeAttempt` saves a
+ * student's grade; the sample-student trial (trial.ts) only shows it.
+ */
+export async function gradeTurns(
+  db: Db,
+  model: LanguageModel,
+  ctx: AiCallContext,
+  settings: StudyChatSettings,
+  turns: readonly Exchange[],
+  guide: Guide | null,
+  work: StudentWork | null,
+): Promise<GradedResult | null> {
+  const prompt = gradePrompt(settings, turns, guide, work);
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
-      const answer = await generateStructured(db, model, ctx, GraderAnswer, prompt);
-      await saveGrade(db, attemptId, toResult(settings, answer, turns));
-      return getResult(db, attemptId);
+      return toResult(settings, await generateStructured(db, model, ctx, GraderAnswer, prompt), turns);
     } catch (error) {
       const retry = error instanceof UnfitGrade || NoObjectGeneratedError.isInstance(error);
       if (retry && attempt < ATTEMPTS) continue;
@@ -209,8 +227,7 @@ export async function gradeAttempt(db: Db, model: LanguageModel, attemptId: stri
       break;
     }
   }
-  await failGrading(db, attemptId);
-  return getResult(db, attemptId);
+  return null;
 }
 
 /**
