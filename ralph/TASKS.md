@@ -100,7 +100,7 @@ Nathan's decisions: a bug loop he starts by hand after testing (`ralph/bugs.sh`)
 - [x] **T37b Bug loop dry run.** (Stopped by the interactive session 2026-10-29 13:30 at Nathan's request: too slow; the local dry run reached a real bug pass after the `.env.local` fix in cb9d7ca. The first real run on production reports is the test instead.) Seed a throwaway report in the local DB and run one bug pass end to end against local (the prompt and `bugs.sh` use `--prod`; add a local switch for the dry run, e.g. `BUGS_PROD=` empty, if needed): claim, record, PR branch pushed, and the small-fix merge path exercised, or explain in PROGRESS what can only be checked against production. Delete the seed rows after. **Done when:** as T37's "Done when".
 - [x] **T38 CHECKPOINT F (deploy).** (Done by the interactive session 2026-10-29: migration applied to production, merged, deployed; guide section still to write — see T38b.) Checkpoint procedure (T36's migration is additive). Add a "Fixing reports" section to `docs/TESTING-GITGRADE.md`: how to start `ralph/bugs.sh`, stop it, and where outcomes show (admin report page, PRs, `docs/IDEAS.md`). **Done when:** prod healthy; then write `DONE` to `ralph/STATUS`.
 
-- [ ] **T38b "Fixing reports" guide.** The `docs/TESTING-GITGRADE.md` section T38 describes (start/stop `ralph/bugs.sh`, where outcomes show). **Done when:** committed.
+- [x] **T38b "Fixing reports" guide.** The `docs/TESTING-GITGRADE.md` section T38 describes (start/stop `ralph/bugs.sh`, where outcomes show). **Done when:** committed.
 
 ## I. Study Chat depth (Nathan, 2026-10-29; from the MakeTheCase "StudyChats" design notes)
 

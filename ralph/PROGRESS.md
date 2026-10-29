@@ -411,3 +411,8 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `ralph/BUG-PROMPT.md`: one report per pass, claim first, follow the fix-bug skill, small-fix rule from D-030 spelled out with merge → deploy → health → `resolve` (rollback + `in_progress` if the deploy breaks), ideas to `docs/IDEAS.md` on an unmerged PR, ends `BUG RESULT: …`.
 - Lint, typecheck, 418 tests green on Node 22 (Node 20 fails 2 PDF tests, as before).
 - **Nathan:** a report left `in_progress` by a crashed pass (no PR) is never retried by the loop; `record` it by hand or tell me to add a stale-claim rule. Vercel reads `vercel.json` from the pushed commit, so this branch's pushes should already stop making previews; check the Vercel dashboard shows no preview for `e94beb6` or later.
+
+## 2026-10-29 19:59 UTC · T38b "Fixing reports" guide · done
+- New "Fixing reports" section in `docs/TESTING-GITGRADE.md`: start (`caffeinate -i ralph/bugs.sh`, own worktree on `main`), when it stops by itself, stop (`touch ralph/STOP` or Ctrl+C), `feedback list --prod`, and where outcomes show (admin report page's "What the bug loop did", PRs by short id, `docs/IDEAS.md` PRs, `ralph/logs/bugs-*.log`).
+- Docs only; lint, typecheck and 421 tests green on Node 22.
+- **Nathan:** `ralph/STOP` is read by both `run.sh` and `bugs.sh`, so stopping one stops the other until the file is deleted (the guide says so). Say if you want separate stop files.
