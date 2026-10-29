@@ -12,16 +12,30 @@ export const LTI_SCOPES = [
   "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly",
 ];
 
-/** `appUrl` is the public origin DALAA is served from, e.g. https://dalaa-v1.vercel.app. */
-export function canvasConfig(appUrl: string) {
+/** DALAA's LTI endpoints under `appUrl`, the public origin, e.g. https://dalaa-v1.vercel.app. */
+export function ltiUrls(appUrl: string) {
   const base = appUrl.replace(/\/+$/, "");
-  const launch = `${base}/api/lti/launch`;
+  return {
+    base,
+    login: `${base}/api/lti/login`,
+    launch: `${base}/api/lti/launch`,
+    jwks: `${base}/api/lti/jwks`,
+  };
+}
+
+/** The public origin for a request: APP_URL when set, else the request's own. */
+export function appUrl(request: Request): string {
+  return process.env.APP_URL?.trim() || new URL(request.url).origin;
+}
+
+export function canvasConfig(appUrl: string) {
+  const { base, login, launch, jwks } = ltiUrls(appUrl);
   return {
     title: "DALAA",
     description: "AI-assisted learning activities: students study, chat and get feedback; grades go to the Canvas gradebook.",
-    oidc_initiation_url: `${base}/api/lti/login`,
+    oidc_initiation_url: login,
     target_link_uri: launch,
-    public_jwk_url: `${base}/api/lti/jwks`,
+    public_jwk_url: jwks,
     scopes: LTI_SCOPES,
     custom_fields: {
       login_id: "$Canvas.user.loginId",
