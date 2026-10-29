@@ -125,3 +125,21 @@ describe("readContent: any file", () => {
     expect(await readContent({ kind: "file", name: "big.txt", bytes: atLimit })).toMatchObject({ ok: false, reason: /characters/ });
   });
 });
+
+describe("readContent: from Canvas", () => {
+  it("labels Canvas pages and files by where they came from", async () => {
+    expect(await readContent({ kind: "canvas-page", name: "Case", html: "<p>Sales &amp; costs</p>" })).toEqual({
+      ok: true,
+      source: "canvas-page",
+      name: "Case",
+      body: "Sales & costs",
+    });
+    expect(await readContent({ kind: "canvas-file", name: "a.txt", bytes: bytes("Hi") })).toMatchObject({
+      source: "canvas-file",
+    });
+  });
+
+  it("refuses a Canvas file of a type DALAA can't read", async () => {
+    expect(await readContent({ kind: "canvas-file", name: "notes.docx", bytes: bytes("PK") })).toMatchObject({ ok: false });
+  });
+});

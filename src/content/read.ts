@@ -1,10 +1,11 @@
 /**
- * Turns what a teacher gives us — pasted text, or a .txt, .md or .pdf file —
- * into the plain text students read and the AI drafts from.
+ * Turns what a teacher gives us — pasted text, a .txt, .md or .pdf file, or a
+ * Canvas page or file (fetched by src/canvas/content.ts) — into the plain text students read and the AI drafts from.
  *
  * Pure: no database. Every refusal is a sentence the teacher can act on.
  */
 
+import { convert } from "html-to-text";
 import { extractText, getDocumentProxy } from "unpdf";
 
 /** Under Vercel's 4.5 MB request body limit, so the refusal is ours, not a 413. */
@@ -14,13 +15,23 @@ export const MAX_CHARS = 100_000;
 
 export type ContentInput =
   | { kind: "paste"; name: string; text: string }
-  | { kind: "file"; name: string; bytes: Uint8Array };
+  | { kind: "file"; name: string; bytes: Uint8Array }
+  | { kind: "canvas-page"; name: string; html: string }
+  | { kind: "canvas-file"; name: string; bytes: Uint8Array };
+
+/** Matches the check on course_content.source. */
+export type ContentSource = "paste" | "upload" | "canvas-page" | "canvas-file";
 
 export type ReadContent =
-  | { ok: true; source: "paste" | "upload"; name: string; body: string }
+  | { ok: true; source: ContentSource; name: string; body: string }
   | { ok: false; reason: string };
 
 const FILE_TYPES = ["txt", "md", "pdf"] as const;
+
+/** Whether a file of this name is one DALAA can read (used to filter Canvas's file list). */
+export function isReadableFile(name: string): boolean {
+  return (FILE_TYPES as readonly string[]).includes(extension(name));
+}
 
 function extension(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -37,7 +48,20 @@ export function cleanText(text: string): string {
     .trim();
 }
 
-function finish(source: "paste" | "upload", name: string, raw: string): ReadContent {
+/** Canvas page HTML as plain text: headings, paragraphs and lists kept; images and link targets dropped. */
+export function htmlToText(html: string): string {
+  return convert(html, {
+    wordwrap: false,
+    selectors: [
+      { selector: "a", options: { ignoreHref: true } },
+      { selector: "img", format: "skip" },
+      ...["h1", "h2", "h3", "h4", "h5", "h6"].map((selector) => ({ selector, options: { uppercase: false } })),
+      { selector: "table", format: "dataTable" },
+    ],
+  });
+}
+
+function finish(source: ContentSource, name: string, raw: string): ReadContent {
   const body = cleanText(raw);
   if (!body) {
     return {
@@ -69,10 +93,12 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
   const name = input.name.trim();
 
   if (input.kind === "paste") return finish("paste", name || "Pasted text", input.text);
+  if (input.kind === "canvas-page") return finish("canvas-page", name || "Canvas page", htmlToText(input.html));
 
+  const source = input.kind === "file" ? "upload" : "canvas-file";
   if (!name) return { ok: false, reason: "That file has no name." };
   const ext = extension(name);
-  if (!(FILE_TYPES as readonly string[]).includes(ext)) {
+  if (!isReadableFile(name)) {
     return { ok: false, reason: `${name} isn't a file DALAA can read. Use a .pdf, .txt or .md file, or paste the text.` };
   }
   if (input.bytes.byteLength > MAX_UPLOAD_BYTES) {
@@ -86,7 +112,7 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
     if (!cleanText(text)) {
       return { ok: false, reason: `${name} has no text we can read; it may be a scan. Paste the text instead.` };
     }
-    return finish("upload", name, text);
+    return finish(source, name, text);
   }
 
   let text: string;
@@ -95,5 +121,5 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
   } catch {
     return { ok: false, reason: `${name} isn't plain text. Save it as UTF-8 text, or paste it.` };
   }
-  return finish("upload", name, text.replace(/^﻿/, ""));
+  return finish(source, name, text.replace(/^﻿/, ""));
 }

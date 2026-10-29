@@ -8,7 +8,14 @@
  * like a throttled Canvas, for testing.
  */
 
-import { PRACTICE_COURSES, PRACTICE_ENROLLMENTS, PRACTICE_SECTIONS, PRACTICE_TEACHER } from "./data";
+import {
+  PRACTICE_COURSES,
+  PRACTICE_ENROLLMENTS,
+  PRACTICE_FILES,
+  PRACTICE_PAGES,
+  PRACTICE_SECTIONS,
+  PRACTICE_TEACHER,
+} from "./data";
 
 export const PRACTICE_PREFIX = "/practice-canvas";
 export const PRACTICE_TOKEN = "practice-canvas-token";
@@ -45,7 +52,40 @@ export function practiceCanvas(request: Request): Response {
     const wanted = states.length ? states : ["active", "invited"]; // Canvas's default
     return paginate(url, enrollments.filter((e) => wanted.includes(e.enrollment_state)));
   }
+  if ((match = path.match(/^\/api\/v1\/courses\/(\d+)\/pages$/))) {
+    const pages = PRACTICE_PAGES.get(Number(match[1]));
+    if (!pages) return notFound();
+    // Canvas's page list has no bodies.
+    return paginate(
+      url,
+      pages.map(({ page_id, url: slug, title, updated_at, published }) => ({ page_id, url: slug, title, updated_at, published })),
+    );
+  }
+  if ((match = path.match(/^\/api\/v1\/courses\/(\d+)\/pages\/([^/]+)$/))) {
+    const page = PRACTICE_PAGES.get(Number(match[1]))?.find((p) => p.url === decodeURIComponent(match![2]));
+    return page ? json(page) : notFound();
+  }
+  if ((match = path.match(/^\/api\/v1\/courses\/(\d+)\/files$/))) {
+    const files = PRACTICE_FILES.get(Number(match[1]));
+    if (!files) return notFound();
+    return paginate(url, files.map((f) => withUrl(url, f.file)));
+  }
+  if ((match = path.match(/^\/api\/v1\/courses\/(\d+)\/files\/(\d+)$/))) {
+    const found = PRACTICE_FILES.get(Number(match[1]))?.find((f) => f.file.id === Number(match![2]));
+    return found ? json(withUrl(url, found.file)) : notFound();
+  }
+  if ((match = path.match(/^\/files\/(\d+)\/download$/))) {
+    const id = Number(match[1]);
+    const found = [...PRACTICE_FILES.values()].flat().find((f) => f.file.id === id);
+    if (!found || url.searchParams.get("verifier") !== `practice-${id}`) return notFound();
+    return new Response(found.bytes.slice(), { headers: { "Content-Type": found.file["content-type"] } });
+  }
   return notFound();
+}
+
+/** A file as the API lists it: with a verifier download link, like Canvas. */
+function withUrl<T extends { id: number }>(request: URL, file: T): T & { url: string } {
+  return { ...file, url: `${request.origin}${PRACTICE_PREFIX}/files/${file.id}/download?verifier=practice-${file.id}` };
 }
 
 function notFound() {

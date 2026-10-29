@@ -15,6 +15,7 @@ export type CanvasErrorKind =
   | "rate-limited" // Canvas throttles with 403 as well as 429
   | "unavailable" // network, timeout, 5xx
   | "too-many-pages" // raise rather than return a truncated list
+  | "too-large" // a download past the caller's byte limit
   | "bad-response";
 
 export class CanvasError extends Error {
@@ -59,6 +60,28 @@ export type CanvasEnrollment = {
     login_id?: string | null;
     sis_user_id?: string | null;
   };
+};
+
+/** A wiki page as listed; the list has no body. `url` is the page's slug, used to fetch it. */
+export type CanvasPage = {
+  page_id: number;
+  url: string;
+  title: string;
+  updated_at: string;
+  published: boolean;
+};
+
+export type CanvasPageWithBody = CanvasPage & { body: string | null };
+
+export type CanvasFile = {
+  id: number;
+  display_name: string;
+  filename: string;
+  "content-type": string;
+  size: number;
+  /** A download link with a verifier; on real Canvas it redirects to file storage. */
+  url: string;
+  updated_at: string;
 };
 
 /** A member of a course from LTI Names and Role Provisioning (NRPS v2). */
@@ -111,6 +134,52 @@ export function canvasClient(config: CanvasConfig) {
     }
     if (res.status === 404) throw new CanvasError("not-found", 404);
     throw new CanvasError(res.status >= 500 ? "unavailable" : "bad-response", res.status);
+  }
+
+  /**
+   * A file's bytes, from the download URL Canvas gave us. Only URLs on this
+   * Canvas are fetched; fetch drops the token if Canvas redirects to another
+   * host (file storage). Stops reading past `maxBytes` rather than buffering it.
+   */
+  async function download(fileUrl: string, maxBytes: number): Promise<Uint8Array> {
+    let url: URL;
+    try {
+      url = new URL(fileUrl);
+    } catch {
+      throw new CanvasError("bad-response");
+    }
+    if (url.origin !== new URL(base).origin) throw new CanvasError("bad-response");
+    const res = await request(url.toString(), "*/*");
+    const declared = Number(res.headers.get("content-length"));
+    if (declared > maxBytes) {
+      await res.body?.cancel();
+      throw new CanvasError("too-large");
+    }
+    if (!res.body) return new Uint8Array();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = res.body.getReader();
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel();
+          throw new CanvasError("too-large");
+        }
+        chunks.push(value);
+      }
+    } catch (e) {
+      throw e instanceof CanvasError ? e : new CanvasError("unavailable");
+    }
+    const bytes = new Uint8Array(total);
+    let at = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, at);
+      at += chunk.byteLength;
+    }
+    return bytes;
   }
 
   async function getOne<T>(path: string): Promise<T> {
@@ -171,6 +240,20 @@ export function canvasClient(config: CanvasConfig) {
         `/api/v1/courses/${courseId}/enrollments?type[]=StudentEnrollment` +
           "&state[]=active&state[]=invited&state[]=completed&state[]=inactive",
       ),
+
+    /** Every wiki page in the course, published or not (teachers often hide a case until class). */
+    pages: (courseId: number) => getAll<CanvasPage>(`/api/v1/courses/${courseId}/pages?sort=title`),
+
+    /** One page with its HTML body. */
+    page: (courseId: number, pageUrl: string) =>
+      getOne<CanvasPageWithBody>(`/api/v1/courses/${courseId}/pages/${encodeURIComponent(pageUrl)}`),
+
+    /** Every file in the course. Filtered by name, not content type: Canvas types .md files inconsistently. */
+    files: (courseId: number) => getAll<CanvasFile>(`/api/v1/courses/${courseId}/files?sort=name`),
+
+    file: (courseId: number, fileId: number) => getOne<CanvasFile>(`/api/v1/courses/${courseId}/files/${fileId}`),
+
+    download,
 
     /** The class list through LTI NRPS; the token is an LTI service token (src/lti/services.ts). */
     nrpsMembers,
