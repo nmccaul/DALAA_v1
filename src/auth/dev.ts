@@ -7,7 +7,7 @@
  * anyone who types a professor's NetID. Never enable it where real students are.
  */
 
-import { timingSafeEqual } from "node:crypto";
+import { secretsMatch } from "./password";
 
 export function devSignInEnabled(): boolean {
   if (process.env.DEV_SIGN_IN !== "1") return false;
@@ -20,8 +20,5 @@ export function devPasswordRequired(): boolean {
 
 export function devPasswordMatches(given: string): boolean {
   const expected = process.env.DEV_SIGN_IN_PASSWORD;
-  if (!expected) return true;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return !expected || secretsMatch(given, expected);
 }
