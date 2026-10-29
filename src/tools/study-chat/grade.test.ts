@@ -96,6 +96,32 @@ describe("grading a Study Chat", () => {
     expect(await grades()).toHaveLength(1);
   });
 
+  it("grades under the settings the attempt started with, not the teacher's later edits (D-031)", async () => {
+    await db.query("update attempts set settings = $2::text::jsonb where id = $1", [attempt, JSON.stringify(draft())]);
+    const edited = draft({
+      touchpoints: [],
+      rubric: { criteria: [{ label: "Only", description: "Anything.", points: 5 }], strictness: "strict" },
+    });
+    await db.query("update activities set settings = $2::text::jsonb where id = $1", [activity, JSON.stringify(edited)]);
+
+    const grader = answering(answer());
+    expect(await gradeAttempt(db, grader, attempt)).toMatchObject({
+      status: "graded",
+      maxScore: 10,
+      criteria: [{ label: "Questions", max: 4 }, { label: "Recommendation", max: 6 }],
+      touchpoints: [{ label: "Cash flow" }],
+    });
+    expect(JSON.stringify(grader.doGenerateCalls[0].prompt)).toContain("Be fair.");
+  });
+
+  it("grades an attempt from before settings were copied under the activity's current settings", async () => {
+    const edited = draft({ rubric: { ...draft().rubric, strictness: "strict" } });
+    await db.query("update activities set settings = $2::text::jsonb where id = $1", [activity, JSON.stringify(edited)]);
+    const grader = answering(answer());
+    expect(await gradeAttempt(db, grader, attempt)).toMatchObject({ status: "graded" });
+    expect(JSON.stringify(grader.doGenerateCalls[0].prompt)).toContain("Be strict.");
+  });
+
   it("keeps a quote without the quote marks the grader wrapped it in", () => {
     const result = toResult(
       draft(),

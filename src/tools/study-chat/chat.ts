@@ -139,10 +139,14 @@ export async function sendTurn(
     return { kind: "refused", reason: `Keep it under ${MAX_MESSAGE_LENGTH.toLocaleString("en-US")} characters.` };
   }
 
-  const chat = await openChat(db, actor, activityId);
-  if ("reason" in chat) return { kind: "refused", reason: chat.reason };
+  const opened = await openChat(db, actor, activityId);
+  if ("reason" in opened) return { kind: "refused", reason: opened.reason };
   let attempt = await startAttempt(db, actor, activityId);
   if (!attempt) return { kind: "refused", reason: "We couldn't find that assignment." };
+  // Opened again now there's an attempt: it runs on its own copy of the
+  // settings, even if the teacher saved changes since `opened` (D-031).
+  const chat = await openChat(db, actor, activityId);
+  if ("reason" in chat) return { kind: "refused", reason: chat.reason };
 
   await db.query(
     `update chat_turns set status = 'failed'
