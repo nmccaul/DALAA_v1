@@ -27,6 +27,8 @@ export type DraftRequest = {
   mode: ModeSlug | "suggest";
   /** The teacher's AI-only guide, if they added one: it shapes the touchpoints and rubric. */
   guide: Guide | null;
+  /** Each student brings their own paper, code or plan, and the chat is about it. */
+  studentWork: boolean;
 };
 
 export type DraftResult = { ok: true; settings: StudyChatSettings } | { ok: false; reason: string };
@@ -69,6 +71,12 @@ function modeBrief(mode: ModeSlug | "suggest"): string {
 /** The prompt for one draft. Exported for tests. */
 export function draftPrompt(request: DraftRequest): { system: string; prompt: string } {
   const parts = [modeBrief(request.mode), `Material title: ${request.contentName.trim() || "Untitled"}\n${fence("student-reading", request.content)}`];
+  if (request.studentWork) {
+    parts.push(
+      "Each student adds their own work (a paper, code or plan) at the start of the chat, and the chat is about it. " +
+        "The AI sees it; you don't. Write the situation, opening, touchpoints and rubric to work for any student's work on this material.",
+    );
+  }
   if (request.guide !== null) {
     parts.push(`The teacher's guide ("${request.guide.name}"), never shown to students:\n${fence("ai-only-guide", request.guide.body)}`);
   }

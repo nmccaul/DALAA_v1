@@ -55,6 +55,7 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
     contentId: String(form.get("contentId") ?? ""),
     guideId: form.get("guideId") ? String(form.get("guideId")) : null,
     mode,
+    studentWork: form.get("studentWork") === "on",
     creationKey: String(form.get("creationKey") ?? ""),
   });
   if (!created.ok) return { error: created.reason };

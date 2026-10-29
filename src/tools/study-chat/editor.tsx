@@ -4,7 +4,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
-import { FIELDS, fieldId } from "./fields";
+import { cardOf, FIELDS, fieldId } from "./fields";
 import { PickerField } from "./forms";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 
@@ -144,10 +144,10 @@ export function StudyChatEditor({
 
   const q = query.trim().toLowerCase();
   const matches = q
-    ? FIELDS.map((f) => ({ ...f, label: `${settingTitle([f.path[0]])} › ${settingTitle(f.path)}` })).filter((f) => f.label.toLowerCase().includes(q))
+    ? FIELDS.map((f) => ({ ...f, label: `${settingTitle([cardOf(f)])} › ${settingTitle(f.path)}` })).filter((f) => f.label.toLowerCase().includes(q))
     : [];
   const jump = (f: (typeof FIELDS)[number]) => {
-    flushSync(() => setOpen((prev) => new Set([...prev, f.path[0], ...(f.more ? [`${f.path[0]}:more`] : [])])));
+    flushSync(() => setOpen((prev) => new Set([...prev, cardOf(f), ...(f.more ? [`${cardOf(f)}:more`] : [])])));
     const el = document.getElementById(fieldId(f.path));
     el?.scrollIntoView({ block: "center" });
     el?.focus();
@@ -237,12 +237,22 @@ export function StudyChatEditor({
           <>
             <p className="font-medium">{scenario.title}</p>
             <p>{scenario.situation}</p>
+            {s.studentWork && <p className="text-muted">Each student adds their own work before the chat.</p>}
           </>,
           <>
             <Field path={["scenarios", "title"]}>{text(scenario.title, (v) => change((d) => void (d.scenarios[0].title = v)))}</Field>
             <Field path={["scenarios", "situation"]}>
               {text(scenario.situation, (v) => change((d) => void (d.scenarios[0].situation = v)), 6)}
             </Field>
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                id={fieldId(["studentWork"])}
+                type="checkbox"
+                checked={s.studentWork}
+                onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
+              />
+              {settingTitle(["studentWork"])}
+            </label>
           </>,
           <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>,
         )}

@@ -41,6 +41,13 @@ export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 export const StudyChatSettings = z
   .strictObject({
     mode: z.enum(MODE_SLUGS).meta({ title: "Mode", description: "The kind of chat this is." }),
+    // The teacher's switch on the create flow, not the AI's: drafting keeps it
+    // as the teacher set it (create.ts). Missing in settings saved before it
+    // existed, which asked for no work.
+    studentWork: z.boolean().default(false).meta({
+      title: "Students bring their own work",
+      description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
+    }),
     goal: text(1000).meta({
       title: "Goal",
       description: "What students should be able to do after the chat, in one or two sentences.",

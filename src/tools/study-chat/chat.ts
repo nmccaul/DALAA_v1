@@ -12,12 +12,13 @@
 import type { LanguageModel } from "ai";
 import { z } from "zod";
 import { completeAttempt, getAttempt, getTakenActivity, startAttempt, type Attempt, type TakenActivity } from "@/attempts/store";
+import { getStudentWork, saveStudentWork, type SaveWorkResult, type StudentWork, type WorkInput } from "@/attempts/work";
 import { generateStructured, streamReply } from "@/ai/call";
 import { aiGuide } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
-import { ENDED, REPLY_FAILED } from "./student-messages";
+import { ADD_WORK_FIRST, ENDED, REPLY_FAILED } from "./student-messages";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
 import { MAX_MESSAGE_LENGTH } from "./student-view";
@@ -142,6 +143,11 @@ export async function sendTurn(
 
   const opened = await openChat(db, actor, activityId);
   if ("reason" in opened) return { kind: "refused", reason: opened.reason };
+  // A chat about the student's own work doesn't start without it. Checked
+  // before startAttempt, so a refused message starts nothing.
+  const before = opened.settings.studentWork ? await getAttempt(db, actor, activityId) : null;
+  const work = before ? await getStudentWork(db, before.id) : null;
+  if (opened.settings.studentWork && !work) return { kind: "refused", reason: ADD_WORK_FIRST };
   let attempt = await startAttempt(db, actor, activityId);
   if (!attempt) return { kind: "refused", reason: "We couldn't find that assignment." };
   // Opened again now there's an attempt: it runs on its own copy of the
@@ -197,7 +203,7 @@ export async function sendTurn(
     db,
     models.reply,
     { purpose: "chat.reply", userId: actor.userId, courseId: chat.activity.courseId },
-    { system: chatSystemPrompt(chat.settings, chat.activity.content, guide), messages: chatMessages(history, message) },
+    { system: chatSystemPrompt(chat.settings, chat.activity.content, guide, work), messages: chatMessages(history, message) },
   );
   const done = (async (): Promise<TurnOutcome> => {
     try {
@@ -211,6 +217,14 @@ export async function sendTurn(
     }
   })();
   return { kind: "stream", textStream: stream.textStream, done };
+}
+
+/** The student adds their own work, for a chat that asks for it. Their first add stands (src/attempts/work.ts). */
+export async function addWork(db: Db, actor: Actor, activityId: string, input: WorkInput): Promise<SaveWorkResult> {
+  const chat = await openChat(db, actor, activityId);
+  if ("reason" in chat) return { ok: false, reason: chat.reason };
+  if (!chat.settings.studentWork) return { ok: false, reason: "This chat doesn't ask for your own work." };
+  return saveStudentWork(db, actor, activityId, input);
 }
 
 /** The student ends the chat themselves, when the teacher allows it and there's something to grade. */
@@ -235,17 +249,21 @@ export async function finishChat(
   return { ok: true, attempt: await completeAttempt(db, attempt.id, "student") };
 }
 
-/** The student's chat so far: their attempt (NULL before the first message) and every finished exchange. */
+/**
+ * The student's chat so far: their attempt (NULL before they start), every
+ * finished exchange, and the work they added (NULL when there's none).
+ */
 export async function readChat(
   db: Db,
   actor: Actor,
   activityId: string,
-): Promise<{ attempt: Attempt | null; turns: Exchange[] } | null> {
+): Promise<{ attempt: Attempt | null; turns: Exchange[]; work: StudentWork | null } | null> {
   const chat = await openChat(db, actor, activityId);
   if ("reason" in chat) return null;
   let attempt = await getAttempt(db, actor, activityId);
   if (attempt?.status === "in_progress" && timeIsUp(chat.settings, attempt)) {
     attempt = await completeAttempt(db, attempt.id, "time");
   }
-  return { attempt, turns: attempt ? await doneTurns(db, attempt.id) : [] };
+  if (!attempt) return { attempt, turns: [], work: null };
+  return { attempt, turns: await doneTurns(db, attempt.id), work: await getStudentWork(db, attempt.id) };
 }

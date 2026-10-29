@@ -8,8 +8,9 @@
  */
 
 import type { ModelMessage } from "ai";
+import type { StudentWork } from "@/attempts/work";
 import type { Guide } from "@/content/guide";
-import { fence, GUIDE_RULE } from "./material";
+import { fence, GUIDE_RULE, WORK_RULE } from "./material";
 import { MODES } from "./modes";
 import type { StudyChatSettings } from "./schema";
 
@@ -27,8 +28,17 @@ const HELPFULNESS: Record<StudyChatSettings["persona"]["helpfulness"], string> =
 const list = (items: readonly { label: string; description: string }[]) =>
   items.map((item) => `- ${item.label}: ${item.description}`).join("\n");
 
-/** `guide` is the teacher's AI-only guide (src/content/guide.ts): the model uses it, the student never sees it. */
-export function chatSystemPrompt(settings: StudyChatSettings, content: ChatContent, guide: Guide | null): string {
+/**
+ * `guide` is the teacher's AI-only guide (src/content/guide.ts): the model uses
+ * it, the student never sees it. `work` is the student's own work, when the
+ * chat asks for it (src/attempts/work.ts).
+ */
+export function chatSystemPrompt(
+  settings: StudyChatSettings,
+  content: ChatContent,
+  guide: Guide | null,
+  work: StudentWork | null,
+): string {
   const { persona, completion } = settings;
   const [scenario] = settings.scenarios;
   const parts = [
@@ -52,6 +62,9 @@ export function chatSystemPrompt(settings: StudyChatSettings, content: ChatConte
   }
   if (content !== null) {
     parts.push(`What the student read before the chat ("${content.name}"):\n${fence("student-reading", content.body)}`);
+  }
+  if (work !== null) {
+    parts.push(`The student's own work ("${work.name}"). ${WORK_RULE}\n${fence("student-work", work.body)}`);
   }
   if (guide !== null) {
     parts.push(`The teacher's guide ("${guide.name}"). ${GUIDE_RULE}\n${fence("ai-only-guide", guide.body)}`);

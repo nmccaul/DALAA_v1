@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MODE_SLUGS, MODES } from "./modes";
-import { FIELDS } from "./fields";
+import { cardOf, FIELDS } from "./fields";
 import { rubricPoints, settingProblems, settingTitle, StudyChatSettings } from "./schema";
 
 const valid = (): StudyChatSettings => ({
   mode: "case-chat",
+  studentWork: false,
   goal: "Recommend whether Harbor Bikes should open a second store, using evidence from the case.",
   scenarios: [
     {
@@ -134,8 +135,14 @@ describe("setting labels", () => {
   it("exist for every setting the review screen can search", () => {
     for (const field of FIELDS) {
       expect(settingTitle(field.path)).not.toBe("");
-      expect(settingTitle([field.path[0]])).not.toBe("");
+      expect(settingTitle([cardOf(field)])).not.toBe("");
     }
+  });
+
+  it("read settings saved before the own-work switch as not asking for it", () => {
+    const old: Partial<StudyChatSettings> = valid();
+    delete old.studentWork;
+    expect(StudyChatSettings.parse(old).studentWork).toBe(false);
   });
 
   it("name what needs fixing in plain sentences", () => {

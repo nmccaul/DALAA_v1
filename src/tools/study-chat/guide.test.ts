@@ -164,7 +164,7 @@ describe("the AI-only guide", () => {
     const content = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Case", text: "Harbor Bikes sells bikes." });
     if (!content.ok) throw new Error(content.reason);
     const model = answering(draft());
-    const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, creationKey: randomUUID() };
+    const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
     expect(await aiGuide(db, created.activityId)).toMatchObject({ body: GUIDE });
@@ -178,7 +178,7 @@ describe("the AI-only guide", () => {
   });
 
   it("is fenced apart from the reading in the draft prompt", () => {
-    const { prompt } = draftPrompt({ content: "Case text", contentName: "Case", mode: "socratic", guide: { name: "Key", body: GUIDE } });
+    const { prompt } = draftPrompt({ content: "Case text", contentName: "Case", mode: "socratic", guide: { name: "Key", body: GUIDE }, studentWork: false });
     expect(prompt).toContain('<material role="student-reading">\nCase text\n</material>');
     expect(prompt).toContain(`<material role="ai-only-guide">\n${GUIDE}\n</material>`);
   });

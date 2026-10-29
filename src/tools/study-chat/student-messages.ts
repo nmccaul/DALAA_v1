@@ -10,3 +10,5 @@ export const ENDED: Readonly<Record<EndedBy, string>> = {
 };
 
 export const REPLY_FAILED = "The reply didn't come through. Send your message again; it won't count against you.";
+
+export const ADD_WORK_FIRST = "Add your work before you start the chat.";

@@ -69,14 +69,14 @@ describe("grading a Study Chat", () => {
   });
 
   it("asks with the rubric, strictness, touchpoints, positions and the whole transcript", () => {
-    const { system, prompt } = gradePrompt(draft(), TURNS, null);
+    const { system, prompt } = gradePrompt(draft(), TURNS, null, null);
     expect(system).toContain("Be fair.");
     expect(prompt).toContain("Recommendation (6 points): Makes a recommendation backed by evidence.");
     expect(prompt).toContain("Cash flow: Notices the seasonal cash squeeze.");
     expect(prompt).toContain("Wait: Fix cash flow first.");
     expect(prompt).toContain("AI: Thanks for coming in.");
     expect(prompt).toContain("Student: Then I'd wait");
-    expect(gradePrompt(draft({ rubric: { ...draft().rubric, strictness: "strict" } }), TURNS, null).system).toContain("Be strict.");
+    expect(gradePrompt(draft({ rubric: { ...draft().rubric, strictness: "strict" } }), TURNS, null, null).system).toContain("Be strict.");
   });
 
   it("stores the result in the shared shape, totalled, with the student's own quotes", async () => {

@@ -17,6 +17,8 @@ export type StudentChatView = {
   /** The AI's first message, shown before the student writes. */
   opening: string;
   persona: { name: string; role: string };
+  /** The student adds their own work before the chat starts. */
+  bringsWork: boolean;
   /** NULL: no limit, or no question. */
   limits: {
     maxTurns: number | null;
@@ -33,6 +35,7 @@ export function studentView(settings: StudyChatSettings): StudentChatView {
     title: scenario.title,
     opening: scenario.opening,
     persona: { name: settings.persona.name, role: settings.persona.title },
+    bringsWork: settings.studentWork,
     limits: { maxTurns, timeLimitMinutes, question, studentCanFinish },
   };
 }
