@@ -1,16 +1,35 @@
 /**
  * What a student sees of their own result, for every tool: the score, what
  * each criterion earned and why, and the points they raised. While grading
- * runs the page refreshes itself until the grade is in.
+ * runs the page refreshes itself until the grade is in. Once graded the
+ * student can dispute it (src/results/disputes.ts).
  */
 
-import type { Result } from "./store";
+import { Button, inputStyles } from "@/components/ui";
+import { openDisputeAction } from "./dispute-actions";
+import { MAX_REASON, type Dispute } from "./disputes";
+import { countedScore, type Result } from "./store";
 import { RefreshWhileGrading } from "./refresh-while-grading";
 
 const points = (n: number) => `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${n === 1 ? "point" : "points"}`;
 
-/** `result`: NULL before grading has started, which the student sees as grading. */
-export function StudentResult({ result }: { result: Result | null }) {
+const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
+/**
+ * `result`: NULL before grading has started, which the student sees as
+ * grading. `dispute`: the student's latest dispute of it, or NULL.
+ */
+export function StudentResult({
+  result,
+  attemptId,
+  activityId,
+  dispute,
+}: {
+  result: Result | null;
+  attemptId: string;
+  activityId: string;
+  dispute: Dispute | null;
+}) {
   if (result === null || result.status === "grading") {
     return (
       <section aria-label="Your grade" className="rounded-panel border border-border bg-surface px-4 py-3">
@@ -30,11 +49,18 @@ export function StudentResult({ result }: { result: Result | null }) {
   }
 
   return (
-    <section aria-label="Your grade" className="flex flex-col gap-4 rounded-panel border border-border bg-surface px-4 py-4">
+    <section
+      id="your-grade"
+      aria-label="Your grade"
+      className="flex scroll-mt-4 flex-col gap-4 rounded-panel border border-border bg-surface px-4 py-4"
+    >
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-xl font-semibold">
-          Your grade: {result.score.toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
+          Your grade: {countedScore(result).toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
         </h2>
+        {result.teacherScore !== null && (
+          <p className="text-sm text-muted">Your teacher set this grade. The scores below are from the first grading.</p>
+        )}
         <p className="max-w-[65ch]">{result.feedback}</p>
       </div>
       <ul className="flex flex-col gap-3">
@@ -66,6 +92,58 @@ export function StudentResult({ result }: { result: Result | null }) {
           </ul>
         </div>
       )}
+      <DisputeBox attemptId={attemptId} activityId={activityId} dispute={dispute} />
     </section>
+  );
+}
+
+/** The latest dispute and the teacher's answer, or the form to send one when none is open. */
+function DisputeBox({ attemptId, activityId, dispute }: { attemptId: string; activityId: string; dispute: Dispute | null }) {
+  if (dispute?.status === "open") {
+    return (
+      <div className="flex flex-col gap-1 border-t border-border pt-3" role="status">
+        <p className="font-medium">You disputed this grade on {dateFormat.format(dispute.openedAt)}.</p>
+        <p className="text-sm text-muted">Your teacher will look at it. Your reason:</p>
+        <blockquote className="max-w-[65ch] border-l-2 border-border-strong pl-3 text-sm whitespace-pre-wrap break-words text-muted">
+          {dispute.reason}
+        </blockquote>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-3">
+      {dispute && (
+        <div className="flex flex-col gap-1">
+          <p className="font-medium">Your teacher looked at your dispute on {dateFormat.format(dispute.resolvedAt!)}.</p>
+          {dispute.response && (
+            <blockquote className="max-w-[65ch] border-l-2 border-border-strong pl-3 whitespace-pre-wrap break-words">
+              {dispute.response}
+            </blockquote>
+          )}
+        </div>
+      )}
+      <details className="group">
+        <summary className="cursor-pointer text-sm font-medium text-accent-text select-none hover:underline">
+          {dispute ? "Dispute it again" : "Dispute this grade"}
+        </summary>
+        <form action={openDisputeAction} className="mt-3 flex max-w-[65ch] flex-col gap-2">
+          <input type="hidden" name="activityId" value={activityId} />
+          <input type="hidden" name="attemptId" value={attemptId} />
+          <input type="hidden" name="clientKey" value={crypto.randomUUID()} />
+          <label htmlFor={`reason-${attemptId}`} className="text-sm text-muted">
+            Tell your teacher what you think the grade missed.
+          </label>
+          <textarea
+            id={`reason-${attemptId}`}
+            name="reason"
+            required
+            maxLength={MAX_REASON}
+            rows={4}
+            className={inputStyles}
+          />
+          <Button className="self-start">Send to your teacher</Button>
+        </form>
+      </details>
+    </div>
   );
 }

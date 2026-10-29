@@ -48,6 +48,9 @@ skills-lock.json
 # Local database from `npm run db:local`
 /.pgdata
 
+# Feedback reports pulled by /fix-bug (screenshots can show student work)
+/.bugs/
+
 # overnight loop logs
 /ralph/logs/
 /ralph/STOP

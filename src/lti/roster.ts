@@ -14,11 +14,13 @@ import { normalizeNetId } from "@/auth/admit";
 import { CanvasError, canvasClient, type NrpsMember } from "@/canvas/client";
 import type { ImportPlan } from "@/canvas/import-plan";
 import { applyPlan, taughtCourse, type SyncResult } from "@/canvas/sync";
+import { upsertStudent } from "@/courses/students";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { courseRole } from "./launch";
 import { toPlatform, type PlatformRow } from "./registration";
 import { NRPS_SCOPE, serviceToken, type ServiceDeps } from "./services";
+import { rememberLtiUser } from "./users";
 
 const CUSTOM = "https://purl.imsglobal.org/spec/lti/claim/custom";
 
@@ -31,9 +33,13 @@ function loginIdOf(member: NrpsMember): string | null {
   return member.email ? normalizeNetId(member.email) : null;
 }
 
-/** What the class list from NRPS will add. Pure, so every oddity is a fixture test. */
-export function planFromMembers(members: NrpsMember[]): ImportPlan {
+/**
+ * What the class list from NRPS will add, and each student's platform id (by
+ * login ID) for sending grades. Pure, so every oddity is a fixture test.
+ */
+export function planFromMembers(members: NrpsMember[]): ImportPlan & { subs: Map<string, string> } {
   const students: ImportPlan["students"] = [];
+  const subs = new Map<string, string>();
   const seen = new Set<string>();
   let notEnrolled = 0;
   let noNetId = 0;
@@ -51,8 +57,9 @@ export function planFromMembers(members: NrpsMember[]): ImportPlan {
     seen.add(netId);
     const email = m.email?.trim().toLowerCase() || null;
     students.push({ netId, name: m.name?.trim() || netId, canvasSectionId: null, email });
+    if (m.user_id) subs.set(netId, m.user_id);
   }
-  return { sections: [], students, skipped: { notEnrolled, noNetId, inTwoSections: 0 } };
+  return { sections: [], students, skipped: { notEnrolled, noNetId, inTwoSections: 0 }, subs };
 }
 
 
@@ -90,6 +97,14 @@ export async function syncLtiRoster(db: Db, actor: Actor, courseId: string, deps
   }
 
   const plan = planFromMembers(members);
-  const counts = await db.transaction((tx) => applyPlan(tx, actor, String, courseId, plan));
+  const counts = await db.transaction(async (tx) => {
+    const applied = await applyPlan(tx, actor, String, courseId, plan);
+    for (const s of plan.students) {
+      const sub = plan.subs.get(s.netId);
+      // The account applyPlan just added or linked: upsertStudent finds it again.
+      if (sub) await rememberLtiUser(tx, ctx.id, await upsertStudent(tx, actor.institutionId, s.netId, s.name, s.email), sub);
+    }
+    return applied;
+  });
   return { ok: true, ...counts, skipped: plan.skipped };
 }

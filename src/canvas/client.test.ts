@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CanvasError, canvasClient, nextLink } from "./client";
+import { CanvasError, canvasClient, nextLink, servicePath, type AgsScore } from "./client";
 import { PRACTICE_TOKEN, practiceCanvas } from "./practice/server";
 
 const BASE = "https://dalaa.test/practice-canvas";
@@ -92,5 +92,100 @@ describe("nextLink", () => {
     expect(nextLink(header)).toBe("https://x/api?page=3");
     expect(nextLink('<https://x/api?page=1>; rel="first"')).toBeNull();
     expect(nextLink(null)).toBeNull();
+  });
+});
+
+describe("AGS (gradebook through LTI)", () => {
+  const CANVAS = "https://canvas.example.edu";
+  const ITEMS = `${CANVAS}/api/lti/courses/42/line_items`;
+  const ITEM = `${ITEMS}/7`;
+
+  /** A fake Canvas gradebook that records each request. */
+  function gradebook(reply: (req: Request) => Response | Promise<Response>) {
+    const calls: { method: string; url: string; accept: string | null; type: string | null; body: string }[] = [];
+    const client = canvasClient({
+      baseUrl: CANVAS,
+      token: "ags-token",
+      fetch: async (input, init) => {
+        const req = new Request(input, init);
+        const body = await req.clone().text();
+        calls.push({ method: req.method, url: req.url, accept: req.headers.get("accept"), type: req.headers.get("content-type"), body });
+        return reply(req);
+      },
+    });
+    return { client, calls };
+  }
+
+  it("reads a column and finds the ones made for an activity", async () => {
+    const { client, calls } = gradebook((req) =>
+      req.url === ITEM
+        ? Response.json({ id: ITEM, scoreMaximum: 10, label: "Case 1" })
+        : Response.json([{ id: ITEM, scoreMaximum: 10, label: "Case 1", resourceId: "act-1" }]),
+    );
+    expect(await client.ags.lineItem(ITEM)).toMatchObject({ id: ITEM, scoreMaximum: 10 });
+    expect(await client.ags.lineItemsFor(`${ITEMS}?per_page=50`, "act-1")).toHaveLength(1);
+    expect(calls.map((c) => [c.method, c.url, c.accept])).toEqual([
+      ["GET", ITEM, "application/vnd.ims.lis.v2.lineitem+json"],
+      ["GET", `${ITEMS}?per_page=50&resource_id=act-1`, "application/vnd.ims.lis.v2.lineitemcontainer+json"],
+    ]);
+  });
+
+  it("makes a column, and only a reply carrying its URL counts as made", async () => {
+    let reply = Response.json({ id: ITEM, scoreMaximum: 10, label: "Case 1", resourceId: "act-1" }, { status: 201 });
+    const { client, calls } = gradebook(() => reply);
+    const item = { scoreMaximum: 10, label: "Case 1", resourceId: "act-1" };
+    expect((await client.ags.createLineItem(ITEMS, item)).id).toBe(ITEM);
+    expect(calls[0]).toMatchObject({ method: "POST", url: ITEMS, type: "application/vnd.ims.lis.v2.lineitem+json" });
+    expect(JSON.parse(calls[0].body)).toEqual(item);
+    reply = Response.json({ ok: true }, { status: 201 });
+    expect(await kindOf(client.ags.createLineItem(ITEMS, item))).toBe("bad-response");
+  });
+
+  it("reads every page of results, keeping the column's query string", async () => {
+    const withQuery = `${ITEM}?type=x`;
+    const { client, calls } = gradebook((req) =>
+      req.url.includes("page=2")
+        ? Response.json([{ userId: "b", resultScore: 7, resultMaximum: 10 }])
+        : Response.json([{ userId: "a" }], { headers: { link: `<${ITEM}/results?type=x&page=2>; rel="next"` } }),
+    );
+    expect((await client.ags.results(withQuery)).map((r) => [r.userId, r.resultScore ?? null])).toEqual([
+      ["a", null],
+      ["b", 7],
+    ]);
+    expect(calls[0]).toMatchObject({ url: `${ITEM}/results?type=x`, accept: "application/vnd.ims.lis.v2.resultcontainer+json" });
+  });
+
+  it("posts a score as an LIS score and treats only 2xx as confirmed", async () => {
+    let status = 200;
+    const { client, calls } = gradebook(() => Response.json({}, { status }));
+    const score: AgsScore = {
+      userId: "sub-1",
+      scoreGiven: 8,
+      scoreMaximum: 10,
+      timestamp: "2027-01-20T12:00:00.000Z",
+      activityProgress: "Completed",
+      gradingProgress: "FullyGraded",
+    };
+    await client.ags.postScore(ITEM, score);
+    expect(calls[0]).toMatchObject({ method: "POST", url: `${ITEM}/scores`, type: "application/vnd.ims.lis.v1.score+json" });
+    expect(JSON.parse(calls[0].body)).toEqual(score);
+    status = 422;
+    expect(await kindOf(client.ags.postScore(ITEM, score))).toBe("bad-response");
+    status = 503;
+    expect(await kindOf(client.ags.postScore(ITEM, score))).toBe("unavailable");
+  });
+
+  it("never sends the token to another host", async () => {
+    const { client, calls } = gradebook(() => Response.json([]));
+    expect(await kindOf(client.ags.results("https://evil.example.com/line_items/7"))).toBe("bad-response");
+    expect(await kindOf(client.ags.lineItem("not a url"))).toBe("bad-response");
+    expect(calls).toEqual([]);
+  });
+});
+
+describe("servicePath", () => {
+  it("adds the service before the query string", () => {
+    expect(servicePath("https://x/line_items/7?a=1", "scores")).toBe("https://x/line_items/7/scores?a=1");
+    expect(servicePath("https://x/line_items/7/", "results")).toBe("https://x/line_items/7/results");
   });
 });

@@ -22,6 +22,7 @@ import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
 import { ACTIVITY_ID_FIELD, returnUrlAllowed, startDeepLink } from "./deep-link";
 import { deepLinkPath } from "./picker";
+import { rememberLtiUser } from "./users";
 import { DEEP_LINKING, RESOURCE_LINK, type LaunchClaims } from "./validate";
 
 export type CourseRole = "instructor" | "student";
@@ -80,14 +81,18 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
     }
     const userId = await findOrCreateUser(tx, institutionId, loginId, email, name);
     courseId ??= await createLtiCourse(tx, claims, userId);
-    // Where "Sync with Canvas" reads the class list (src/lti/roster.ts); the latest launch wins.
-    if (claims.nrps) {
+    // Where "Sync with Canvas" reads the class list (src/lti/roster.ts) and grades find
+    // the gradebook (AGS lineitems); the latest launch wins, a launch without one keeps the last.
+    if (claims.nrps || claims.ags?.lineItems) {
       await tx.query(
-        `update lti_contexts set memberships_url = $3
-          where platform_id = $1 and context_id = $2 and memberships_url is distinct from $3`,
-        [claims.platform.id, context.id, claims.nrps.membershipsUrl],
+        `update lti_contexts set memberships_url = coalesce($3, memberships_url), lineitems_url = coalesce($4, lineitems_url)
+          where platform_id = $1 and context_id = $2
+            and (memberships_url is distinct from coalesce($3, memberships_url)
+                 or lineitems_url is distinct from coalesce($4, lineitems_url))`,
+        [claims.platform.id, context.id, claims.nrps?.membershipsUrl ?? null, claims.ags?.lineItems ?? null],
       );
     }
+    await rememberLtiUser(tx, claims.platform.id, userId, claims.sub);
 
     // Canvas is the authority on who is in its course and in what role.
     await tx.query(

@@ -87,13 +87,27 @@ describe("grading a Study Chat", () => {
       maxScore: 10,
       criteria: [
         { label: "Questions", score: 3, max: 4, evidence: "How is cash flow in the winter?" },
-        { label: "Recommendation", score: 5.5, max: 6, evidence: "“fix the seasonal cash squeeze”" },
+        { label: "Recommendation", score: 5.5, max: 6, evidence: "fix the seasonal cash squeeze" },
       ],
       touchpoints: [{ label: "Cash flow", hit: true }],
       position: "Wait",
       feedback: "You found the cash problem and used it.",
     });
     expect(await grades()).toHaveLength(1);
+  });
+
+  it("keeps a quote without the quote marks the grader wrapped it in", () => {
+    const result = toResult(
+      draft(),
+      answer({
+        criteria: [
+          { criterion: "Questions", score: 4, evidence: '"How is cash flow in the winter?"', feedback: "Good." },
+          { criterion: "Recommendation", score: 5, evidence: "‘fix the seasonal cash squeeze’", feedback: "Clear." },
+        ],
+      }),
+      TURNS,
+    );
+    expect(result.criteria.map((c) => c.evidence)).toEqual(["How is cash flow in the winter?", "fix the seasonal cash squeeze"]);
   });
 
   it("drops a quote the student didn't write and a position the chat doesn't have", () => {

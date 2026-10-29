@@ -49,6 +49,14 @@ export default async function SettingsPage() {
         <Section title="Canvas">
           <CanvasStatus connection={canvas} />
         </Section>
+        {actor.isAdmin && (
+          <Section title="Feedback reports">
+            <p className="text-muted">What people sent with the Feedback button, with a picture of the page.</p>
+            <div>
+              <ButtonLink href="/settings/feedback" variant="secondary">See feedback reports</ButtonLink>
+            </div>
+          </Section>
+        )}
       </div>
     </>
   );

@@ -99,3 +99,11 @@ export function coursesTakenBy(actor: Actor, alias = "c"): Scope {
     values: [actor.userId],
   };
 }
+
+/**
+ * Feedback reports the actor may read: every one for an admin (the inbox),
+ * none otherwise. Reporters send reports; they don't browse them.
+ */
+export function feedbackReadableBy(actor: Actor): Scope {
+  return actor.isAdmin ? MATCH_ALL : MATCH_NOTHING;
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import { FeedbackButton } from "@/components/feedback";
 import { Logo } from "@/components/logo";
 import { Tabs } from "@/components/tabs";
 import { signOut } from "../sign-in/actions";
@@ -26,22 +27,23 @@ export default async function TeacherLayout({ children }: LayoutProps<"/">) {
         Skip to content
       </a>
       <header className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <Link href="/courses" className="shrink-0" aria-label="DALAA home">
-            <Logo />
+            <Logo compact />
           </Link>
           <Tabs tabs={AREAS} label="Main" />
-          <div className="ml-auto hidden items-center gap-3 text-sm sm:flex">
-            <span className="max-w-48 truncate text-muted">{actor.displayName}</span>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            <span className="hidden max-w-48 truncate text-muted sm:inline">{actor.displayName}</span>
             <form action={signOut}>
-              <button className="rounded-control px-2 py-1 text-muted hover:text-text">Sign out</button>
+              <button className="rounded-control px-2 py-1 whitespace-nowrap text-muted hover:text-text">Sign out</button>
             </form>
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
+      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-10 pb-24 sm:px-6">
         {children}
       </main>
+      <FeedbackButton />
     </>
   );
 }
