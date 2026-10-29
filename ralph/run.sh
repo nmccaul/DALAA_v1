@@ -10,7 +10,9 @@ MAX_PASSES=${MAX_PASSES:-80}
 LOGS=ralph/logs
 mkdir -p "$LOGS"
 
-for pass in $(seq 1 "$MAX_PASSES"); do
+pass=0
+while (( pass < MAX_PASSES )); do
+  (( pass++ ))
   [[ -f ralph/STOP ]] && { echo "STOP file found; stopping."; break; }
   [[ "$(cat ralph/STATUS 2>/dev/null)" == DONE* ]] && { echo "All tasks done."; break; }
 
@@ -20,9 +22,10 @@ for pass in $(seq 1 "$MAX_PASSES"); do
   code=$?
   tail -n 3 "$log"
 
-  if grep -qiE "usage limit|limit reached|rate limit|resets at|out of (extra )?usage" "$log" \
+  if grep -qiE "usage limit|limit reached|rate limit|resets at|resets [0-9]|hit your .*limit|out of (extra )?usage" "$log" \
      && ! grep -q "PASS RESULT:" "$log"; then
-    echo "Usage limit hit; sleeping 30 minutes."
+    echo "Usage limit hit; sleeping 30 minutes (not counted as a pass)."
+    (( pass-- ))
     sleep 1800
   elif [[ $code -ne 0 ]] && ! grep -q "PASS RESULT:" "$log"; then
     echo "Pass exited $code without a result; pausing 2 minutes."
