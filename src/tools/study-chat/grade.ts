@@ -101,9 +101,9 @@ const plain = (text: string) =>
     .replace(/\s+/g, " ")
     .replace(/^["'\s]+|["'\s.…]+$/g, "");
 
-/** The quote if the student wrote it, else NULL. */
+/** The quote if the student wrote it, else NULL. Stored without the quote marks the grader wraps it in; the page adds its own. */
 function quoted(evidence: string, studentWords: string): string | null {
-  const quote = evidence.trim();
+  const quote = evidence.trim().replace(/^["“'‘]([^]*)["”'’]$/, "$1").trim();
   return quote !== "" && plain(quote) !== "" && studentWords.includes(plain(quote)) ? quote : null;
 }
 
