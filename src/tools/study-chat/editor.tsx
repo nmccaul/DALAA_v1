@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
 import { FIELDS, fieldId } from "./fields";
+import { PickerField } from "./forms";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 
 type S = StudyChatSettings;
@@ -111,11 +112,13 @@ export function StudyChatEditor({
   activityId,
   published,
   initial,
+  addToCanvas,
 }: {
   courseId: string;
   activityId: string;
   published: boolean;
   initial: S;
+  addToCanvas: string | null;
 }) {
   const [s, setS] = useState(initial);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -188,6 +191,7 @@ export function StudyChatEditor({
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="activityId" value={activityId} />
       <input type="hidden" name="settings" value={json} />
+      <PickerField addToCanvas={addToCanvas} />
 
       <div className="relative max-w-md">
         <label htmlFor="setting-search" className="sr-only">

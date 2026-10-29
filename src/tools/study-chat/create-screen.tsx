@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { getContent } from "@/content/store";
 import { db } from "@/db/client";
+import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
 import { MaterialForm, ModeForm } from "./forms";
 import { MODE_SLUGS, MODES } from "./modes";
@@ -12,7 +13,8 @@ import { MODE_SLUGS, MODES } from "./modes";
  * showing comes from the URL: ?content=<id> once the material is saved.
  */
 export async function StudyChatCreate({ actor, course, searchParams }: CreateScreenProps) {
-  const here = `/courses/${course.id}/activities/new/study-chat`;
+  const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);
+  const here = keepPicker(`/courses/${course.id}/activities/new/study-chat`, addToCanvas);
   const content = typeof searchParams.content === "string" ? await getContent(db(), actor, course.id, searchParams.content) : null;
 
   if (!content) {
@@ -28,7 +30,7 @@ export async function StudyChatCreate({ actor, course, searchParams }: CreateScr
         >
           Use a Canvas page or file
         </Link>
-        <MaterialForm courseId={course.id} creationKey={randomUUID()} />
+        <MaterialForm courseId={course.id} creationKey={randomUUID()} addToCanvas={addToCanvas} />
       </section>
     );
   }
@@ -48,6 +50,7 @@ export async function StudyChatCreate({ actor, course, searchParams }: CreateScr
         courseId={course.id}
         contentId={content.id}
         creationKey={randomUUID()}
+        addToCanvas={addToCanvas}
         modes={MODE_SLUGS.map((slug) => ({ slug, label: MODES[slug].label, description: MODES[slug].description }))}
       />
     </section>

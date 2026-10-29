@@ -19,7 +19,8 @@
 import { normalizeNetId } from "@/auth/admit";
 import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
-import { ACTIVITY_ID_FIELD, deepLinkPath, returnUrlAllowed, startDeepLink } from "./deep-link";
+import { ACTIVITY_ID_FIELD, returnUrlAllowed, startDeepLink } from "./deep-link";
+import { deepLinkPath } from "./picker";
 import { DEEP_LINKING, RESOURCE_LINK, type LaunchClaims } from "./validate";
 
 export type CourseRole = "instructor" | "student";

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button, inputStyles } from "@/components/ui";
+import { PICKER_PARAM } from "@/lti/picker";
 import { draftAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
 
@@ -13,13 +14,27 @@ function Problem({ state }: { state: FormState }) {
   ) : null;
 }
 
+/** Keeps an open "Add to Canvas" picker through the create flow (src/lti/picker.ts). */
+export function PickerField({ addToCanvas }: { addToCanvas: string | null }) {
+  return addToCanvas ? <input type="hidden" name={PICKER_PARAM} value={addToCanvas} /> : null;
+}
+
 /** Paste the material, or upload it. A chosen file wins over pasted text. */
-export function MaterialForm({ courseId, creationKey }: { courseId: string; creationKey: string }) {
+export function MaterialForm({
+  courseId,
+  creationKey,
+  addToCanvas,
+}: {
+  courseId: string;
+  creationKey: string;
+  addToCanvas: string | null;
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveMaterialAction, {});
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="creationKey" value={creationKey} />
+      <PickerField addToCanvas={addToCanvas} />
       <div className="flex flex-col gap-2">
         <label htmlFor="file" className="font-medium">
           Upload a file
@@ -53,11 +68,13 @@ export function ModeForm({
   courseId,
   contentId,
   creationKey,
+  addToCanvas,
   modes,
 }: {
   courseId: string;
   contentId: string;
   creationKey: string;
+  addToCanvas: string | null;
   modes: readonly Pick<Mode, "slug" | "label" | "description">[];
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(draftAction, {});
@@ -79,6 +96,7 @@ export function ModeForm({
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="contentId" value={contentId} />
       <input type="hidden" name="creationKey" value={creationKey} />
+      <PickerField addToCanvas={addToCanvas} />
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3 font-medium">What kind of chat?</legend>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">

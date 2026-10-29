@@ -5,6 +5,7 @@ import { Button, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { pendingDeepLink } from "@/lti/deep-link";
+import { keepPicker } from "@/lti/picker";
 import { findTool } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Add to Canvas" };
@@ -19,12 +20,6 @@ export default async function AddToCanvasPage({ params }: PageProps<"/courses/[c
   const { courseId, requestId } = await params;
   const { actor, course } = await loadTaughtCourse(courseId);
   const pending = await pendingDeepLink(db(), actor, requestId);
-  const create = (
-    <Link href={`/courses/${course.id}/activities/new`} className="text-sm font-medium underline">
-      Create a new assignment
-    </Link>
-  );
-
   if (!pending || pending.courseId !== course.id) {
     return (
       <EmptyState title="This has expired">
@@ -33,11 +28,18 @@ export default async function AddToCanvasPage({ params }: PageProps<"/courses/[c
     );
   }
 
+  // Publishing the new assignment comes back here (src/lti/picker.ts).
+  const create = (
+    <Link href={keepPicker(`/courses/${course.id}/activities/new`, pending.id)} className="text-sm font-medium underline">
+      Create a new assignment
+    </Link>
+  );
+
   const published = (await listCourseActivities(db(), actor, course.id)).filter((a) => a.status === "published");
   if (published.length === 0) {
     return (
       <EmptyState title="No published assignments yet" action={create}>
-        <p>Create one and publish it, then choose DALAA again in Canvas to add it.</p>
+        <p>Create one and publish it, and you&apos;ll come back here to add it.</p>
       </EmptyState>
     );
   }
@@ -69,7 +71,7 @@ export default async function AddToCanvasPage({ params }: PageProps<"/courses/[c
         ))}
       </ul>
       <p className="text-sm text-muted">
-        Not here? {create}, publish it, then choose DALAA again in Canvas.
+        Not here? {create} and publish it, and you&apos;ll come back here to add it.
       </p>
     </div>
   );

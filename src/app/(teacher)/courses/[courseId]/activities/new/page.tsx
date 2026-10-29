@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadTaughtCourse } from "@/courses/load";
+import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { isLive, TOOLS } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Create assignment" };
 
 /** Step 1 of a new assignment: which type? (PRD §5 step 5) */
-export default async function NewActivityPage({ params }: PageProps<"/courses/[courseId]/activities/new">) {
+export default async function NewActivityPage({ params, searchParams }: PageProps<"/courses/[courseId]/activities/new">) {
   const { course } = await loadTaughtCourse((await params).courseId);
+  const picker = pickerRequest((await searchParams)[PICKER_PARAM]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,7 +46,7 @@ export default async function NewActivityPage({ params }: PageProps<"/courses/[c
             <li key={tool.slug}>
               {live ? (
                 <Link
-                  href={`/courses/${course.id}/activities/new/${tool.slug}`}
+                  href={keepPicker(`/courses/${course.id}/activities/new/${tool.slug}`, picker)}
                   className={`group ${cardStyles} transition-colors hover:border-border-strong`}
                   style={{ borderTopColor: tool.accent, borderTopWidth: 4 }}
                 >

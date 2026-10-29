@@ -18,6 +18,7 @@ import { getTaughtActivity } from "@/activities/store";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { LTI_SIGNING_ALG, type ToolKey } from "./keys";
+import { pickerRequest } from "./picker";
 import type { Platform } from "./registration";
 import type { LaunchClaims } from "./validate";
 
@@ -31,8 +32,6 @@ export const DEEP_LINK_TTL_SECONDS = 60 * 60;
 
 /** The response JWT's life: Canvas reads it as soon as the form posts. */
 const RESPONSE_SECONDS = 5 * 60;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The custom field naming the assignment a Canvas link opens (src/lti/launch.ts). */
 export const ACTIVITY_ID_FIELD = "activity_id";
@@ -66,12 +65,9 @@ export async function startDeepLink(
   return row.id;
 }
 
-/** The DALAA path where the teacher picks what to add. */
-export const deepLinkPath = (courseId: string, requestId: string) => `/courses/${courseId}/add-to-canvas/${requestId}`;
-
 /** An open request for this teacher, or null (spent, expired, someone else's, made up). */
 export async function pendingDeepLink(db: Db, actor: Actor, requestId: string): Promise<{ id: string; courseId: string } | null> {
-  if (!UUID.test(requestId)) return null;
+  if (!pickerRequest(requestId)) return null;
   const [row] = await db.query<{ id: string; course_id: string }>(
     `select id, course_id from lti_deep_link_requests
       where id = $1 and user_id = $2 and used_at is null and expires_at > now()`,

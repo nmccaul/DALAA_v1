@@ -4,7 +4,7 @@ import { MODES } from "./modes";
 import { StudyChatSettings } from "./schema";
 
 /** The drafted Study Chat as short summary cards the teacher opens to edit, then Publish. */
-export function StudyChatReview({ activity }: ReviewScreenProps) {
+export function StudyChatReview({ activity, addToCanvas }: ReviewScreenProps) {
   const parsed = StudyChatSettings.safeParse(activity.settings);
   if (!parsed.success) {
     return <p className="text-danger">Some of this chat&apos;s settings don&apos;t fit any more. Create it again.</p>;
@@ -19,7 +19,13 @@ export function StudyChatReview({ activity }: ReviewScreenProps) {
           {MODES[parsed.data.mode].label} · {published ? "Published" : "Draft, students can't see it yet"}
         </p>
       </div>
-      <StudyChatEditor courseId={activity.courseId} activityId={activity.id} published={published} initial={parsed.data} />
+      <StudyChatEditor
+        courseId={activity.courseId}
+        activityId={activity.id}
+        published={published}
+        initial={parsed.data}
+        addToCanvas={addToCanvas}
+      />
     </div>
   );
 }

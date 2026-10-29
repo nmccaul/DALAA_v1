@@ -5,6 +5,7 @@ import { graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
+import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 
@@ -25,7 +26,7 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
 
   const saved = await saveContent(db(), actor, courseId, String(form.get("creationKey") ?? ""), input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(`${newPath(courseId)}?content=${saved.content.id}`);
+  redirect(keepPicker(`${newPath(courseId)}?content=${saved.content.id}`, pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
@@ -44,10 +45,13 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
     creationKey: String(form.get("creationKey") ?? ""),
   });
   if (!created.ok) return { error: created.reason };
-  redirect(`/courses/${courseId}/activities/${created.activityId}`);
+  redirect(keepPicker(`/courses/${courseId}/activities/${created.activityId}`, pickerRequest(form.get(PICKER_PARAM))));
 }
 
-/** The review screen's edits: Save draft keeps editing; Publish saves, then publishes. */
+/**
+ * The review screen's edits: Save draft keeps editing; Publish saves, then
+ * publishes, and lands back on Canvas's "Add to Canvas" picker if it came from there.
+ */
 export async function saveSettingsAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
@@ -64,5 +68,5 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
 
   const published = await publishStudyChat(db(), actor, activityId);
   if (!published.ok) return { error: published.reason };
-  redirect(`/courses/${courseId}`);
+  redirect(afterPublishPath(courseId, pickerRequest(form.get(PICKER_PARAM))));
 }

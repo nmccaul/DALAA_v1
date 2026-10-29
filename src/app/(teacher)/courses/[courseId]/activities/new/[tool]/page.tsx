@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadTaughtCourse } from "@/courses/load";
+import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { findTool, isLive } from "@/tools/catalog";
 import { screensFor } from "@/tools/screens";
 
@@ -18,10 +19,11 @@ export default async function NewToolActivityPage({ params, searchParams }: Page
   if (!tool || !isLive(tool) || !screens) notFound();
   const Icon = tool.icon;
   const Create = screens.create;
+  const query = await searchParams;
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/courses/${course.id}/activities/new`} className="-mb-2 text-sm text-muted hover:text-text">
+      <Link href={keepPicker(`/courses/${course.id}/activities/new`, pickerRequest(query[PICKER_PARAM]))} className="-mb-2 text-sm text-muted hover:text-text">
         ← All types
       </Link>
       <div className="flex items-center gap-3">
@@ -30,7 +32,7 @@ export default async function NewToolActivityPage({ params, searchParams }: Page
         </span>
         <h2 className="font-display text-2xl font-semibold tracking-tight">New {tool.name}</h2>
       </div>
-      <Create actor={actor} course={course} searchParams={await searchParams} />
+      <Create actor={actor} course={course} searchParams={query} />
     </div>
   );
 }

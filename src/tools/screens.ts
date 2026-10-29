@@ -20,7 +20,8 @@ export type CreateScreenProps = {
   searchParams: Record<string, string | string[] | undefined>;
 };
 
-export type ReviewScreenProps = { actor: Actor; activity: TaughtActivity };
+/** `addToCanvas`: the open "Add to Canvas" picker's request, so Publish returns to it (src/lti/picker.ts). */
+export type ReviewScreenProps = { actor: Actor; activity: TaughtActivity; addToCanvas: string | null };
 
 type ToolScreens = {
   create: (props: CreateScreenProps) => ReactNode | Promise<ReactNode>;
