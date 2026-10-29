@@ -277,3 +277,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Surprise: the student action's redirect back to the same page showed the old page until reload; fixed with `revalidatePath` before the redirect.
 - Browser check (local smoke course): student disputed, teacher resolved at 9 with an answer, student saw "Your grade: 9 of 10" and the answer. Light 1280 teacher, dark 390 both sides look right. Local dispute and teacher score cleared afterwards.
 - **Nathan:** teachers can't read the student's chat from the Grading tab yet, which a dispute really needs; worth a task. No dispute deadline (Quizzer's `days_to_dispute`) either. Also the grader's evidence quotes show doubled quote marks (“"…"”) on the student page: the grader includes quotes in the evidence text.
+
+## 2026-10-29 15:31 UTC · T25a LTI user ids + gradebook URL · done
+- T25 was too big for one pass; split into T25a (this), T25b (AGS client, pure push rules, sender + ledger) and T25c (Grading tab button) in TASKS.
+- AGS sends a score keyed by the platform's user id (the launch `sub`), which DALAA never stored. Additive migration `20261029152911_lti_users.sql`: `lti_users` (platform, user → sub; unique both ways; RLS) and nullable `lti_contexts.lineitems_url`. Applied locally; goes to production at checkpoint C.
+- `src/lti/users.ts`: `rememberLtiUser` (latest wins; a sub seen on another account moves to the new one) and `ltiSubs`. Called on every launch (`src/lti/launch.ts`, which also keeps the AGS lineitems URL like the memberships URL: a launch without one keeps the last) and on roster sync (`planFromMembers` now returns each student's NRPS `user_id`; `syncLtiRoster` finds the account again through `upsertStudent`). The sub is still never used to find or create an account.
+- Tests: launch (URL kept/replaced, subs recorded and moved), roster (subs from NRPS, linked account gets the sub), RLS list. 328 green on Node 22.
+- Note for T25b: a student who signed up outside Canvas and was never synced or launched has no sub, so their grade can't be sent; T25c should list them as an exception ("Sync with Canvas first").
