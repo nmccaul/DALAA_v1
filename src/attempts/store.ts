@@ -34,6 +34,9 @@ export type TakenActivity = {
   content: { name: string; body: string } | null;
 };
 
+/** Where a student takes an activity (src/app/activities/[activityId]). */
+export const takePath = (activityId: string) => `/activities/${activityId}`;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ATTEMPT_COLUMNS = `id, activity_id as "activityId", status, ended_by as "endedBy",

@@ -193,6 +193,10 @@ describe("deep linking", () => {
     expect(await stored(other)).toEqual({ lti_resource_link_id: "rl-1", lti_line_item_url: LINE_ITEM });
     expect(await stored(activityId)).toEqual({ lti_resource_link_id: null, lti_line_item_url: null });
 
+    // A student who follows the link lands on the assignment itself.
+    const student = link("rl-1", { email: "sam@example.edu", roles: [`${ROLE}Learner`], custom: { login_id: "sam@example.edu", activity_id: other } });
+    expect(await signInFromLaunch(db, student)).toMatchObject({ ok: true, path: `/activities/${other}` });
+
     // An unknown or copied activity id opens the course.
     const copied = link("rl-3", { custom: { login_id: "teacher@example.edu", activity_id: randomUUID() } });
     expect(await signInFromLaunch(db, copied)).toMatchObject({ ok: true, path: `/courses/${courseId}` });

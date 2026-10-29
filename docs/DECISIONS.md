@@ -159,6 +159,13 @@ chat, `GRADER_MODEL` (OpenAI) for drafting settings and grading. Production
 authenticates with Vercel OIDC; local uses `AI_GATEWAY_API_KEY`. One ledger row
 per real call; cost NULL when unknown, never 0.
 
+### D-027 · A Study Chat attempt starts with the first message
+*2026-10-29, overnight build (T21d); Nathan to confirm.* Opening the chat
+page writes nothing. The attempt, and its time limit, start when the student
+sends their first message, so reading the material first doesn't eat into the
+chat's time, and a student who only looks at the page isn't counted as
+submitted or started. The page says so next to the time limit.
+
 ---
 
 ## Open

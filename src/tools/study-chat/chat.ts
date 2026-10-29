@@ -19,11 +19,10 @@ import { STUDY_CHAT } from "./create";
 import { ENDED, REPLY_FAILED } from "./student-messages";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
+import { MAX_MESSAGE_LENGTH } from "./student-view";
 
 /** The model that replies, and the cheap one that checks whether the question was answered. */
 export type ChatModels = { reply: LanguageModel; check: LanguageModel };
-
-export const MAX_MESSAGE_LENGTH = 4000;
 
 /** A turn left 'pending' this long belongs to a request that died; it may be sent again. */
 const STALE_PENDING_SECONDS = 120;

@@ -16,6 +16,7 @@
  *   `activity_id` opens that assignment and remembers its Canvas link.
  */
 
+import { takePath } from "@/attempts/store";
 import { normalizeNetId } from "@/auth/admit";
 import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
@@ -99,8 +100,12 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
       return { ok: true as const, userId, courseId, role, path: deepLinkPath(courseId, await startDeepLink(tx, claims, userId, courseId)) };
     }
     const activityId = await linkedActivity(tx, courseId, claims);
-    // The student's assignment page lands with T21; until then, home.
-    const path = role === "instructor" ? `/courses/${courseId}${activityId ? `/activities/${activityId}` : ""}` : "/";
+    const path =
+      role === "instructor"
+        ? `/courses/${courseId}${activityId ? `/activities/${activityId}` : ""}`
+        : activityId
+          ? takePath(activityId)
+          : "/";
     return { ok: true as const, userId, courseId, role, path };
   });
 }

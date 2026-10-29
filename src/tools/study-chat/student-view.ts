@@ -9,6 +9,9 @@
 
 import type { StudyChatSettings } from "./schema";
 
+/** The longest message a student may send; the page stops typing there, `sendTurn` refuses past it. */
+export const MAX_MESSAGE_LENGTH = 4000;
+
 export type StudentChatView = {
   title: string;
   /** The AI's first message, shown before the student writes. */
