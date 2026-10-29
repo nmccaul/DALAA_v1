@@ -142,6 +142,65 @@ describe("password sign-in", () => {
     });
   });
 
+  describe("shared test student (D-029)", () => {
+    beforeEach(() => {
+      vi.stubEnv("TEST_STUDENT_EMAIL", "Student@DALAA.test");
+      vi.stubEnv("TEST_STUDENT_PASSWORD", "battery staple");
+    });
+    const form = { email: "student@dalaa.test", password: "battery staple" };
+
+    it("links to the account a roster sync made for that email, without asking Supabase", async () => {
+      const id = await enrolStudent("canvas.student", "student@dalaa.test");
+      const { provider, calls } = fakeProvider();
+      expect(await signInWithPassword(db, inst, { ...form, email: " STUDENT@dalaa.test" }, provider)).toEqual({ ok: true, userId: id });
+      expect(calls).toEqual([]);
+      expect(await loadActor(db, id)).toMatchObject({ isStaff: false, netId: "canvas.student" });
+    });
+
+    it("gets a new student account with no courses when nothing has synced it yet", async () => {
+      const result = await signInWithPassword(db, inst, form, fakeProvider().provider);
+      if (!result.ok) throw new Error(result.reason);
+      expect(await loadActor(db, result.userId)).toMatchObject({ isStaff: false, netId: "student@dalaa.test", displayName: "Test Student" });
+      expect(await db.query("select 1 from course_members where user_id = $1", [result.userId])).toEqual([]);
+    });
+
+    it("is never staff: refused when the email is on the allowlist or teaches an LTI course", async () => {
+      await db.query("insert into staff_allowlist (institution_id, external_id) values ($1, 'student@dalaa.test')", [inst]);
+      expect(await signInWithPassword(db, inst, form, fakeProvider().provider)).toEqual({ ok: false, reason: "password" });
+      expect(await db.query("select 1 from users where external_id = 'student@dalaa.test'")).toEqual([]);
+
+      await db.query("delete from staff_allowlist");
+      const id = await enrolStudent("canvas.student", "student@dalaa.test");
+      const [platform] = await db.query<{ id: string }>(
+        `insert into lti_platforms (institution_id, issuer, client_id, auth_url, token_url, jwks_url)
+         values ($1, 'https://canvas.test', 'c', 'https://a', 'https://t', 'https://j') returning id`,
+        [inst],
+      );
+      const [course] = await db.query<{ id: string }>("select course_id as id from course_members where user_id = $1", [id]);
+      await db.query("insert into lti_contexts (platform_id, context_id, course_id) values ($1, 'ctx', $2)", [platform.id, course.id]);
+      await db.query("update course_members set role = 'instructor' where user_id = $1", [id]);
+      expect(await signInWithPassword(db, inst, form, fakeProvider().provider)).toEqual({ ok: false, reason: "password" });
+    });
+
+    it("refuses a wrong password, even one Supabase holds for that email", async () => {
+      const { provider } = fakeProvider({ "student@dalaa.test": "supabase pw" });
+      for (const password of ["battery staple ", "wrong", "", "supabase pw"]) {
+        expect(await signInWithPassword(db, inst, { ...form, password }, provider)).toEqual({ ok: false, reason: "password" });
+      }
+      expect(await db.query("select 1 from users")).toEqual([]);
+    });
+
+    it("can't be signed up for", async () => {
+      vi.stubEnv("SCHOOL_EMAIL_DOMAINS", "dalaa.test");
+      const { provider, calls } = fakeProvider();
+      expect(await createAccount(db, inst, { email: "student@dalaa.test", password: "12345678" }, provider)).toEqual({
+        ok: false,
+        reason: "account-exists",
+      });
+      expect(calls).toEqual([]);
+    });
+  });
+
   describe("students", () => {
     it("creates an account for a school email: a student with no courses, not staff", async () => {
       const { provider, accounts } = fakeProvider();

@@ -17,7 +17,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { admit, normalizeNetId, type Admission } from "./admit";
+import { admit, loadActor, normalizeNetId, type Admission } from "./admit";
 
 /** What proves an email + password. Supabase in the app; a fake in tests. */
 export type PasswordProvider = {
@@ -65,6 +65,12 @@ export function testTeacherLoginId(): string | null {
   return normalizeEmail(process.env.TEST_TEACHER_EMAIL ?? "");
 }
 
+/** The shared test student's login email, or null when it isn't configured (D-029). */
+export function testStudentEmail(): string | null {
+  if (!process.env.TEST_STUDENT_PASSWORD) return null;
+  return normalizeEmail(process.env.TEST_STUDENT_EMAIL ?? "");
+}
+
 /** The shared logins (D-023, D-029). Nobody sets a password for these; it lives in env. */
 export function isSharedLogin(email: string): boolean {
   return [process.env.TEST_TEACHER_EMAIL, process.env.TEST_STUDENT_EMAIL].some(
@@ -106,6 +112,13 @@ export async function signInWithPassword(
     return admit(db, institutionId, { netId: email, displayName: "Test Teacher", email });
   }
 
+  if (email === testStudentEmail()) {
+    if (!secretsMatch(form.password, process.env.TEST_STUDENT_PASSWORD ?? "")) {
+      return { ok: false, reason: "password" };
+    }
+    return admitTestStudent(db, institutionId, email);
+  }
+
   // Any domain: only a school email can sign up, but anyone may have set a password (D-029).
   if (!(await provider.verify(email, form.password))) return { ok: false, reason: "password" };
   return admitByEmail(db, institutionId, email);
@@ -119,7 +132,7 @@ export async function createAccount(
 ): Promise<PasswordAdmission> {
   const email = normalizeEmail(form.email);
   if (!email) return { ok: false, reason: "bad-email" };
-  if (email === testTeacherLoginId()) return { ok: false, reason: "account-exists" };
+  if (isSharedLogin(email)) return { ok: false, reason: "account-exists" };
   if (!isSchoolEmail(email)) return { ok: false, reason: "not-school-email" };
   if (form.password.length < MIN_PASSWORD) return { ok: false, reason: "weak-password" };
 
@@ -184,4 +197,25 @@ async function loginIdForEmail(db: Db, institutionId: string, email: string): Pr
 async function admitByEmail(db: Db, institutionId: string, email: string): Promise<Admission> {
   const loginId = await loginIdForEmail(db, institutionId, email);
   return admit(db, institutionId, { netId: loginId, email }, { newStudent: true });
+}
+
+/**
+ * The shared test student (D-029): the account a launch or roster sync made for
+ * this email, else a new student with no courses. A shared password never opens
+ * a staff account, so an email that is (or would be) staff is refused.
+ */
+async function admitTestStudent(db: Db, institutionId: string, email: string): Promise<PasswordAdmission> {
+  const loginId = await loginIdForEmail(db, institutionId, email);
+  const [staff] = await db.query(
+    "select 1 from staff_allowlist where institution_id = $1 and external_id = $2",
+    [institutionId, loginId],
+  );
+  const [existing] = await db.query<{ id: string }>(
+    "select id from users where institution_id = $1 and external_id = $2",
+    [institutionId, loginId],
+  );
+  if (staff || loginId === testTeacherLoginId() || (existing && (await loadActor(db, existing.id))?.isStaff)) {
+    return { ok: false, reason: "password" };
+  }
+  return admit(db, institutionId, { netId: loginId, displayName: "Test Student", email }, { newStudent: true });
 }
