@@ -39,3 +39,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `src/lti/config.ts` now has `ltiUrls()` and `appUrl(request)` so the login, launch and config routes read one place for endpoint paths.
 - Tests: `src/lti/login.test.ts` (good request, both issuers, missing client_id, unknown issuer, unknown client, missing params, unconfigured, GET/POST parsing).
 - redirect_uri is always DALAA's own launch URL (from APP_URL), never the request's target_link_uri; the launch (T07) checks target_link_uri in the token.
+
+## 2026-10-29 06:45 UTC · T07 Launch validation · done
+- `src/lti/validate.ts`: `validateLaunch()` consumes the state atomically first (one `update … where used_at is null and expires_at > now`), so a replay or a race fails and a bad token still burns its state. Then jose `jwtVerify` (RS256 only, 60 s clock tolerance, exp/iat/nonce/sub required) against the platform JWKS, iss = the issuer the login named, aud contains our client id, azp required and equal when there are several audiences or azp is present, nonce = the stored one, deployment known, version 1.3.0, Resource Link (needs resource_link.id) or Deep Linking (needs deep_link_return_url), target_link_uri present.
+- Returns typed `LaunchClaims` (platform, sub, email, name, roles, context, resource link, custom fields as strings, deep linking settings, AGS and NRPS endpoints) for T08. Remote JWKS sets are cached per URL (`remoteKeys`); tests inject a local set.
+- Route `src/app/api/lti/launch/route.ts` (POST): for now a verified launch only returns `{ ok, messageType }`; T08 replaces this with sign-in.
+- Tests `src/lti/validate.test.ts` (14): good, deep linking, bad signature, wrong aud, multi-aud/azp, wrong iss, replayed state, nonce from another login, burned state, unknown deployment, expired token, expired state, bad version/type/missing claims, form parsing.
+- Not checked: target_link_uri against our own origin (left to T08, which decides where to redirect).
