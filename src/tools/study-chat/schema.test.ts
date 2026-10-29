@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MODE_SLUGS, MODES } from "./modes";
-import { rubricPoints, StudyChatSettings } from "./schema";
+import { FIELDS } from "./fields";
+import { rubricPoints, settingProblems, settingTitle, StudyChatSettings } from "./schema";
 
 const valid = (): StudyChatSettings => ({
   mode: "case-chat",
@@ -118,5 +119,44 @@ describe("Study Chat modes", () => {
       }
     }
     expect(Object.keys(MODES).sort()).toEqual([...MODE_SLUGS].sort());
+  });
+});
+
+describe("setting labels", () => {
+  it("come from the schema, through lists and nullable fields", () => {
+    expect(settingTitle(["goal"])).toBe("Goal");
+    expect(settingTitle(["scenarios", "opening"])).toBe("Opening message");
+    expect(settingTitle(["rubric", "criteria", 2, "points"])).toBe("Points");
+    expect(settingTitle(["completion", "maxTurns"])).toBe("Most student messages");
+    expect(() => settingTitle(["nope"])).toThrow();
+  });
+
+  it("exist for every setting the review screen can search", () => {
+    for (const field of FIELDS) {
+      expect(settingTitle(field.path)).not.toBe("");
+      expect(settingTitle([field.path[0]])).not.toBe("");
+    }
+  });
+
+  it("name what needs fixing in plain sentences", () => {
+    const s = valid();
+    s.goal = " ";
+    s.persona.tone = "x".repeat(301);
+    s.completion = { maxTurns: null, timeLimitMinutes: 0, question: null, studentCanFinish: false };
+    const result = StudyChatSettings.safeParse(s);
+    if (result.success) throw new Error("expected a problem");
+    expect(settingProblems(result.error)).toEqual([
+      "“Goal” can't be empty.",
+      "“Tone” is too long.",
+      "“Time limit (minutes)” is too low or too short.",
+    ]);
+  });
+
+  it("pass the custom message through", () => {
+    const s = valid();
+    s.completion = { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false };
+    const result = StudyChatSettings.safeParse(s);
+    if (result.success) throw new Error("expected a problem");
+    expect(settingProblems(result.error)).toEqual(["The chat needs at least one way to end."]);
   });
 });

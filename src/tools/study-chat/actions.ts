@@ -5,10 +5,10 @@ import { graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
-import { createStudyChat, publishStudyChat } from "./create";
+import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 
-export type FormState = { error?: string };
+export type FormState = { error?: string; problems?: string[]; savedAt?: number };
 
 const newPath = (courseId: string) => `/courses/${courseId}/activities/new/study-chat`;
 
@@ -47,10 +47,21 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
   redirect(`/courses/${courseId}/activities/${created.activityId}`);
 }
 
-export async function publishAction(_prev: FormState, form: FormData): Promise<FormState> {
+/** The review screen's edits: Save draft keeps editing; Publish saves, then publishes. */
+export async function saveSettingsAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
   const activityId = String(form.get("activityId") ?? "");
+  let settings: unknown;
+  try {
+    settings = JSON.parse(String(form.get("settings") ?? ""));
+  } catch {
+    return { error: "We couldn't read your changes. Reload the page and try again." };
+  }
+  const saved = await saveStudyChat(db(), actor, activityId, settings);
+  if (!saved.ok) return { error: saved.reason, problems: saved.problems };
+  if (form.get("intent") !== "publish") return { savedAt: Date.now() };
+
   const published = await publishStudyChat(db(), actor, activityId);
   if (!published.ok) return { error: published.reason };
   redirect(`/courses/${courseId}`);

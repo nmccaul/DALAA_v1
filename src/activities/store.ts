@@ -102,3 +102,22 @@ export async function publishActivity(
   await db.query("update activities set status = 'published', updated_at = now() where id = $1", [activity.id]);
   return { ok: true };
 }
+
+export type ActivityChanges = Pick<NewActivity, "title" | "settings" | "points">;
+
+/** Replaces a draft's or published activity's title, settings and points. Saving the same thing twice changes nothing. */
+export async function updateActivity(
+  db: Db,
+  actor: Actor,
+  activityId: string,
+  changes: ActivityChanges,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const activity = await getTaughtActivity(db, actor, activityId);
+  if (!activity) return { ok: false, reason: "That assignment isn't one of yours." };
+  // Through text, as in createActivity.
+  await db.query(
+    "update activities set title = $2, settings = $3::text::jsonb, points = $4, updated_at = now() where id = $1",
+    [activity.id, changes.title, JSON.stringify(changes.settings), changes.points],
+  );
+  return { ok: true };
+}

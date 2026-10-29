@@ -6,7 +6,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { findTool, isLive } from "@/tools/catalog";
-import { createStudyChat, publishStudyChat, STUDY_CHAT } from "./create";
+import { createStudyChat, publishStudyChat, saveStudyChat, STUDY_CHAT } from "./create";
 import { answering, draft } from "./test-fixtures";
 
 describe("creating a Study Chat", () => {
@@ -110,5 +110,45 @@ describe("creating a Study Chat", () => {
     expect(await publishStudyChat(db, prof, result.activityId)).toEqual({ ok: true });
     expect(await publishStudyChat(db, prof, result.activityId)).toEqual({ ok: true });
     expect((await getTaughtActivity(db, prof, result.activityId))?.status).toBe("published");
+  });
+
+  it("saves a teacher's edits, with the title and points following the settings", async () => {
+    const result = await createStudyChat(db, answering(draft()), prof, course, {
+      contentId: content,
+      mode: "case-chat",
+      creationKey: randomUUID(),
+    });
+    if (!result.ok) throw new Error(result.reason);
+    const edited = draft();
+    edited.scenarios[0].title = "Two stores?";
+    edited.completion.timeLimitMinutes = 20;
+    edited.rubric.criteria.push({ label: "Clarity", description: "Says it plainly.", points: 5 });
+
+    expect(await saveStudyChat(db, other, result.activityId, edited)).toEqual({ ok: false, reason: "That assignment isn't one of yours." });
+    expect(await saveStudyChat(db, prof, result.activityId, edited)).toEqual({ ok: true });
+    expect(await saveStudyChat(db, prof, result.activityId, edited)).toEqual({ ok: true });
+    expect(await getTaughtActivity(db, prof, result.activityId)).toMatchObject({
+      title: "Two stores?",
+      points: 15,
+      settings: edited,
+      status: "draft",
+    });
+    expect(await publishStudyChat(db, prof, result.activityId)).toEqual({ ok: true });
+  });
+
+  it("refuses edits that don't fit the schema and keeps what was saved", async () => {
+    const result = await createStudyChat(db, answering(draft()), prof, course, {
+      contentId: content,
+      mode: "case-chat",
+      creationKey: randomUUID(),
+    });
+    if (!result.ok) throw new Error(result.reason);
+
+    expect(await saveStudyChat(db, prof, result.activityId, { ...draft(), goal: "", secret: true })).toEqual({
+      ok: false,
+      reason: "Some settings need fixing before you save.",
+      problems: ["“Goal” can't be empty.", "“Study Chat settings” needs a valid value."],
+    });
+    expect((await getTaughtActivity(db, prof, result.activityId))?.settings).toEqual(draft());
   });
 });

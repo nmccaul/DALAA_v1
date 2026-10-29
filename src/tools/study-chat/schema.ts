@@ -107,7 +107,8 @@ export const StudyChatSettings = z
             }),
           )
           .min(1)
-          .max(10),
+          .max(10)
+          .meta({ title: "Criteria" }),
         strictness: z.enum(STRICTNESS).meta({
           title: "Grader strictness",
           description: "How hard the AI grader is on partial answers.",
@@ -122,4 +123,36 @@ export type StudyChatSettings = z.infer<typeof StudyChatSettings>;
 /** The points a chat is worth: the sum of its rubric criteria. */
 export function rubricPoints(settings: StudyChatSettings): number {
   return settings.rubric.criteria.reduce((sum, c) => sum + c.points, 0);
+}
+
+/**
+ * The teacher-facing label of the setting at `path` (keys only; list
+ * positions are skipped), read from the schema's `title`s so the editor, its
+ * search and its error messages can't drift from the schema.
+ */
+export function settingTitle(path: readonly PropertyKey[]): string {
+  let node = StudyChatSettings as z.ZodType;
+  for (const key of path) {
+    if (typeof key !== "string") continue;
+    while (node instanceof z.ZodNullable || node instanceof z.ZodArray) {
+      node = (node instanceof z.ZodNullable ? node.unwrap() : node.element) as z.ZodType;
+    }
+    if (!(node instanceof z.ZodObject) || !Object.hasOwn(node.shape, key)) throw new Error(`No setting ${path.join(".")}`);
+    node = node.shape[key] as z.ZodType;
+  }
+  const title = node.meta()?.title;
+  if (!title) throw new Error(`Setting ${path.join(".")} has no title`);
+  return title;
+}
+
+/** Why settings don't fit, as plain sentences that name each setting. */
+export function settingProblems(error: z.ZodError): string[] {
+  const problems = error.issues.map((issue) => {
+    if (issue.code === "custom") return issue.message;
+    const where = `“${settingTitle(issue.path)}”`;
+    if (issue.code === "too_small") return issue.origin === "string" ? `${where} can't be empty.` : `${where} is too low or too short.`;
+    if (issue.code === "too_big") return issue.origin === "string" ? `${where} is too long.` : `${where} is too high or has too many.`;
+    return `${where} needs a valid value.`;
+  });
+  return [...new Set(problems)];
 }

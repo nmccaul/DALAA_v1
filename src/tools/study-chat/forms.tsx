@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Button, inputStyles } from "@/components/ui";
-import { draftAction, publishAction, saveMaterialAction, type FormState } from "./actions";
+import { draftAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
 
 function Problem({ state }: { state: FormState }) {
@@ -102,20 +102,6 @@ export function ModeForm({
           Suggest for me
         </Button>
       </div>
-    </form>
-  );
-}
-
-export function PublishForm({ courseId, activityId }: { courseId: string; activityId: string }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(publishAction, {});
-  return (
-    <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="courseId" value={courseId} />
-      <input type="hidden" name="activityId" value={activityId} />
-      <div>
-        <Button disabled={pending}>{pending ? "Publishing…" : "Publish"}</Button>
-      </div>
-      <Problem state={state} />
     </form>
   );
 }
