@@ -61,3 +61,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Launch errors are now a plain HTML page with the same status codes (no more JSON inside Canvas).
 - Tests: `src/lti/handoff.test.ts` (use-once, expiry, path constraint, cookie present/blocked/other user, landed→open redirect, HTML escaping); `launch.test.ts` updated for the landed hop. Migration applied locally only; T09 applies it to production.
 - Nathan: the new-tab page is plain HTML (not the app shell), deliberately, since it answers a cross-site POST; check its look in Safari inside Canvas tomorrow.
+
+## 2026-10-29 06:54 UTC · T09 CHECKPOINT A (deploy) · blocked
+- Lint, typecheck and tests green (148 tests); branch pushed. Both new migrations (`20261029062749_lti.sql`, `20261029064935_lti_login_codes.sql`) are additive (create table/index, enable RLS).
+- Applying them to production failed: the Supabase pooler answers `tenant/user postgres.rxcytik… not found`. Production `/api/health` was **already** `{"ok":false,"db":"down"}` before this pass, so it isn't something this branch caused. The project isn't in the Supabase account the MCP tool can see (likely Vercel Marketplace-managed), so I couldn't check whether it's paused.
+- Stopped before the PR/merge/deploy: nothing merged, production unchanged (`/` 200, `/api/lti/jwks` 404 because main doesn't have it yet).
+- Production env has the LTI_* var names; they're sensitive, so their values can't be pulled to confirm they're non-empty.
+- **Nathan:** open the DALAA Supabase project (via Vercel → Storage), restore/unpause it (or fix POSTGRES_URL_NON_POOLING if the project moved), confirm `/api/health` shows the db up, then rerun T09 (set it back to `[ ]`).
