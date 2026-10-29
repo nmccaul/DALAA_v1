@@ -261,3 +261,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Production deploy `dalaa-v1-7oq5x133c` Ready from the merge; it also picks up the D-028 model env values. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200.
 - Surprise: the first `vercel env pull` wrote no file and printed nothing useful; a retry worked. The migrate step now checks the URL starts with `postgres` before running.
 - **Nathan:** VERIFY IN MORNING: a student chat on production now grades with the real `GRADER_MODEL` (not yet exercised against production).
+
+## 2026-10-29 15:21 UTC · T24a Grading tab + teacher score · done
+- Split T24 into T24a (this) and T24b (disputes) in TASKS.
+- Additive migration `20261029151342_teacher_scores.sql`: nullable `teacher_score`, `teacher_scored_by`, `teacher_scored_at` on `results`, with checks (only on a graded result, never above `max_score`, all three set together). Needs applying to production at checkpoint C; it adds check constraints too, but every existing row passes them (the new columns are NULL).
+- New `src/results/grading.ts`: `listCourseGrades` (published assignments, every student on the class list plus flagged ones with an attempt, status and both scores) and `setTeacherScore` (through `coursesTaughtBy`; refuses out of range or ungraded; NULL puts the AI's back). `getResult` returns `teacherScore`; `countedScore` is the one place "teacher's if set, else AI's" lives. The student home list uses the same rule in SQL (`coalesce`).
+- Grading tab (`courses/[courseId]/grading`) shows it, with Save and "Use the AI's score". Students see "Your teacher set this grade. The scores below are from the first grading." 323 tests green on Node 22.
+- Browser check (local smoke course; I added `smoke.1793284727258.teacher` to the local `staff_allowlist` so the NetID stand-in lets them in): save 9.5, reset, save 6; student home read "Graded: 6 of 10" and the result page showed the note. Light 1280 and dark 390 look right. The teacher score was cleared afterwards.
+- **Nathan:** a teacher can't give more than the assignment's points (the DB refuses it), so no extra credit for now. Say if you want that.
