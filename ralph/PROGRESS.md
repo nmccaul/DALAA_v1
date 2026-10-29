@@ -440,3 +440,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Student page: "First, add your work" form (upload or paste) replaces the chat until added, then a folded "Your work: …" above the chat. The time limit now counts from when the work is added (directions say so).
 - 8 new tests (6 in `work.test.ts`, 1 create, 1 schema). 441 green on Node 22; lint and typecheck clean. Browser check (local, `aa16stu`): form light 1280 and dark 390, empty submit shows the error, a paste opens the chat. Seed activity deleted.
 - **Nathan:** a student can add work only once (no replacing a wrong file); say if you want "replace before the first message".
+
+## 2026-10-29 20:28 UTC · T40b2 Edit the guide after drafting · done
+- `setActivityGuide` in `src/activities/store.ts` is the one way to attach or remove a guide after drafting: course teachers only, same-course guide only, idempotent. No migration.
+- Review screen: "Guide only the AI reads: <name> Remove", or a folded "Add a guide only the AI reads" with upload/paste and "Use a Canvas page or file". The line is `GuidePanel` (`src/tools/study-chat/guide-panel.tsx`), shared with create step 2, which now also offers Canvas for the guide.
+- Canvas picker: `?for=guide` saves the pick to `course_guides` (`saveFromCanvas(..., "guide")`) and returns `?guide=`; with `&activity=` the pick action attaches it to that activity before returning.
+- Tests: add/replace/remove, student refused, other course's guide refused (guide.test.ts); Canvas pick saved as a guide, not as student reading (content.test.ts); `afterPick` with `guide`. 444 green on Node 22; lint and typecheck clean.
+- Browser check (local, `natetest`, seeded draft in MKTG 201, deleted after): added a pasted guide, removed it, picker shows the guide wording (that course isn't Canvas-linked, so no real Canvas pick); light 1280 and dark 390. Fixed a `<form>` inside `<p>` hydration error found on the way.
+- **Nathan:** adding or removing a guide reloads the review page, so unsaved edits in the setting cards are lost; save first. A Canvas pick for the guide wasn't tried against real gitgrade.
