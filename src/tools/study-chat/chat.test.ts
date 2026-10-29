@@ -93,7 +93,7 @@ describe("a student's Study Chat", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, 'published', 10, $4, $5) returning id`,
       [course, STUDY_CHAT, JSON.stringify(draft()), saved.content.id, prof.userId],
     );
-    models = { reply: chatModel(), check: answering({ answered: false }) };
+    models = { reply: chatModel(), check: answering({ answered: false, awaitingStudent: false }) };
   });
 
   it("streams a reply, saves the turn, and sends the material and history to the model", async () => {
@@ -161,12 +161,15 @@ describe("a student's Study Chat", () => {
     expect(await readChat(db, student, activity)).toMatchObject({ attempt: { status: "completed", endedBy: "time" } });
   });
 
-  it("ends once the check says the question is answered, and a failed check ends nothing", async () => {
+  it("ends once the check says the question is answered and the AI isn't waiting on the student, and a failed check ends nothing", async () => {
     await setSettings(draft({ completion: { maxTurns: null, timeLimitMinutes: null, question: "Open or wait?", studentCanFinish: false } }));
     models.check = answering("not json");
     expect(await send("Maybe")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
 
-    models.check = answering({ answered: true });
+    models.check = answering({ answered: true, awaitingStudent: true });
+    expect(await send("I'd bet on e-bikes.")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
+
+    models.check = answering({ answered: true, awaitingStudent: false });
     expect(await send("Wait: cash flow first.")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "question" } });
     expect(JSON.stringify((models.check as MockLanguageModelV4).doGenerateCalls[0].prompt)).toContain("Wait: cash flow first.");
   });

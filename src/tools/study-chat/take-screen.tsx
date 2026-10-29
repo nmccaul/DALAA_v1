@@ -7,15 +7,17 @@ import { StudentResult } from "@/results/student-result";
 import type { TakeScreenProps } from "@/tools/screens";
 import { readChat } from "./chat";
 import { ChatRoom } from "./chat-room";
+import { FinishedChat } from "./finished-chat";
 import { gradeAttempt } from "./grade";
 import { StudyChatSettings } from "./schema";
 import { ENDED } from "./student-messages";
 import { studentView } from "./student-view";
 
 /**
- * A student's Study Chat: directions, the material, then the chat, and once
- * it has ended, the grade. The browser gets `studentView`, the finished
- * exchanges and the student's own result, nothing else. An ended chat with no
+ * A student's Study Chat: directions, the material, then the chat. Once it
+ * has ended, the grade comes first and the chat is folded away under it. The
+ * browser gets `studentView`, the finished exchanges and the student's own
+ * result, nothing else. An ended chat with no
  * grade yet (or a failed one) is graded after the page is sent.
  */
 export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
@@ -30,6 +32,16 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   const result = ended ? await getResult(db(), ended.id) : null;
   if (ended && result?.status !== "graded") after(() => gradeAttempt(db(), graderModel(), ended.id));
   const dispute = ended && result?.status === "graded" ? await latestDispute(db(), ended.id) : null;
+  const endedReason = ended?.endedBy ? ENDED[ended.endedBy] : null;
+  const room = (
+    <ChatRoom
+      activityId={activity.id}
+      view={view}
+      initialTurns={chat.turns}
+      startedAt={attempt?.startedAt.toISOString() ?? null}
+      ended={endedReason}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,14 +62,16 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
           </div>
         </details>
       )}
-      <ChatRoom
-        activityId={activity.id}
-        view={view}
-        initialTurns={chat.turns}
-        startedAt={attempt?.startedAt.toISOString() ?? null}
-        ended={ended?.endedBy ? ENDED[ended.endedBy] : null}
-      />
-      {ended && <StudentResult result={result} attemptId={ended.id} activityId={activity.id} dispute={dispute} />}
+      {ended ? (
+        <FinishedChat
+          ended={endedReason ?? ENDED.student}
+          messages={chat.turns.length}
+          result={<StudentResult result={result} attemptId={ended.id} activityId={activity.id} dispute={dispute} />}
+          conversation={room}
+        />
+      ) : (
+        room
+      )}
     </div>
   );
 }
