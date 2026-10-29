@@ -166,6 +166,13 @@ sends their first message, so reading the material first doesn't eat into the
 chat's time, and a student who only looks at the page isn't counted as
 submitted or started. The page says so next to the time limit.
 
+### D-028 · Free-tier AI Gateway models for testing
+*2026-10-29, Nathan.* Amends D-026. AI Gateway's free credit ($5/month) only
+serves older models, so testing uses `CHAT_MODEL=google/gemini-2.5-flash` and
+`GRADER_MODEL=openai/gpt-5.2` (local, preview and production). Moving to newer
+models (e.g. `gemini-3.8-flash`, `gpt-6.1-sol`) needs paid gateway credit and
+only an env change.
+
 ---
 
 ## Open

@@ -212,3 +212,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Production deploy `dalaa-v1-h01j8sb3r` Ready from the merge. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200, `/api/lti/config` 200.
 - Surprise: the safety check refuses `rm -rf "$(dirname "$S")"`; make the temp dir with `mktemp -d` first and remove its literal path afterwards.
 - No Chrome tools in this pass. **Nathan:** VERIFY IN MORNING: launch from course 42 (the DALAA nav link should land on the course), and the deep-link checks from T20/T20b, now against production.
+
+## 2026-10-29 14:40 UTC · AI Gateway unblocked (interactive session) · done
+- Nathan restored Supabase (prod `/api/health` db up) and added a card; the gateway's free credit only serves older models, so `CHAT_MODEL=google/gemini-2.5-flash` and `GRADER_MODEL=openai/gpt-5.2` in `.env.local` and Vercel production + preview (D-028). `gemini-3.x` and `gpt-5.4`+ answer 403 "Free tier users do not have access to this model".
+- `scripts/ai-smoke.mts`: both models replied, `ai_calls` rows have tokens and cost. `scripts/draft-smoke.mts`: the Harbor Bikes draft validates. T13b and T17b marked done; T21c (real chat) can now run.
+- Production still has the old model env values baked into the current deploy; the next checkpoint's deploy picks up the new ones.
+- `ralph/run.sh`: the "You've hit your 5-hour limit" message is now recognised; limit waits don't count as passes.
