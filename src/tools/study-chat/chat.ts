@@ -16,6 +16,7 @@ import { generateStructured, streamReply } from "@/ai/call";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
+import { ENDED, REPLY_FAILED } from "./student-messages";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
 
@@ -28,6 +29,9 @@ export const MAX_MESSAGE_LENGTH = 4000;
 const STALE_PENDING_SECONDS = 120;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A turn key is a browser-made UUID; `sendTurn` refuses anything else. */
+export const validTurnKey = (key: string) => UUID.test(key);
 
 export type TurnOutcome = { ok: true; reply: string; attempt: Attempt } | { ok: false; reason: string };
 
@@ -59,13 +63,6 @@ function timeIsUp(settings: StudyChatSettings, attempt: Attempt): boolean {
   const minutes = settings.completion.timeLimitMinutes;
   return minutes !== null && Date.now() >= attempt.startedAt.getTime() + minutes * 60_000;
 }
-
-const ENDED: Record<NonNullable<Attempt["endedBy"]>, string> = {
-  turns: "This chat has ended: you've used all your messages.",
-  time: "This chat has ended: time's up.",
-  question: "This chat has ended: you've answered the question.",
-  student: "You've finished this chat.",
-};
 
 /**
  * Asks the check model whether the student has answered the chat's question.
@@ -133,7 +130,7 @@ export async function sendTurn(
   input: { clientKey: string; message: string },
 ): Promise<SendResult> {
   const message = input.message.trim();
-  if (!UUID.test(input.clientKey)) throw new Error("Chat turn key must be a UUID");
+  if (!validTurnKey(input.clientKey)) throw new Error("Chat turn key must be a UUID");
   if (message === "") return { kind: "refused", reason: "Write a message first." };
   if (message.length > MAX_MESSAGE_LENGTH) {
     return { kind: "refused", reason: `Keep it under ${MAX_MESSAGE_LENGTH.toLocaleString("en-US")} characters.` };
@@ -200,7 +197,7 @@ export async function sendTurn(
     } catch (error) {
       console.error("chat.reply failed:", error instanceof Error ? error.message : error);
       await db.query("update chat_turns set status = 'failed' where id = $1 and status = 'pending'", [claimed.id]);
-      return { ok: false, reason: "The reply didn't come through. Send your message again; it won't count against you." };
+      return { ok: false, reason: REPLY_FAILED };
     }
   })();
   return { kind: "stream", textStream: stream.textStream, done };

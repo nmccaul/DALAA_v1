@@ -33,6 +33,16 @@ describe("listCourseActivities", () => {
     const later = await activity("Case 2", "published", 10, "2027-02-10T23:59:00Z");
     const sooner = await activity("Case 1", "published", 12.5, "2027-01-20T23:59:00Z");
 
+    // Finished attempts count as submitted; one still in progress doesn't.
+    for (const [netId, status] of [["s1", "completed"], ["s2", "completed"], ["s3", "in_progress"]] as const) {
+      const student = await actorFor(netId);
+      await db.query(
+        `insert into attempts (activity_id, user_id, status, ended_by, completed_at)
+         values ($1, $2, $3, $4, $5)`,
+        [sooner, student.userId, status, status === "completed" ? "student" : null, status === "completed" ? new Date() : null],
+      );
+    }
+
     const rows = await listCourseActivities(db, prof, course);
     expect(rows.map((r) => r.id)).toEqual([sooner, later, undated]);
     expect(rows[0]).toEqual({
@@ -42,9 +52,10 @@ describe("listCourseActivities", () => {
       status: "published",
       points: 12.5,
       dueAt: new Date("2027-01-20T23:59:00Z"),
-      submitted: 0,
+      submitted: 2,
       graded: 0,
     });
+    expect(rows[1]).toMatchObject({ submitted: 0 });
     expect(rows[2]).toMatchObject({ status: "draft", points: null, dueAt: null });
 
     expect(await listCourseActivities(db, other, course)).toEqual([]);

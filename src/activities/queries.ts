@@ -15,7 +15,9 @@ export type ActivityRow = {
   points: number | null;
   /** NULL: no due date. */
   dueAt: Date | null;
+  /** Students who have finished their attempt. */
   submitted: number;
+  /** 0 until the grader writes results (T22). */
   graded: number;
 };
 
@@ -23,15 +25,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * A course's activities for one of its teachers: soonest due first, then
- * those with no due date, newest first. Students can't submit anything until
- * attempts exist (T21), so `submitted` and `graded` are counted as 0 until then.
+ * those with no due date, newest first.
  */
 export async function listCourseActivities(db: Db, actor: Actor, courseId: string): Promise<ActivityRow[]> {
   if (!UUID.test(courseId)) return [];
   const where = and({ text: "a.course_id = $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
   return db.query<ActivityRow>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points, a.due_at as "dueAt",
-            0 as submitted, 0 as graded
+            (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
+            0 as graded
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}
