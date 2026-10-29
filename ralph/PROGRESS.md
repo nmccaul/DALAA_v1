@@ -105,3 +105,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Additive migration `20261029090502_activities.sql` (RLS): settings must be a JSON object, a published activity must have points > 0, unique (course, resource link id) with NULLs unconstrained. Applied locally only. Content is not in settings; T15 adds it to the activity.
 - Tests: `src/tools/study-chat/schema.test.ts` (11) + an activities constraint test in `src/db/schema.test.ts`. 201 green.
 - Nathan: `activities.points` isn't forced to equal the rubric total; decide in T19 whether points come from the rubric or are set separately.
+
+## 2026-10-29 09:09 UTC · T14b Tool registry · done
+- `src/tools/catalog.ts` is now the registry: each tool has a `status` (`live` / `coming-soon`) and `isLive()`. Study Chat (`study-chat`) is live; Quizzer (`quizzer`) and Oral Assessment (`oral-assessment`, new Microphone icon, kept the old pink accent) are coming soon. The old Case Chat and Explain entries are gone: they're Study Chat modes now (D-021).
+- New activity page: Study Chat is the only clickable card ("Start a Study Chat →"); the others are muted cards marked "Coming soon". The general "tools aren't built yet" preview note is removed. The per-tool page 404s for a coming-soon tool and dropped its "Or look at…" links; for Study Chat it's still the walkthrough with a disabled Start button until T19 builds the create flow.
+- Landing page: the tools list now comes from the same registry and marks Quizzer and Oral Assessment "Coming soon". The hero copy ("Case discussions, quizzes and explain-it-back activities…") is unchanged.
+- Tests: `src/tools/catalog.test.ts` (unique slugs, statuses, white-on-accent contrast ≥ 4.5:1). 205 green. Checked the landing and both teacher pages render (200; quizzer page 404) against the local dev server with a signed local session; no screenshot pass.
+- Nathan: check the new Study Chat and Oral Assessment one-liners on the landing page; they describe what's being built, not what's live in production yet.
