@@ -26,7 +26,7 @@ export type Mode = {
   label: string;
   /** One line under the label: what the student does. */
   description: string;
-  /** Tells the drafting model what kind of chat to set up. Never shown to students. */
+  /** Tells the drafting model what kind of chat to set up, and the chat model what kind it's in. Never shown to students. */
   promptSeed: string;
   /** Starting points for the draft; the model and the teacher may change them. */
   hints: {
