@@ -284,3 +284,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `src/lti/users.ts`: `rememberLtiUser` (latest wins; a sub seen on another account moves to the new one) and `ltiSubs`. Called on every launch (`src/lti/launch.ts`, which also keeps the AGS lineitems URL like the memberships URL: a launch without one keeps the last) and on roster sync (`planFromMembers` now returns each student's NRPS `user_id`; `syncLtiRoster` finds the account again through `upsertStudent`). The sub is still never used to find or create an account.
 - Tests: launch (URL kept/replaced, subs recorded and moved), roster (subs from NRPS, linked account gets the sub), RLS list. 328 green on Node 22.
 - Note for T25b: a student who signed up outside Canvas and was never synced or launched has no sub, so their grade can't be sent; T25c should list them as an exception ("Sync with Canvas first").
+
+## 2026-10-29 15:37 UTC · T25b1 AGS client + push rules · done
+- T25b was too big for one pass; split into T25b1 (this) and T25b2 (sender + ledger) in TASKS.
+- `src/canvas/client.ts`: `request` can POST a JSON body with its own content type; new `ags` calls (read a column, find columns by `resource_id`, make one, read every page of results, post a score) and `servicePath` (adds `/results` or `/scores` before the query string). LTI service calls now refuse any URL not on this Canvas before sending the token; NRPS shares the same paging helper (also checks `next` links now).
+- `src/results/push-plan.ts` (pure, every tool): categories send · lowered · unchanged · changed in Canvas · not graded · not in Canvas · points mismatch. "Changed in Canvas" means Canvas holds something other than what DALAA last sent, including a score typed in before DALAA ever sent one, or a cleared one; never overwritten. A score Canvas already holds counts as unchanged even if DALAA didn't send it. `needsPreview` is false for the clean case (only send/unchanged/not graded).
+- 342 tests green on Node 22 (8 plan fixtures, 6 client tests).
+- **Nathan:** "lowered" is compared with what Canvas holds now, not with DALAA's last send. Say if you'd rather it be the other way.
