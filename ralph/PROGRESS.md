@@ -205,3 +205,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - D-027 (Nathan to confirm): the attempt and its time limit start with the first message; opening the page writes nothing.
 - Browser check (local, temporary student + published chat, removed after): the real gateway still refuses (no card), which showed the failure box and "Send again"; with the turn route mocked on the network the reply streamed in and the meter counted; Finish with a saved turn → "You've finished this chat." and it survives a reload. Light desktop and dark 390px look right. Fixed during the check: the time left read 21 of 20 minutes, and the timer stayed visible after the chat ended.
 - Not covered: a real model reply end to end (T21c, needs the AI Gateway card). Diff 419 lines.
+
+## 2026-10-29 14:31 UTC · T09 CHECKPOINT A (deploy) · done
+- Lint, typecheck and 308 tests green on Node 22; branch was already pushed. All 12 migrations since `main` checked additive (new tables/indexes, nullable columns on `canvas_connections` with a check that holds for existing rows) and applied to production first; the users email unique index went in without a duplicate conflict.
+- PR #102 (`feat/study-chat-lti` → `main`) opened and merged; branch pulled `main` (fast-forward).
+- Production deploy `dalaa-v1-h01j8sb3r` Ready from the merge. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200, `/api/lti/config` 200.
+- Surprise: the safety check refuses `rm -rf "$(dirname "$S")"`; make the temp dir with `mktemp -d` first and remove its literal path afterwards.
+- No Chrome tools in this pass. **Nathan:** VERIFY IN MORNING: launch from course 42 (the DALAA nav link should land on the course), and the deep-link checks from T20/T20b, now against production.
