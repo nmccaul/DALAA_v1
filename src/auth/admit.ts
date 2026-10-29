@@ -1,6 +1,7 @@
 /**
  * Who may sign in — the same rules for the dev stand-in and BYU Okta later.
- * A sign-in provider only proves a NetID; this decides what that NetID gets.
+ * A sign-in provider only proves a login ID (a NetID, or an email on Canvases
+ * whose login IDs are emails — D-025); this decides what that ID gets.
  *
  * - On the staff allowlist → first sign-in creates the account (no form).
  * - Already on a course roster as an active student → signed in.
@@ -16,9 +17,15 @@ export type Admission =
   | { ok: true; userId: string }
   | { ok: false; reason: "not-on-roster" | "bad-netid" };
 
+const NET_ID = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+// Canvases whose login IDs are emails (D-025). Deliberately plain: one @, a dotted domain.
+const EMAIL = /^[a-z0-9._%+-]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+
+/** A login ID as stored in `users.external_id`: a BYU NetID or a lowercased email. */
 export function normalizeNetId(raw: string): string | null {
-  const netId = raw.trim().toLowerCase();
-  return /^[a-z0-9][a-z0-9._-]{0,63}$/.test(netId) ? netId : null;
+  const id = raw.trim().toLowerCase();
+  if (NET_ID.test(id)) return id;
+  return id.length <= 254 && EMAIL.test(id) ? id : null;
 }
 
 export async function admit(db: Db, institutionId: string, identity: Identity): Promise<Admission> {

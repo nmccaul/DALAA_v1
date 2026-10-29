@@ -1,7 +1,40 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Db } from "@/db/types";
-import { admit, loadActor } from "./admit";
+import { admit, loadActor, normalizeNetId } from "./admit";
+
+describe("normalizeNetId", () => {
+  it("accepts NetIDs, lowercased and trimmed, including practice ones", () => {
+    expect(normalizeNetId("  JDoe42 ")).toBe("jdoe42");
+    expect(normalizeNetId("practice.stu-1")).toBe("practice.stu-1");
+  });
+
+  it("accepts email login IDs, lowercased and trimmed (D-025)", () => {
+    expect(normalizeNetId(" Jane.Doe+cs@Example.EDU ")).toBe("jane.doe+cs@example.edu");
+    expect(normalizeNetId("a@mail.gitgrade.org")).toBe("a@mail.gitgrade.org");
+  });
+
+  it("rejects what is neither", () => {
+    for (const bad of [
+      "",
+      "   ",
+      "a b",
+      "-lead",
+      "x".repeat(65),
+      "no-domain@",
+      "@example.com",
+      "two@@example.com",
+      "a@b@example.com",
+      "a@localhost",
+      "a@example..com",
+      "a b@example.com",
+      `${"x".repeat(65)}@example.com`,
+      `a@${"d".repeat(250)}.com`,
+    ]) {
+      expect(normalizeNetId(bad), bad).toBeNull();
+    }
+  });
+});
 
 describe("admit", () => {
   let db: Db;
@@ -51,6 +84,11 @@ describe("admit", () => {
   it("signs in a student who is on a roster, by NetID", async () => {
     const id = await enrol("stu1");
     expect(await admit(db, inst, { netId: "STU1" })).toEqual({ ok: true, userId: id });
+  });
+
+  it("signs in by email login ID, matched case-insensitively", async () => {
+    const id = await enrol("stu@example.edu");
+    expect(await admit(db, inst, { netId: "Stu@Example.edu" })).toEqual({ ok: true, userId: id });
   });
 
   it("refuses strangers and flagged students, and never creates them", async () => {
