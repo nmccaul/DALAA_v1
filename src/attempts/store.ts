@@ -8,6 +8,7 @@
  * never sent to the student's browser).
  */
 
+import { canvasBaseUrl } from "@/canvas/institution";
 import { and, coursesTakenBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 
@@ -32,6 +33,8 @@ export type TakenActivity = {
   settings: Record<string, unknown>;
   /** What the student studies; NULL when the activity has none. */
   content: { name: string; body: string } | null;
+  /** The course's page in real Canvas, for the student's way back; NULL for a practice or unlinked course. */
+  canvasCourseUrl: string | null;
 };
 
 /** Where a student takes an activity (src/app/activities/[activityId]). */
@@ -49,9 +52,16 @@ const ATTEMPT_COLUMNS = `id, activity_id as "activityId", status, ended_by as "e
 export async function getTakenActivity(db: Db, actor: Actor, activityId: string): Promise<TakenActivity | null> {
   if (!UUID.test(activityId)) return null;
   const where = and({ text: "a.id = $1 and a.status = 'published'", values: [activityId] }, coursesTakenBy(actor, "c"));
-  const [row] = await db.query<Omit<TakenActivity, "content"> & { contentName: string | null; contentBody: string | null }>(
+  const [row] = await db.query<
+    Omit<TakenActivity, "content" | "canvasCourseUrl"> & {
+      contentName: string | null;
+      contentBody: string | null;
+      canvasCourseId: string | null;
+    }
+  >(
     `select a.id, a.course_id as "courseId", a.tool, a.title, a.settings,
-            cc.name as "contentName", cc.body as "contentBody"
+            cc.name as "contentName", cc.body as "contentBody",
+            case when c.is_practice then null else c.canvas_course_id end as "canvasCourseId"
        from activities a
        join courses c on c.id = a.course_id
        left join course_content cc on cc.id = a.content_id
@@ -59,8 +69,12 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
     where.values,
   );
   if (!row) return null;
-  const { contentName, contentBody, ...activity } = row;
-  return { ...activity, content: contentName !== null && contentBody !== null ? { name: contentName, body: contentBody } : null };
+  const { contentName, contentBody, canvasCourseId, ...activity } = row;
+  return {
+    ...activity,
+    content: contentName !== null && contentBody !== null ? { name: contentName, body: contentBody } : null,
+    canvasCourseUrl: canvasCourseId === null ? null : `${canvasBaseUrl()}/courses/${encodeURIComponent(canvasCourseId)}`,
+  };
 }
 
 /** The student's attempt at an activity they can take, started now if they haven't one. Starting twice returns the first. */
