@@ -2,7 +2,7 @@ import { Button, EmptyState, inputStyles } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { listCourseGrades, type StudentGrade } from "@/results/grading";
-import { setScoreAction } from "./actions";
+import { resolveDisputeAction, setScoreAction } from "./actions";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
@@ -24,6 +24,8 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
   const assignments = await listCourseGrades(db(), actor, course.id);
   const error = typeof q.error === "string" ? ERRORS[q.error] : undefined;
 
+  const disputed = assignments.reduce((n, a) => n + a.students.filter((s) => s.disputeId !== null).length, 0);
+
   if (assignments.length === 0) {
     return (
       <EmptyState title="Nothing to grade yet">
@@ -37,6 +39,12 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
 
   return (
     <div className="flex flex-col gap-8">
+      {disputed > 0 && (
+        <p role="status" className="rounded-panel border border-border-strong bg-accent-soft px-4 py-3">
+          {disputed === 1 ? "A student disputed a grade." : `${disputed} students disputed a grade.`} It&apos;s marked below with
+          their reason.
+        </p>
+      )}
       {assignments.map((a) => (
         <section key={a.activityId} className="flex flex-col gap-3" aria-labelledby={`grades-${a.activityId}`}>
           <h2 id={`grades-${a.activityId}`} className="font-display text-xl font-semibold break-words">
@@ -59,8 +67,15 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
                       {s.flagged && <span translate="yes"> · Not on the latest class list</span>}
                     </span>
                   </div>
-                  {s.status === "graded" && s.attemptId ? (
-                    <ScoreForm courseId={course.id} student={s} saved={q.saved === s.attemptId} error={q.attempt === s.attemptId ? error : undefined} />
+                  {s.disputeId && s.attemptId ? (
+                    <DisputeForm courseId={course.id} student={s} error={q.attempt === s.attemptId ? error : undefined} />
+                  ) : s.status === "graded" && s.attemptId ? (
+                    <ScoreForm
+                      courseId={course.id}
+                      student={s}
+                      saved={q.saved === s.attemptId ? "Saved." : q.resolved === s.attemptId ? "Dispute resolved." : null}
+                      error={q.attempt === s.attemptId ? error : undefined}
+                    />
                   ) : (
                     <span className="text-sm text-muted">{STATUS[s.status]}</span>
                   )}
@@ -75,7 +90,17 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
 }
 
 /** A graded attempt's score: the one that counts, editable, and the AI's when the teacher changed it. */
-function ScoreForm({ courseId, student, saved, error }: { courseId: string; student: StudentGrade; saved: boolean; error?: string }) {
+function ScoreForm({
+  courseId,
+  student,
+  saved,
+  error,
+}: {
+  courseId: string;
+  student: StudentGrade;
+  saved: string | null;
+  error?: string;
+}) {
   const max = student.maxScore!;
   const counted = student.teacherScore ?? student.aiScore!;
   const inputId = `score-${student.attemptId}`;
@@ -113,11 +138,57 @@ function ScoreForm({ courseId, student, saved, error }: { courseId: string; stud
       )}
       {saved && (
         <p role="status" className="text-sm text-accent-text">
-          Saved.
+          {saved}
         </p>
       )}
       {error && (
         <p id={`${inputId}-error`} role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
+    </form>
+  );
+}
+
+/** A disputed grade: the student's reason, then the score to keep or change and an answer, sent together. */
+function DisputeForm({ courseId, student, error }: { courseId: string; student: StudentGrade; error?: string }) {
+  const max = student.maxScore!;
+  const id = `dispute-${student.attemptId}`;
+  return (
+    <form action={resolveDisputeAction} className="flex w-full flex-col gap-2 sm:max-w-md">
+      <input type="hidden" name="courseId" value={courseId} />
+      <input type="hidden" name="attemptId" value={student.attemptId!} />
+      <input type="hidden" name="disputeId" value={student.disputeId!} />
+      <p className="text-sm font-medium text-danger">Disputed</p>
+      <blockquote className="border-l-2 border-border-strong pl-3 text-sm whitespace-pre-wrap break-words">
+        {student.disputeReason}
+      </blockquote>
+      <div className="flex items-center gap-2">
+        <label htmlFor={`${id}-score`} className="text-sm text-muted">
+          Score
+        </label>
+        <input
+          id={`${id}-score`}
+          name="score"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={max}
+          step={0.01}
+          required
+          defaultValue={student.teacherScore ?? student.aiScore!}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`${inputStyles} max-w-24 tabular-nums`}
+        />
+        <span className="text-sm whitespace-nowrap text-muted">of {pointsFormat.format(max)}</span>
+      </div>
+      <label htmlFor={`${id}-response`} className="text-sm text-muted">
+        Your answer to {student.name} (optional)
+      </label>
+      <textarea id={`${id}-response`} name="response" rows={2} className={inputStyles} />
+      <Button className="self-start">Resolve</Button>
+      {error && (
+        <p id={`${id}-error`} role="alert" className="text-sm text-danger">
           {error}
         </p>
       )}

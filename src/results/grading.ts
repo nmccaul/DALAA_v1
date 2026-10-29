@@ -22,6 +22,9 @@ export type StudentGrade = {
   aiScore: number | null;
   teacherScore: number | null;
   maxScore: number | null;
+  /** The student's open dispute of this grade (src/results/disputes.ts): NULL when there's none. */
+  disputeId: string | null;
+  disputeReason: string | null;
 };
 
 export type AssignmentGrades = {
@@ -51,13 +54,15 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
             t.id as "attemptId",
             case when r.status = 'graded' then r.score::float8 end as "aiScore",
             r.teacher_score::float8 as "teacherScore",
-            case when r.status = 'graded' then r.max_score::float8 end as "maxScore"
+            case when r.status = 'graded' then r.max_score::float8 end as "maxScore",
+            d.id as "disputeId", d.reason as "disputeReason"
        from activities a
        join courses c on c.id = a.course_id
        join course_members m on m.course_id = a.course_id and m.role = 'student'
        join users u on u.id = m.user_id
        left join attempts t on t.activity_id = a.id and t.user_id = m.user_id
        left join results r on r.attempt_id = t.id
+       left join disputes d on d.attempt_id = t.id and d.status = 'open'
       where ${where.text} and (m.status = 'active' or t.id is not null)
       order by a.due_at asc nulls last, a.created_at desc, a.id, u.display_name, u.external_id`,
     where.values,

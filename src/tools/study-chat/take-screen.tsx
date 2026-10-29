@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { graderModel } from "@/ai/models";
 import { db } from "@/db/client";
+import { latestDispute } from "@/results/disputes";
 import { getResult } from "@/results/store";
 import { StudentResult } from "@/results/student-result";
 import type { TakeScreenProps } from "@/tools/screens";
@@ -28,6 +29,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   const ended = attempt?.status === "completed" ? attempt : null;
   const result = ended ? await getResult(db(), ended.id) : null;
   if (ended && result?.status !== "graded") after(() => gradeAttempt(db(), graderModel(), ended.id));
+  const dispute = ended && result?.status === "graded" ? await latestDispute(db(), ended.id) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +57,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
         startedAt={attempt?.startedAt.toISOString() ?? null}
         ended={ended?.endedBy ? ENDED[ended.endedBy] : null}
       />
-      {ended && <StudentResult result={result} />}
+      {ended && <StudentResult result={result} attemptId={ended.id} activityId={activity.id} dispute={dispute} />}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import { listStudentAssignments } from "@/activities/queries";
 import { getResult } from "./store";
+import { latestDispute, openDispute, resolveDispute } from "./disputes";
 import { listCourseGrades, setTeacherScore } from "./grading";
 
 async function setup() {
@@ -140,5 +141,87 @@ describe("setTeacherScore", () => {
     const t = await attempt(a, await student("ana", "Ana"), true);
     await db.query("insert into results (attempt_id) values ($1)", [t]);
     await expect(db.query("update results set teacher_score = 1, teacher_scored_at = now() where attempt_id = $1", [t])).rejects.toThrow();
+  });
+});
+
+describe("disputes", () => {
+  const key = () => crypto.randomUUID();
+
+  it("lets a student dispute their own graded attempt once at a time, and a resent form opens nothing new", async () => {
+    const { db, prof, course, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const ana = await student("ana", "Ana");
+    const ben = await student("ben", "Ben");
+    const graded = await attempt(a, ana, true);
+    await grade(graded, 7);
+    const ungraded = await attempt(a, ben, true);
+
+    expect(await openDispute(db, ana, graded, "   ", key())).toBe("no_reason");
+    expect(await openDispute(db, ana, graded, "x".repeat(2001), key())).toBe("no_reason");
+    expect(await openDispute(db, ben, graded, "Not mine", key())).toBe("not_found");
+    expect(await openDispute(db, ben, ungraded, "Not graded", key())).toBe("not_found");
+    expect(await openDispute(db, prof, graded, "Teacher", key())).toBe("not_found");
+
+    const k = key();
+    expect(await openDispute(db, ana, graded, "  I named the cash flow risk.  ", k)).toBe("opened");
+    expect(await openDispute(db, ana, graded, "I named the cash flow risk.", k)).toBe("opened");
+    expect(await openDispute(db, ana, graded, "And another thing", key())).toBe("already_open");
+    expect(await db.query("select 1 from disputes")).toHaveLength(1);
+    expect(await latestDispute(db, graded)).toMatchObject({ status: "open", reason: "I named the cash flow risk.", response: null });
+
+    const [row] = (await listCourseGrades(db, prof, course))[0].students;
+    expect(row).toMatchObject({ name: "Ana", disputeReason: "I named the cash flow risk." });
+    expect(row.disputeId).toBe((await latestDispute(db, graded))!.id);
+  });
+
+  it("a flagged student can't dispute", async () => {
+    const { db, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const gone = await student("gone", "Dee", "flagged");
+    const graded = await attempt(a, gone, true);
+    await grade(graded, 7);
+    expect(await openDispute(db, gone, graded, "Please look", key())).toBe("not_found");
+  });
+
+  it("the teacher resolves with or without a new score, and the student may dispute again after", async () => {
+    const { db, prof, other, course, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const ana = await student("ana", "Ana");
+    const graded = await attempt(a, ana, true);
+    await grade(graded, 7);
+    await openDispute(db, ana, graded, "Please look again", key());
+    const { id } = (await latestDispute(db, graded))!;
+
+    expect(await resolveDispute(db, other, id, 9, "")).toBe("not_found");
+    expect(await resolveDispute(db, prof, id, 11, "")).toBe("out_of_range");
+    expect(await latestDispute(db, graded)).toMatchObject({ status: "open" });
+
+    // Keeping the score that counts sets no teacher score.
+    expect(await resolveDispute(db, prof, id, 7, "  The grade stands.  ")).toBe("resolved");
+    expect(await getResult(db, graded)).toMatchObject({ score: 7, teacherScore: null });
+    expect(await latestDispute(db, graded)).toMatchObject({ status: "resolved", response: "The grade stands." });
+    expect((await listCourseGrades(db, prof, course))[0].students[0]).toMatchObject({ disputeId: null, disputeReason: null });
+    // Resent: nothing changes.
+    expect(await resolveDispute(db, prof, id, 10, "Changed my mind")).toBe("resolved");
+    expect(await getResult(db, graded)).toMatchObject({ teacherScore: null });
+    expect(await latestDispute(db, graded)).toMatchObject({ response: "The grade stands." });
+
+    expect(await openDispute(db, ana, graded, "Second look?", key())).toBe("opened");
+    const second = (await latestDispute(db, graded))!;
+    expect(second).toMatchObject({ status: "open", reason: "Second look?" });
+    expect(await resolveDispute(db, prof, second.id, 8.5, "")).toBe("resolved");
+    expect(await getResult(db, graded)).toMatchObject({ score: 7, teacherScore: 8.5 });
+    expect(await latestDispute(db, graded)).toMatchObject({ status: "resolved", response: null });
+  });
+
+  it("allows only one open dispute per attempt even by hand", async () => {
+    const { db, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const graded = await attempt(a, await student("ana", "Ana"), true);
+    await grade(graded, 7);
+    await db.query("insert into disputes (attempt_id, client_key, reason) values ($1, $2, 'One')", [graded, key()]);
+    await expect(
+      db.query("insert into disputes (attempt_id, client_key, reason) values ($1, $2, 'Two')", [graded, key()]),
+    ).rejects.toThrow();
   });
 });
