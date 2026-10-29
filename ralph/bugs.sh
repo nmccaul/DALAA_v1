@@ -5,10 +5,16 @@
 # build loop's branch here is never touched.
 # Stops when nothing is waiting, after MAX_PASSES, or when ralph/STOP exists.
 # Run with:  caffeinate -i ralph/bugs.sh
+# Dry run against the local database (T37b): BUGS_PROD= MAX_PASSES=1
+#   BUGS_REF=origin/<branch> BUGS_TREE=<scratch dir> ralph/bugs.sh
+# drops --prod everywhere and tells the pass not to open a PR or merge.
 set -u
 cd "${0:A:h}/.."
 REPO=$PWD
 TREE=${BUGS_TREE:-${REPO:h}/DALAA_v1-bugs}
+
+REF=${BUGS_REF:-origin/main}
+PROD=${BUGS_PROD---prod}
 
 MAX_PASSES=${MAX_PASSES:-40}
 LOGS=ralph/logs
@@ -18,14 +24,22 @@ mkdir -p "$LOGS"
 # ends a claimed one with its status (in_progress = a PR waiting for Nathan).
 waiting() {
   local out
-  out=$(npm run -s feedback -- list --prod 2>&1) || { echo "feedback list failed:" >&2; echo "$out" | tail -n 3 >&2; return 2; }
+  out=$(npm run -s feedback -- list ${=PROD} 2>&1) || { echo "feedback list failed:" >&2; echo "$out" | tail -n 3 >&2; return 2; }
   print -r -- "$out" | grep -v '^No open reports\.$' | grep -cv $'\tin_progress$'
 }
 
 if [[ ! -d $TREE ]]; then
-  git fetch -q origin main && git worktree add --detach "$TREE" origin/main || exit 1
+  git fetch -q origin && git worktree add --detach "$TREE" "$REF" || exit 1
   ln -s "$REPO/.env.local" "$TREE/.env.local"
   (cd "$TREE" && npm ci --silent) || exit 1
+fi
+
+# The prompt says --prod throughout; a dry run strips it and adds its own rules.
+prompt=$(cat ralph/BUG-PROMPT.md)
+if [[ -z $PROD ]]; then
+  prompt="$(cat ralph/BUG-DRYRUN.md)
+
+${prompt// --prod/}"
 fi
 
 pass=0
@@ -36,10 +50,10 @@ while (( pass < MAX_PASSES )); do
   (( n == 0 )) && { echo "No reports waiting."; break; }
   (( pass++ ))
 
-  (cd "$TREE" && git fetch -q origin main && git checkout -q --detach origin/main) || exit 1
+  (cd "$TREE" && git fetch -q origin && git checkout -q --detach "$REF") || exit 1
   log="$LOGS/bugs-$(date -u +%Y%m%dT%H%M%SZ).log"
   echo "=== bug pass $pass ($n waiting)  $(date)  → $log"
-  (cd "$TREE" && claude -p "$(cat "$REPO/ralph/BUG-PROMPT.md")" --permission-mode auto) > "$log" 2>&1
+  (cd "$TREE" && claude -p "$prompt" --permission-mode auto) > "$log" 2>&1
   code=$?
   tail -n 3 "$log"
 
