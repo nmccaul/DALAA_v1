@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import type { LoginIdLabel } from "@/auth/login-id";
 import { Button, inputStyles } from "@/components/ui";
 import { setUpCourse, type Fields, type SetUpState } from "./actions";
 
@@ -37,7 +38,7 @@ function Field({
   );
 }
 
-export function CourseForm({ initial }: { initial: Fields }) {
+export function CourseForm({ initial, loginId }: { initial: Fields; loginId: LoginIdLabel }) {
   const [state, action, pending] = useActionState<SetUpState, FormData>(setUpCourse, { fields: initial });
   const { fields, errors = {}, problems } = state;
   const described = (id: string, hint?: boolean) =>
@@ -66,7 +67,7 @@ export function CourseForm({ initial }: { initial: Fields }) {
       <Field
         id="roster"
         label="Class list"
-        hint="Paste from a spreadsheet: one student per line with NetID, then name, then section if you have sections."
+        hint={`Paste from a spreadsheet: one student per line with ${loginId.noun}, then name, then section if you have sections.`}
         error={errors.roster}
       >
         <textarea id="roster" name="roster" defaultValue={fields.roster} rows={8} spellCheck={false}

@@ -1,12 +1,13 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { listCourseActivities } from "@/activities/queries";
+import { loginIdLabel } from "@/auth/login-id";
+import { LocalTime } from "@/components/local-time";
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { findTool } from "@/tools/catalog";
 
-const dueFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 export default async function CourseAssignmentsPage({ params }: PageProps<"/courses/[courseId]">) {
@@ -24,7 +25,7 @@ export default async function CourseAssignmentsPage({ params }: PageProps<"/cour
           <span className="font-medium text-text" translate="no">
             {host}/sign-in
           </span>{" "}
-          with their NetID.
+          with their {loginIdLabel().noun}.
         </p>
       </EmptyState>
     );
@@ -56,7 +57,7 @@ export default async function CourseAssignmentsPage({ params }: PageProps<"/cour
                 </div>
               </div>
               <span className="text-sm text-muted sm:w-48">
-                {a.dueAt ? `Due ${dueFormat.format(a.dueAt)}` : "No due date"}
+                {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
               </span>
               <span className="text-sm sm:w-44">
                 {a.status === "published" ? (

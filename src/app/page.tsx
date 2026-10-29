@@ -7,6 +7,7 @@ import { currentActor } from "@/auth/current";
 import { passwordSettingEmail } from "@/auth/password";
 import { FeedbackButton } from "@/components/feedback";
 import { Landing } from "@/components/landing";
+import { LocalTime } from "@/components/local-time";
 import { Logo } from "@/components/logo";
 import { SetPassword } from "@/components/set-password";
 import { EmptyState } from "@/components/ui";
@@ -19,7 +20,6 @@ export const metadata: Metadata = {
   title: { absolute: "DALAA: AI learning activities that show how students think" },
 };
 
-const dueFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 function statusLabel(a: StudentAssignment): string {
@@ -101,7 +101,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                                 {a.title}
                               </Link>
                               <span className="text-sm text-muted">
-                                {a.dueAt ? `Due ${dueFormat.format(a.dueAt)}` : "No due date"} ·{" "}
+                                {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"} ·{" "}
                                 {pointsFormat.format(a.points)} {a.points === 1 ? "point" : "points"}
                               </span>
                             </div>

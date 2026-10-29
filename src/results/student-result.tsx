@@ -5,6 +5,7 @@
  * student can dispute it (src/results/disputes.ts).
  */
 
+import { LocalTime } from "@/components/local-time";
 import { Button, inputStyles } from "@/components/ui";
 import { openDisputeAction } from "./dispute-actions";
 import { MAX_REASON, type Dispute } from "./disputes";
@@ -13,7 +14,6 @@ import { RefreshWhileGrading } from "./refresh-while-grading";
 
 const points = (n: number) => `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${n === 1 ? "point" : "points"}`;
 
-const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
 /**
  * `result`: NULL before grading has started, which the student sees as
@@ -102,7 +102,7 @@ function DisputeBox({ attemptId, activityId, dispute }: { attemptId: string; act
   if (dispute?.status === "open") {
     return (
       <div className="flex flex-col gap-1 border-t border-border pt-3" role="status">
-        <p className="font-medium">You disputed this grade on {dateFormat.format(dispute.openedAt)}.</p>
+        <p className="font-medium">You disputed this grade on <LocalTime value={dispute.openedAt} style="day" />.</p>
         <p className="text-sm text-muted">Your teacher will look at it. Your reason:</p>
         <blockquote className="max-w-[65ch] border-l-2 border-border-strong pl-3 text-sm whitespace-pre-wrap break-words text-muted">
           {dispute.reason}
@@ -114,7 +114,7 @@ function DisputeBox({ attemptId, activityId, dispute }: { attemptId: string; act
     <div className="flex flex-col gap-3 border-t border-border pt-3">
       {dispute && (
         <div className="flex flex-col gap-1">
-          <p className="font-medium">Your teacher looked at your dispute on {dateFormat.format(dispute.resolvedAt!)}.</p>
+          <p className="font-medium">Your teacher looked at your dispute on <LocalTime value={dispute.resolvedAt!} style="day" />.</p>
           {dispute.response && (
             <blockquote className="max-w-[65ch] border-l-2 border-border-strong pl-3 whitespace-pre-wrap break-words">
               {dispute.response}

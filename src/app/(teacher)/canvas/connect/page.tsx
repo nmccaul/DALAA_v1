@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button, PageHeader, buttonStyles } from "@/components/ui";
-import { canvasBaseUrl, connectReturnPath } from "@/canvas/connection";
+import { connectReturnPath } from "@/canvas/connection";
+import { canvasBaseUrl } from "@/canvas/institution";
 import { oauthApp } from "@/canvas/oauth";
 import { choosePracticeCanvasAction } from "./actions";
 import { TokenForm } from "./token-form";

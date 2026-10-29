@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { loginIdLabel } from "@/auth/login-id";
 import { db } from "@/db/client";
+import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { listRoster } from "@/courses/queries";
@@ -20,7 +22,6 @@ const SYNC_ERRORS: Record<string, string> = {
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const dateTime = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 
 export default async function CourseStudentsPage({
   params,
@@ -39,10 +40,11 @@ export default async function CourseStudentsPage({
   const roster = showStudentView ? everyone : everyone.filter((s) => !s.studentView);
   const fromLti = await isLtiCourse(db(), course.id);
   const hasSections = roster.some((s) => s.section);
+  const loginId = loginIdLabel();
 
   // After "Bring in" (PR #81): how many were added, and why anyone wasn't.
   const importNotes = [
-    count("nonetid") && `${plural(count("nonetid"), "student wasn't", "students weren't")} added because Canvas didn't share their NetID.`,
+    count("nonetid") && `${plural(count("nonetid"), "student wasn't", "students weren't")} added because Canvas didn't share their ${loginId.noun}.`,
     count("twosections") && `${plural(count("twosections"), "student is", "students are")} in two sections in Canvas, so they're listed without a section.`,
     count("dropped") && `${count("dropped")} who dropped the course in Canvas ${count("dropped") === 1 ? "wasn't" : "weren't"} added.`,
   ].filter(Boolean) as string[];
@@ -83,9 +85,11 @@ export default async function CourseStudentsPage({
       {course.canvasLinked || fromLti ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">
-            {course.canvasSyncedAt
-              ? `Class list last matched Canvas ${dateTime.format(course.canvasSyncedAt)}.`
-              : "Class list from Canvas."}
+            {course.canvasSyncedAt ? (
+              <>Class list last matched Canvas <LocalTime value={course.canvasSyncedAt} />.</>
+            ) : (
+              "Class list from Canvas."
+            )}
           </p>
           <form action={fromLti ? ltiSyncAction : syncAction}>
             <input type="hidden" name="courseId" value={course.id} />
@@ -103,7 +107,7 @@ export default async function CourseStudentsPage({
 
       {roster.length === 0 && studentViews === 0 ? (
         <EmptyState title="No students yet">
-          <p>Students you add will appear here and can sign in with their NetID.</p>
+          <p>Students you add will appear here and can sign in with their {loginId.noun}.</p>
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-panel border border-border bg-surface">
@@ -111,7 +115,7 @@ export default async function CourseStudentsPage({
             <thead className="border-b border-border text-muted">
               <tr>
                 <th scope="col" className="px-4 py-3 font-medium">Name</th>
-                <th scope="col" className="px-4 py-3 font-medium">NetID</th>
+                <th scope="col" className="px-4 py-3 font-medium">{loginId.title}</th>
                 {hasSections && <th scope="col" className="px-4 py-3 font-medium">Section</th>}
                 <th scope="col" className="px-4 py-3 font-medium"><span className="sr-only">Status</span></th>
               </tr>

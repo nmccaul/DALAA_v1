@@ -8,6 +8,7 @@
  */
 
 import { normalizeNetId } from "@/auth/admit";
+import { loginIdLabel, type LoginIdLabel } from "@/auth/login-id";
 
 export type RosterRow = { netId: string; name: string | null; section: string | null };
 
@@ -34,7 +35,7 @@ function headerColumns(cells: string[]): Columns | null {
   return { netId, name, section: section < 0 ? null : section };
 }
 
-export function parseRoster(text: string): ParsedRoster {
+export function parseRoster(text: string, loginId: LoginIdLabel = loginIdLabel()): ParsedRoster {
   const lines = text.split(/\r?\n/);
   const rows: RosterRow[] = [];
   const problems: RosterProblem[] = [];
@@ -56,7 +57,7 @@ export function parseRoster(text: string): ParsedRoster {
     const rawNetId = cell(columns.netId);
     const netId = normalizeNetId(rawNetId);
     if (!netId) {
-      const reason = rawNetId ? `"${rawNetId}" isn't a NetID` : "No NetID on this line";
+      const reason = rawNetId ? `"${rawNetId}" isn't a ${loginId.noun}` : `No ${loginId.noun} on this line`;
       problems.push({ line, text: raw.trim(), reason });
       return;
     }
