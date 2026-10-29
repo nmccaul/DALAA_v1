@@ -14,3 +14,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Tests in `src/auth/admit.test.ts`: NetIDs (incl. `practice.`), emails, a list of rejects, and admit() by email login ID case-insensitively.
 - Existing `users.external_id` check (non-empty, lowercase) already fits emails; no migration.
 - Nathan: roster paste error text still says "isn't a NetID" for bad IDs — fine for BYU, may want "login ID" wording later.
+
+## 2026-10-29 06:27 UTC · T03 Dependencies + iframe cookie · done
+- Pinned exactly: `jose@6.2.13` (JWT/JWKS for LTI), `ai@7.0.156` (AI SDK, Gateway model strings), `@supabase/supabase-js@2.118.0` (admin auth client), `zod@4.6.7` (peer dependency of `ai`). All are widely used and maintained.
+- `sessionCookieOptions(production)` in `src/auth/session.ts` is the one place cookie attributes live: `Secure; SameSite=None` in production, `Lax` locally. Tested in `session.test.ts`.
+- `endSession` now clears the cookie with the same attributes (maxAge 0). A plain delete would be dropped inside the Canvas iframe, so sign-out there would fail silently.
+- `docs/CANVAS.md` session line updated. npm audit reports some advisories in transitive deps; not addressed (no --force).
