@@ -32,6 +32,8 @@ export const ReportContext = z.object({
   userAgent: z.string().transform((s) => s.slice(0, 300)),
   viewport: z.object({ w: z.number().int().nonnegative(), h: z.number().int().nonnegative(), dpr: z.number().positive() }),
   colorScheme: z.enum(["light", "dark"]),
+  /** The reporter drew on the screenshot before sending it. Missing on reports from before marking existed. */
+  annotated: z.boolean().optional(),
   console: ring(z.object({ t: z.number(), level: z.enum(["warn", "error"]), text: scrubbed(300) })),
   errors: ring(z.object({ t: z.number(), message: scrubbed(300), stack: scrubbed(2000).nullable() })),
 });

@@ -48,6 +48,7 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
             className="w-full rounded-panel border border-border"
           />
         )}
+        {report.hasScreenshot && context.annotated && <p className="-mt-4 text-sm text-muted">The reporter marked up this picture.</p>}
 
         <dl className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-5">
           <Row label="Page"><span className="font-mono text-sm" translate="no">{report.url}</span></Row>

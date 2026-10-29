@@ -48,6 +48,13 @@ beforeEach(async () => {
 });
 
 describe("saveReport", () => {
+  it("keeps whether the reporter marked up the picture", async () => {
+    const marked = await saveReport(db, student, input({ context: { ...input().context, annotated: true } }), null);
+    const plain = await saveReport(db, student, input(), null);
+    expect((await getReport(db, admin, (marked as { id: string }).id))?.context.annotated).toBe(true);
+    expect((await getReport(db, admin, (plain as { id: string }).id))?.context.annotated).toBeUndefined();
+  });
+
   it("saves a report with its screenshot and the deployed commit, and an admin can read it back", async () => {
     const outcome = await saveReport(db, student, input(), "abc123def456");
     expect(outcome).toMatchObject({ ok: true, id: expect.any(String) });
