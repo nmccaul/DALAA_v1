@@ -11,12 +11,16 @@
  * - Membership follows the Canvas role in that course: Instructor or TA →
  *   instructor (staff for that course without the allowlist, D-020),
  *   Learner → student. Anything else is refused.
+ * - A Deep Linking launch (a teacher adding DALAA as a Canvas assignment) goes
+ *   to the picker (src/lti/deep-link.ts); a Resource Link launch carrying an
+ *   `activity_id` opens that assignment and remembers its Canvas link.
  */
 
 import { normalizeNetId } from "@/auth/admit";
 import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
-import type { LaunchClaims } from "./validate";
+import { ACTIVITY_ID_FIELD, deepLinkPath, returnUrlAllowed, startDeepLink } from "./deep-link";
+import { DEEP_LINKING, RESOURCE_LINK, type LaunchClaims } from "./validate";
 
 export type CourseRole = "instructor" | "student";
 
@@ -55,6 +59,11 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
   if (!role) return refuse(403, "DALAA is for the teachers and students of this course.");
   const loginId = launchLoginId(claims);
   if (!loginId) return refuse(403, "Canvas didn't send a login ID or email DALAA can use.");
+  const deepLinking = claims.messageType === DEEP_LINKING;
+  if (deepLinking && role !== "instructor") return refuse(403, "Only the course's teachers can add DALAA assignments.");
+  if (deepLinking && !(claims.deepLinking && returnUrlAllowed(claims.platform, claims.deepLinking.returnUrl))) {
+    return refuse(400, "Canvas asked DALAA to send its answer somewhere it doesn't trust.");
+  }
 
   const institutionId = claims.platform.institutionId;
   const context = claims.context;
@@ -85,8 +94,12 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
       [courseId, userId, role],
     );
 
-    // Activities and deep linking land later (T20, T21); until then, the course or home.
-    const path = role === "instructor" ? `/courses/${courseId}` : "/";
+    if (deepLinking) {
+      return { ok: true as const, userId, courseId, role, path: deepLinkPath(courseId, await startDeepLink(tx, claims, userId, courseId)) };
+    }
+    const activityId = await linkedActivity(tx, courseId, claims);
+    // The student's assignment page lands with T21; until then, home.
+    const path = role === "instructor" ? `/courses/${courseId}${activityId ? `/activities/${activityId}` : ""}` : "/";
     return { ok: true as const, userId, courseId, role, path };
   });
 }
@@ -133,6 +146,42 @@ async function findOrCreateUser(
   );
   await fillEmail(tx, user.id, email);
   return user.id;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The assignment a Canvas link opens: its `activity_id`, if that assignment is
+ * in this course (a link copied into another Canvas course opens the course
+ * instead). The first launch of a link records it, with its gradebook line
+ * item, so grades know where to go (T25). A link Canvas moved to another
+ * assignment is taken off the old one; an assignment already on another link
+ * keeps its first.
+ */
+async function linkedActivity(tx: Db, courseId: string, claims: LaunchClaims): Promise<string | null> {
+  const id = claims.custom[ACTIVITY_ID_FIELD];
+  if (claims.messageType !== RESOURCE_LINK || !claims.resourceLink || !id || !UUID.test(id)) return null;
+  const [activity] = await tx.query<{ id: string; lti_resource_link_id: string | null }>(
+    "select id, lti_resource_link_id from activities where id = $1 and course_id = $2",
+    [id, courseId],
+  );
+  if (!activity) return null;
+  const link = claims.resourceLink.id;
+  if (activity.lti_resource_link_id === null) {
+    await tx.query(
+      `update activities set lti_resource_link_id = null, lti_line_item_url = null, updated_at = now()
+        where course_id = $1 and lti_resource_link_id = $2`,
+      [courseId, link],
+    );
+  }
+  if (activity.lti_resource_link_id === null || activity.lti_resource_link_id === link) {
+    await tx.query(
+      `update activities set lti_resource_link_id = $2, lti_line_item_url = coalesce($3, lti_line_item_url), updated_at = now()
+        where id = $1`,
+      [activity.id, link, claims.ags?.lineItem ?? null],
+    );
+  }
+  return activity.id;
 }
 
 async function mappedCourse(tx: Db, platformId: string, contextId: string): Promise<string | null> {
