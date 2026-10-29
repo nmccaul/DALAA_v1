@@ -26,3 +26,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `src/lti/registration.ts`: `envRegistration()` builds endpoints from `LTI_PLATFORM_URL` and allows issuers `https://canvas.instructure.com` + the platform URL; `LTI_DEPLOYMENT_ID` may be comma-separated. `ensurePlatform()` upserts platform + deployments (null for unknown issuer/client); `isKnownDeployment()` for T07.
 - Tests in `src/lti/registration.test.ts` (env parsing, upsert idempotence, refusals, schema uniqueness, RLS). Applied to local DB.
 - Surprise: `npm run migrate` doesn't read `.env.local`; ran it with the README's local DATABASE_URL. Not applied to production yet (checkpoint T09 does that).
+
+## 2026-10-29 06:40 UTC · T05 Tool keys + JWKS + config · done
+- `src/lti/keys.ts`: `loadToolKey()` reads `LTI_PRIVATE_KEY` (base64 PKCS8 PEM), refuses non-RSA or unreadable keys with `LtiKeyError` (never echoing the value), derives the public JWK (kty/n/e + alg RS256, use sig) with `kid` = RFC 7638 thumbprint, so it's stable across deploys. `toolKey()` caches per process; T07/T12/T20 sign with `privateKey`.
+- `src/lti/config.ts` builds the Canvas JSON config (login/launch/JWKS URLs, 5 AGS+NRPS scopes, the 3 custom fields, public privacy, course_navigation + assignment_selection "DALAA Study Chat").
+- Routes `/api/lti/jwks` (503 "LTI is not configured" without a key; 1 h cache header) and `/api/lti/config` (base = `APP_URL`, else request origin).
+- Tests: `src/lti/keys.test.ts`, `src/lti/config.test.ts`. Local curl: one RSA key, fields alg,e,kid,kty,n,use, no `d`.
