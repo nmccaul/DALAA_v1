@@ -10,7 +10,7 @@ the prompt below wherever they disagree.
   counts as clean. Branch from that same commit (`git checkout -b
   fix/feedback-<short>`), not from `origin/main`.
 - The seeded report is not a real bug. Treat it as reproduced. Its fix is to
-  create `ralph/logs/dryrun-<short>.md` with one line: the date and the short
+  create `ralph/dryrun-<short>.md` with one line: the date and the short
   id. No failing test is needed for it, but run `npm run lint && npm run
   typecheck && npm test` as usual (put Node 22 first on PATH:
   `~/.nvm/versions/node/v22.23.3/bin`).
