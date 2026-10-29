@@ -61,7 +61,8 @@ feel and shared plumbing.
 
 *v2 and v3 scope is in `ROADMAP.md`.*
 
-- LTI 1.3 (kept possible, not built — see `DECISIONS.md` D-004).
+- LTI 1.3 at BYU. (LTI is built now for the gitgrade test build — D-020; BYU
+  stays on the REST path, D-004.)
 - Institutions other than BYU; LMSs other than Canvas.
 - Converting an activity from one tool to another (should-have, later).
 - Automatic grade posting or automatic roster deletion — ever.
@@ -117,7 +118,10 @@ there's an exception.**
 ## 6. Student flow
 
 Canvas assignment link → DALAA → **Sign in with BYU** (once per session) →
-activity → feedback. Not embedded in Canvas (that would need LTI). A failed AI
+activity → feedback. On a Canvas that has DALAA installed as an LTI tool
+(gitgrade today, D-020) the activity opens inside Canvas with no second
+sign-in; outside Canvas, students may create their own account with a school
+email (D-022, D-024). A failed AI
 turn never loses their work; "Save and finish later" always means the same thing.
 
 ## 7. Architecture
@@ -131,7 +135,8 @@ turn never loses their work; "Save and finish later" always means the same thing
 - **Shared results shape**: per attempt × criterion → status, weight, evidence.
   This is what powers class analytics across tools.
 - **Stack (D-007):** TypeScript, Next.js, Supabase Postgres, Vercel — built
-  portable (no Supabase Auth, plain SQL migrations, standalone Node build) so
+  portable (Supabase Auth only as one identity provider into `admit()` —
+  D-022; plain SQL migrations, standalone Node build) so
   production can move to a BYU server. Production hosting is decided with BYU IT
   before the pilot (D-015).
 
@@ -147,8 +152,10 @@ Canvas specifics: `CANVAS.md`.
 | — | Revise | Declared in DAALAA; lower priority | Quizzer `daila-v1` |
 | — | External tools (Adam Jensen) | Join via the tool-builder contract | Not started |
 
-*Open: DAALAA's plan builds QUIZ first because it runs with every AI provider
-down. Decide whether Case Chat or Quiz goes first (D-008).*
+*For the gitgrade test build the first tool is **Study Chat** (D-021): read
+content, then chat in one of ten modes (Explain, Apply, LikenToMe, Case Chat,
+Debate, Pitch, Interview, Roleplay, Liken2Us, Socratic), graded by AI. The BYU
+pilot choice (D-008) is still open.*
 
 ## 9. Tool-builder contract (draft — "how the DALAA model works")
 

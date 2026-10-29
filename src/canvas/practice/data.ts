@@ -7,7 +7,7 @@
  * to need several pages.
  */
 
-import type { CanvasCourse, CanvasEnrollment, CanvasSection, CanvasUser } from "../client";
+import type { CanvasCourse, CanvasEnrollment, CanvasFile, CanvasPageWithBody, CanvasSection, CanvasUser } from "../client";
 
 export const PRACTICE_TEACHER: CanvasUser = { id: 9001, name: "Practice Professor" };
 
@@ -97,3 +97,53 @@ export const PRACTICE_COURSES: CanvasCourse[] = [
   { id: 1102, name: "Strategy Capstone", course_code: "BUS M 499", term: WINTER, total_students: activeStudents(1102) },
   { id: 1103, name: "Marketing Principles", course_code: "MKTG 201", term: FALL, total_students: activeStudents(1103) },
 ];
+
+/** Course pages, keyed by Canvas course id. A made-up case, written as Canvas stores it (HTML). */
+export const PRACTICE_PAGES = new Map<number, CanvasPageWithBody[]>([
+  [
+    1101,
+    [
+      {
+        page_id: 7001,
+        url: "case-harbor-bikes",
+        title: "Case: Harbor Bikes",
+        updated_at: "2026-10-01T16:00:00Z",
+        published: false,
+        body:
+          "<h2>Harbor Bikes</h2><p>Harbor Bikes rents bicycles to tourists in a small coastal town. " +
+          "Sales fell 18% last summer after a scooter-share company arrived.</p>" +
+          "<ul><li>Fleet: 120 bikes</li><li>Season: May&ndash;September</li></ul>" +
+          '<p>Should the owner <a href="https://example.com">add e-bikes</a>, cut prices, or partner with hotels?</p>' +
+          '<img src="/files/1/preview" alt="Harbor photo">',
+      },
+      {
+        page_id: 7002,
+        url: "syllabus-notes",
+        title: "Syllabus notes",
+        updated_at: "2026-09-01T16:00:00Z",
+        published: true,
+        body: "<p>Read each case before class.</p>",
+      },
+    ],
+  ],
+]);
+
+/** Course files with their bytes. Includes one DALAA can't read (.docx). */
+export const PRACTICE_FILES = new Map<number, { file: Omit<CanvasFile, "url">; bytes: Uint8Array }[]>([
+  [
+    1101,
+    [
+      practiceFile(8001, "Harbor Bikes data.md", "text/x-markdown", "# Harbor Bikes data\n\nRentals by month: May 310, June 420."),
+      practiceFile(8002, "Reading guide.txt", "text/plain", "Look for the trade-off between price and fleet size."),
+      practiceFile(8003, "Old syllabus.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "PK"),
+    ],
+  ],
+]);
+
+function practiceFile(id: number, name: string, type: string, text: string) {
+  const bytes = new TextEncoder().encode(text);
+  return {
+    file: { id, display_name: name, filename: name, "content-type": type, size: bytes.byteLength, updated_at: "2026-10-01T16:00:00Z" },
+    bytes,
+  };
+}

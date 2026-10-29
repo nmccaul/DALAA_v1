@@ -7,5 +7,8 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
+    // Each PGlite test database boots and migrates in-process; under parallel
+    // load that alone can pass the 5 s default.
+    testTimeout: 30_000,
   },
 });

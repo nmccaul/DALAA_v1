@@ -15,11 +15,13 @@ real 50-student roster is unproven. Port the design and the rules, not the Pytho
 - Issuer `https://login.byu.edu/oauth2/default`; scopes `openid profile email`;
   NetID = `preferred_username`. CAS only as fallback (BYU is retiring it).
 - `users.external_id` = **NetID**. Never Okta's `sub`.
-- Session: HMAC-signed `HttpOnly; Secure; SameSite=Lax` cookie.
+- Session: HMAC-signed `HttpOnly` cookie; `Secure; SameSite=None` in production so it works inside the Canvas iframe (D-020), `Lax` locally.
 - State/nonce/PKCE verifier and `intent` (student vs staff) in a short-lived signed
   cookie — never read `intent` from the query string.
 - Staff are never created by sign-in; unknown NetID asking for staff is refused.
 - Student not on any roster → "ask your instructor to sync the roster."
+  *Amended 2026-10-29 (D-024): students may sign up with a school email, and
+  accounts link by email. LTI instructors are admitted per course (D-020).*
 - Okta needs exact redirect URIs → Vercel preview URLs can't use it; register prod
   + one stable staging URL. Dev uses a stand-in actor.
 

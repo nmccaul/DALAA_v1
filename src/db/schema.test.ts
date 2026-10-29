@@ -30,6 +30,19 @@ describe("core schema", () => {
     await expect(addUser("jdoe")).rejects.toThrow(/duplicate key/);
   });
 
+  it("gives an email to one account only, ignoring case; no email is unconstrained", async () => {
+    const withEmail = (netId: string, email: string | null) =>
+      db.query("insert into users (institution_id, external_id, display_name, email) values ($1, $2, 'x', $3)", [
+        inst,
+        netId,
+        email,
+      ]);
+    await withEmail("e1", "Ann@School.edu");
+    await expect(withEmail("e2", "ann@school.edu")).rejects.toThrow(/duplicate key/);
+    await withEmail("e3", null);
+    await withEmail("e4", null);
+  });
+
   it("refuses to put a student in another course's section", async () => {
     const course = async (code: string) =>
       (
@@ -50,5 +63,24 @@ describe("core schema", () => {
         [a, prof, sectionOfB],
       ),
     ).rejects.toThrow(/foreign key/);
+  });
+  it("keeps activities well-formed: object settings, points once published, one per Canvas link", async () => {
+    const [{ id: course }] = await db.query<{ id: string }>(
+      "insert into courses (institution_id, code, title, term, created_by) values ($1, 'ACT', 'ACT', 'W27', $2) returning id",
+      [inst, prof],
+    );
+    const add = (settings: string, status: string, points: number | null, link: string | null) =>
+      db.query(
+        `insert into activities (course_id, tool, title, settings, status, points, lti_resource_link_id, created_by)
+         values ($1, 'study-chat', 'Harbor Bikes', $2::jsonb, $3, $4, $5, $6)`,
+        [course, settings, status, points, link, prof],
+      );
+    await expect(add("[]", "draft", null, null)).rejects.toThrow(/check constraint/);
+    await expect(add("{}", "published", null, null)).rejects.toThrow(/check constraint/);
+    await expect(add("{}", "draft", 0, null)).rejects.toThrow(/check constraint/);
+    await add("{}", "draft", null, null);
+    await add("{}", "draft", null, null);
+    await add("{}", "published", 10, "rl-1");
+    await expect(add("{}", "published", 10, "rl-1")).rejects.toThrow(/duplicate key/);
   });
 });

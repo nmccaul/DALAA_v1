@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SESSION_SECONDS, signSession, verifySession } from "./session";
+import { SESSION_SECONDS, sessionCookieOptions, signSession, verifySession } from "./session";
 
 const secret = "s".repeat(32);
 const now = 1_800_000_000;
@@ -23,5 +23,10 @@ describe("session cookie", () => {
     for (const bad of [undefined, "", "a.b", "a.b.c.d", "user-1.NaN.sig"]) {
       expect(verifySession(bad, secret, now)).toBeNull();
     }
+  });
+
+  it("is SameSite=None + Secure in production (Canvas iframe), Lax locally", () => {
+    expect(sessionCookieOptions(true)).toMatchObject({ httpOnly: true, secure: true, sameSite: "none" });
+    expect(sessionCookieOptions(false)).toMatchObject({ httpOnly: true, secure: false, sameSite: "lax" });
   });
 });

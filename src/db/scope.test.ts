@@ -5,6 +5,7 @@ import {
   MATCH_ALL,
   MATCH_NOTHING,
   and,
+  coursesTakenBy,
   coursesTaughtBy,
   coursesVisibleTo,
   or,
@@ -113,6 +114,12 @@ describe("course scopes against Postgres", () => {
 
   it("hides a course from a student flagged off the roster", async () => {
     expect(await run(coursesVisibleTo(actor("gone", false)))).toEqual([]);
+    expect(await run(coursesTakenBy(actor("gone", false)))).toEqual([]);
+  });
+
+  it("lists only the courses a student takes, not ones they teach", async () => {
+    expect(await run(coursesTakenBy(actor("stu1", false)))).toEqual(["A 100"]);
+    expect(await run(coursesTakenBy(actor("profa", true, true)))).toEqual([]);
   });
 
   it("gives a professor removed from the allowlist nothing to teach", async () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import { createCourse } from "./create";
-import { getTaughtCourse, listRoster, listTaughtCourses } from "./queries";
+import { getTaughtCourse, listRoster, listTakenCourses, listTaughtCourses } from "./queries";
 
 describe("listTaughtCourses", () => {
   it("lists only the teacher's courses, counting active students", async () => {
@@ -40,6 +40,36 @@ describe("listTaughtCourses", () => {
     expect(await listTaughtCourses(db, actor)).toEqual([
       { id: mine, code: "MINE 1", title: "T", term: "Winter 2027", students: 2, isPractice: false, canvasLinked: false, canvasSyncedAt: null },
     ]);
+  });
+});
+
+describe("listTakenCourses", () => {
+  it("lists a student's courses, and nothing for a student not on any roster yet", async () => {
+    const db = await testDb();
+    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
+    const actorFor = async (netId: string): Promise<Actor> => {
+      const [{ id }] = await db.query<{ id: string }>(
+        "insert into users (institution_id, external_id, display_name) values ($1, $2, $2) returning id",
+        [inst, netId],
+      );
+      return { userId: id, institutionId: inst, netId, displayName: netId, isStaff: false, isAdmin: false };
+    };
+    const prof = await actorFor("prof");
+    const onRoster = await actorFor("s1");
+    const signedUp = await actorFor("new@byu.edu");
+    const [{ id: course }] = await db.query<{ id: string }>(
+      "insert into courses (institution_id, code, title, term, created_by) values ($1, 'ACC 200', 'T', 'Winter 2027', $2) returning id",
+      [inst, prof.userId],
+    );
+    await db.query("insert into course_members (course_id, user_id, role) values ($1, $2, 'student')", [
+      course,
+      onRoster.userId,
+    ]);
+
+    expect(await listTakenCourses(db, onRoster)).toEqual([
+      { id: course, code: "ACC 200", title: "T", term: "Winter 2027" },
+    ]);
+    expect(await listTakenCourses(db, signedUp)).toEqual([]);
   });
 });
 

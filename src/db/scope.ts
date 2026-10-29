@@ -84,3 +84,18 @@ export function coursesTaughtBy(actor: Actor, alias = "c"): Scope {
     values: [actor.userId],
   };
 }
+
+/**
+ * Courses the actor is taking as a student — the student home page. Only
+ * active memberships: a student flagged off the roster takes nothing. Admin
+ * doesn't widen it; this is "my courses", not "every course".
+ */
+export function coursesTakenBy(actor: Actor, alias = "c"): Scope {
+  const a = checkAlias(alias);
+  return {
+    text: `exists (select 1 from course_members cm
+                    where cm.course_id = ${a}.id and cm.user_id = $1
+                      and cm.role = 'student' and cm.status = 'active')`,
+    values: [actor.userId],
+  };
+}

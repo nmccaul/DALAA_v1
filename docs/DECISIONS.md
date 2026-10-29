@@ -103,13 +103,76 @@ the chassis ships.
 *2026-09-28 meeting.* Scott to invite. Needs the tool-builder contract (PRD §9)
 written first.
 
+### D-020 · LTI 1.3 now, for gitgrade; REST stays for BYU
+*2026-10-29, Nathan.* Amends D-004 and moves LTI out of v3.
+DALAA runs as an LTI 1.3 tool in Nathan's own Canvas
+(`gitgrade.opencanvaslms.org`, he is admin) so the whole loop — launch, roster
+(NRPS), deep linking, grades (AGS) — can be tested inside Canvas. The REST path
+with each teacher's own token stays for BYU, where no admin will install a tool
+yet. Both go through service modules (`src/canvas/`, `src/lti/`); no page
+speaks HTTP to Canvas. The grade rules (explicit push, unconfirmed is never
+sent, Canvas edits reported not overwritten, points mismatch refuses) apply to
+AGS unchanged. LTI code is written fresh from the spec, not copied from
+Scholarly. Instructors arriving by LTI are admitted as staff for that course
+without the allowlist (Canvas has already said who teaches it).
+
+### D-021 · Study Chat is the first tool, with modes
+*2026-10-29, Nathan.* Answers D-008 for the gitgrade test build.
+Study Chat: the student reads content, then chats about it; an AI grader scores
+the transcript against a rubric. One settings schema (content, goal, scenario,
+positions, touchpoints, persona, completion, rubric + grader strictness), every
+field drafted by AI. **Modes** are presets that seed the draft, not separate
+tools: Explain, Apply, LikenToMe, Case Chat, Debate, Pitch, Interview, Roleplay,
+Liken2Us, Socratic. Quizzer and Oral Assessment show as "Coming soon".
+
+### D-022 · Supabase Auth as one identity provider into `admit()`
+*2026-10-29, Nathan.* Amends D-007's "No Supabase Auth".
+Outside Canvas, people sign in with email + password through Supabase Auth.
+Accounts are created server-side with the admin API, already confirmed, so no
+email is sent; only `SCHOOL_EMAIL_DOMAINS` (`byu.edu`) may sign up. Supabase
+only proves who someone is — `admit()` decides what they get. Okta/CAS later is
+another provider into the same `admit()`. The service-role key never leaves
+the server.
+
+### D-023 · Shared test teacher login — test-only, remove before the pilot
+*2026-10-29, Nathan.* `TEST_TEACHER_EMAIL` / `TEST_TEACHER_PASSWORD` sign in as
+staff (constant-time compare) so testers can try the teacher side without an
+allowlist entry. Must be removed before any real student uses DALAA.
+
+### D-024 · Students may sign up themselves; accounts link by email
+*2026-10-29, Nathan.* Amends "sign-in never creates a student"
+(`docs/CANVAS.md`). A student may create their own account (school email only,
+D-022). An LTI launch, roster sync or signup whose email matches an existing
+user attaches to that user — never a second account. `users.external_id` stays
+the one identity key. Staff are still never created by sign-in alone (D-018,
+except LTI instructors per D-020).
+
+### D-025 · Login IDs may be emails on non-BYU Canvas
+*2026-10-29, Nathan.* On gitgrade, Canvas `login_id` is an email. Identity
+accepts lowercased email-shaped login IDs as well as BYU NetIDs; both live in
+`users.external_id`. Practice NetIDs keep their `practice.` prefix.
+
+### D-026 · AI through Vercel AI Gateway, models chosen by env
+*2026-10-29, Nathan.* All model calls go through one module (`src/ai/`) using
+the AI SDK with AI Gateway model strings: `CHAT_MODEL` (Gemini) for the student
+chat, `GRADER_MODEL` (OpenAI) for drafting settings and grading. Production
+authenticates with Vercel OIDC; local uses `AI_GATEWAY_API_KEY`. One ledger row
+per real call; cost NULL when unknown, never 0.
+
+### D-027 · A Study Chat attempt starts with the first message
+*2026-10-29, overnight build (T21d); Nathan to confirm.* Opening the chat
+page writes nothing. The attempt, and its time limit, start when the student
+sends their first message, so reading the material first doesn't eat into the
+chat's time, and a student who only looks at the page isn't counted as
+submitted or started. The page says so next to the time limit.
+
 ---
 
 ## Open
 
 | # | Question | Owner | Notes |
 |---|---|---|---|
-| D-008 | First tool on the chassis: Case Chat or Quiz? | Scott | Case Chat is most proven/active; Quiz runs with AI down (simplest chassis test). |
+| D-008 | First tool on the chassis: Case Chat or Quiz? | Scott | For the gitgrade test build, Study Chat (D-021). Still open for the BYU pilot. |
 | D-011 | How does DAALAA relate to DALAA_v1? Replace, or port its code? | Scott / Nathan | DAALAA's `CLAUDE.md` still says "six tables, a type never adds a table" — reconcile with D-003 before any agent runs there. |
 | D-012 | Does Explain move under Case Chat? | Scott | Scott's view in the meeting: yes. |
 | D-013 | Canvas assignment creation opt-in per activity, or on by default? | Nathan | DAALAA plan says opt-in; simplicity argues for default-on with an off switch. |

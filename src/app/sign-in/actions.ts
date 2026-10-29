@@ -5,6 +5,28 @@ import { db } from "@/db/client";
 import { admit } from "@/auth/admit";
 import { endSession, institutionId, startSession } from "@/auth/current";
 import { devPasswordMatches, devSignInEnabled } from "@/auth/dev";
+import { createAccount, signInWithPassword, type PasswordAdmission } from "@/auth/password";
+import { supabasePasswords } from "@/auth/supabase";
+
+async function finish(result: PasswordAdmission, from: string): Promise<never> {
+  if (!result.ok) redirect(`/sign-in?${from}error=${result.reason}`);
+  await startSession(result.userId);
+  redirect("/");
+}
+
+const credentials = (form: FormData) => ({
+  email: String(form.get("email") ?? ""),
+  password: String(form.get("password") ?? ""),
+});
+
+export async function passwordSignIn(form: FormData): Promise<void> {
+  await finish(await signInWithPassword(db(), await institutionId(), credentials(form), supabasePasswords), "");
+}
+
+export async function createStudentAccount(form: FormData): Promise<void> {
+  const result = await createAccount(db(), await institutionId(), credentials(form), supabasePasswords);
+  await finish(result, "mode=create&");
+}
 
 export async function devSignIn(form: FormData): Promise<void> {
   if (!devSignInEnabled()) redirect("/sign-in?error=disabled");

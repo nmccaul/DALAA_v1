@@ -7,6 +7,7 @@ import { clientFor } from "@/canvas/connection";
 import { linkToCanvas, syncRoster, type SyncResult } from "@/canvas/sync";
 import { VaultError } from "@/canvas/vault";
 import { db } from "@/db/client";
+import { syncLtiRoster } from "@/lti/roster";
 
 async function canvasOrConnect(courseId: string) {
   const canvas = await clientFor(db(), await requireActor()).catch((e) => {
@@ -37,4 +38,10 @@ export async function linkAction(form: FormData): Promise<void> {
   const actor = await requireActor();
   const canvas = await canvasOrConnect(courseId);
   report(courseId, await linkToCanvas(db(), actor, canvas, courseId, Number(form.get("canvasCourseId"))));
+}
+
+/** A course opened from Canvas through LTI: the class list comes from Canvas itself, no token needed. */
+export async function ltiSyncAction(form: FormData): Promise<void> {
+  const courseId = String(form.get("courseId"));
+  report(courseId, await syncLtiRoster(db(), await requireActor(), courseId));
 }

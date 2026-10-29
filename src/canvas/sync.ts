@@ -21,7 +21,20 @@ export type SyncCounts = { added: number; returned: number; flagged: number; mov
 
 export type SyncResult =
   | ({ ok: true } & SyncCounts & { skipped: ImportPlan["skipped"] })
-  | { ok: false; reason: "not-linked" | "wrong-canvas" | "not-yours" | "taken" | "reconnect" | "unavailable" };
+  | {
+      ok: false;
+      reason:
+        | "not-linked"
+        | "wrong-canvas"
+        | "not-yours"
+        | "taken"
+        | "reconnect"
+        | "unavailable"
+        // LTI only (src/lti/roster.ts): no launch has said where the class list is yet,
+        // or Canvas refused to share it.
+        | "no-class-list"
+        | "refused";
+    };
 
 /** The Canvas course id behind a stored id ("123" or "practice:<user>:123"). */
 export function canvasIdOf(stored: string): number {
@@ -30,7 +43,7 @@ export function canvasIdOf(stored: string): number {
 
 type CourseRow = { id: string; canvas_course_id: string | null; is_practice: boolean };
 
-async function taughtCourse(db: Db, actor: Actor, courseId: string): Promise<CourseRow | null> {
+export async function taughtCourse(db: Db, actor: Actor, courseId: string): Promise<CourseRow | null> {
   const [row] = await db.query<CourseRow>(
     `select c.id, c.canvas_course_id, c.is_practice from courses c
       where c.id = $1 and exists (select 1 from course_members m where m.course_id = c.id
@@ -62,7 +75,7 @@ export async function syncRoster(db: Db, actor: Actor, canvas: TeacherCanvas, co
 
   const plan = await fetchPlan(canvas, canvasIdOf(course.canvas_course_id));
   if ("ok" in plan) return plan;
-  const counts = await db.transaction((tx) => applyPlan(tx, actor, canvas, course.id, plan));
+  const counts = await db.transaction((tx) => applyPlan(tx, actor, sectionKeyFor(canvas, actor), course.id, plan));
   return { ok: true, ...counts, skipped: plan.skipped };
 }
 
@@ -101,17 +114,29 @@ export async function linkToCanvas(
       key,
       canvas.mode === "practice",
     ]);
-    return applyPlan(tx, actor, canvas, courseId, plan);
+    return applyPlan(tx, actor, sectionKeyFor(canvas, actor), courseId, plan);
   });
   return { ok: true, ...counts, skipped: plan.skipped };
 }
 
-/** Make the course's sections and students match the plan. Adds and flags; never deletes. */
-async function applyPlan(tx: Db, actor: Actor, canvas: TeacherCanvas, courseId: string, plan: ImportPlan): Promise<SyncCounts> {
+const sectionKeyFor = (canvas: TeacherCanvas, actor: Actor) => (canvasSectionId: number) =>
+  storedCanvasId(canvas, actor, canvasSectionId);
+
+/**
+ * Make the course's sections and students match the plan. Adds and flags; never deletes.
+ * `sectionKey` is how a Canvas section id is stored (practice ids are per teacher).
+ */
+export async function applyPlan(
+  tx: Db,
+  actor: Actor,
+  sectionKey: (canvasSectionId: number) => string,
+  courseId: string,
+  plan: ImportPlan,
+): Promise<SyncCounts> {
   // Sections: match by Canvas id, else adopt a hand-made section of the same name, else create.
   const sectionByCanvasId = new Map<number, string>();
   for (const s of plan.sections) {
-    const canvasKey = storedCanvasId(canvas, actor, s.canvasSectionId);
+    const canvasKey = sectionKey(s.canvasSectionId);
     const [linked] = await tx.query<{ id: string }>(
       "select id from sections where course_id = $1 and canvas_section_id = $2",
       [courseId, canvasKey],
@@ -143,22 +168,29 @@ async function applyPlan(tx: Db, actor: Actor, canvas: TeacherCanvas, courseId: 
     [courseId],
   );
   const byNetId = new Map(members.map((m) => [m.net_id, m]));
+  const byUserId = new Map(members.map((m) => [m.user_id, m]));
   const counts: SyncCounts = { added: 0, returned: 0, flagged: 0, moved: 0 };
+  // By account, not login ID: an email can link a student to an account with another login ID.
   const inCanvas = new Set<string>();
 
   for (const student of plan.students) {
     if (student.netId === actor.netId) continue;
-    inCanvas.add(student.netId);
     // No section means "in two sections in Canvas": keep whatever DALAA has; don't guess.
     const section = student.canvasSectionId === null ? undefined : sectionByCanvasId.get(student.canvasSectionId);
-    const member = byNetId.get(student.netId);
+    const userId =
+      byNetId.get(student.netId)?.user_id ??
+      (await upsertStudent(tx, actor.institutionId, student.netId, student.name, student.email ?? null));
+    if (userId === actor.userId) continue;
+    inCanvas.add(userId);
+    const member = byUserId.get(userId);
     if (!member) {
-      const userId = await upsertStudent(tx, actor.institutionId, student.netId, student.name);
-      await tx.query(
-        "insert into course_members (course_id, user_id, role, section_id) values ($1, $2, 'student', $3)",
+      // An instructor of this course isn't also made a student of it.
+      const inserted = await tx.query(
+        `insert into course_members (course_id, user_id, role, section_id) values ($1, $2, 'student', $3)
+         on conflict (course_id, user_id) do nothing returning user_id`,
         [courseId, userId, section ?? null],
       );
-      counts.added++;
+      if (inserted.length) counts.added++;
       continue;
     }
     if (member.status === "flagged") counts.returned++;
@@ -171,7 +203,7 @@ async function applyPlan(tx: Db, actor: Actor, canvas: TeacherCanvas, courseId: 
   }
 
   for (const m of members) {
-    if (m.status === "active" && !inCanvas.has(m.net_id)) {
+    if (m.status === "active" && !inCanvas.has(m.user_id)) {
       await tx.query("update course_members set status = 'flagged' where course_id = $1 and user_id = $2", [
         courseId,
         m.user_id,

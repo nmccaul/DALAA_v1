@@ -1,6 +1,6 @@
 # Roadmap — v1, v2, v3
 
-*Updated 2026-10-03. Mirrors the GitHub project board (iterations v1 / v2 / v3).
+*Updated 2026-10-29 (LTI pulled into now, D-020). Mirrors the GitHub project board (iterations v1 / v2 / v3).
 Dates are placeholders. Nothing past v1 is committed: v2 and v3 items get built
 when the pilot shows a need, not because they're listed.*
 
@@ -8,7 +8,7 @@ when the pilot shows a need, not because they're listed.*
 |---|---|---|
 | **v1** | Oct 2026 → Jan 2027 | One BYU instructor can run a real activity end to end, safely. Baseline function, no vanity features. |
 | **v2** | Winter → Summer 2027 | After the pilot: more instructors and tools at BYU, teams, reuse, review workflow, scale. |
-| **v3** | Sep 2027 → | Distant future: LTI, other institutions, other LMSs. |
+| **v3** | Sep 2027 → | Distant future: other institutions, other LMSs. |
 
 **The v1 test:** if the pilot can run without it, it's not v1. Exceptions are things
 BYU's security review or a student's rights require (privacy baseline, extensions).
@@ -51,6 +51,21 @@ Next, roughly in order:
 4. **Real BYU sign-in (#14)** and the BYU IT answers (#9, #10) before any real
    student uses DALAA.
 
+### Now — Study Chat test build on gitgrade (D-020, D-021)
+
+Pulled forward 2026-10-29 so the whole loop can be tested inside a real Canvas
+(Nathan's `gitgrade.opencanvaslms.org`). Task list: `ralph/TASKS.md`.
+
+1. **LTI 1.3** — OIDC login, launch → session, NRPS roster, deep linking, AGS
+   grades. REST with each teacher's token stays for BYU.
+2. **Sign-in outside Canvas** — Supabase Auth into `admit()` (D-022), student
+   signup with a school email and linking by email (D-024), a shared test
+   teacher (D-023, removed before the pilot).
+3. **AI layer** through AI Gateway with a per-call ledger (D-026).
+4. **Study Chat** — AI-drafted settings from course content, modes, student
+   chat, AI grader, disputes, send grades to Canvas.
+5. **Feedback button** on every page.
+
 ### Everything in v1
 
 | Area | In v1 | Board |
@@ -68,7 +83,7 @@ Next, roughly in order:
 | **Accommodations** | Per-student due-date extension | #48 |
 | **Privacy & data** | Encryption, course separation, no-training provider settings, data minimization, written retention/deletion and incident-response procedures | #41 |
 | **Backup** | Managed DB backups; CSV export of grades and results | #42 |
-| **Tools** | One first tool (Case Chat or Quiz, decision #4) | #49 |
+| **Tools** | One first tool — Study Chat for the gitgrade test build (D-021); BYU pilot choice still #4 | #49 |
 
 ## v2 — after the pilot (BYU)
 
@@ -102,14 +117,14 @@ BYU or embed in Canvas.
 
 | Theme | Includes | Board |
 |---|---|---|
-| LTI | Launch from Canvas, NRPS rosters/roles, deep linking, AGS grades, group sync | #2, #66 |
+| LTI extras | Group sync; LTI at other institutions. (Launch, NRPS, deep linking and AGS moved to now — D-020.) | #2, #66 |
 | Multi-institution | Per-school Canvas URL, sign-in, settings | #30 |
 | Institution admin | Institution settings and approved models, shared keys, allowlists, institution budgets, message templates, fairness testing | #67 |
 | Other LMSs | LMS-neutral integration layer; migration between instances | #68 |
 
 v3 depends on choices made in v1: all Canvas calls stay in one module, identity
 stays NetID, and grade rules stay separate from the code that sends grades
-(`DECISIONS.md` D-004). Scholarly's LTI 1.3 code is the head start.
+(`DECISIONS.md` D-004). LTI 1.3 itself is written fresh from the spec (D-020).
 
 ---
 

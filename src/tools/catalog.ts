@@ -1,16 +1,19 @@
 /**
- * The activity tools teachers choose from (PRD §8). Today this only describes
- * them, for the "New activity" preview; nothing is created. When the first
- * tool is built (#49), this becomes the registry tools plug into, and the
- * chassis still never branches on a tool name (CLAUDE.md).
+ * The tool registry: every kind of activity a teacher can create (PRD §8,
+ * D-021). Pages list tools from here and read `status`; the chassis never
+ * branches on a tool name (CLAUDE.md). Study Chat is the one live tool; the
+ * others are listed so teachers see what's coming, and can't be started.
  */
 
-import { ChatsCircle, Lightbulb, ListChecks } from "@phosphor-icons/react/dist/ssr";
+import { ChatsCircle, ListChecks, Microphone } from "@phosphor-icons/react/dist/ssr";
 import type { ComponentType } from "react";
+
+export type ToolStatus = "live" | "coming-soon";
 
 export type ToolInfo = {
   slug: string;
   name: string;
+  status: ToolStatus;
   icon: ComponentType<{ size?: number; weight?: "regular" | "duotone"; "aria-hidden"?: boolean }>;
   /** What students do, in one sentence. */
   students: string;
@@ -26,18 +29,21 @@ export type ToolInfo = {
 
 export const TOOLS: readonly ToolInfo[] = [
   {
-    slug: "case-chat",
-    name: "Case Chat",
+    slug: "study-chat",
+    name: "Study Chat",
+    status: "live",
     icon: ChatsCircle,
-    students: "Students question a character from a case to uncover what happened, then take a position.",
-    teacher: "Where the class landed, the themes in their reasoning, and who found each key fact.",
-    material: "A case or reading, plus your teaching notes",
-    draft: "the character, what they know and will reveal, and the facts students should uncover",
+    students:
+      "Students read your material, then talk it through with an AI: explain it, apply it, debate it, or question a character from a case.",
+    teacher: "A grade for each student against your rubric, with the parts of the chat that earned it.",
+    material: "A Canvas page, a file, or text you paste",
+    draft: "the goal, the scenario, the AI's character, when the chat ends, and a rubric",
     accent: "#0b7f74",
   },
   {
-    slug: "quiz",
-    name: "Quiz",
+    slug: "quizzer",
+    name: "Quizzer",
+    status: "coming-soon",
     icon: ListChecks,
     students: "Students answer questions, with AI feedback on written answers.",
     teacher: "Scores by question and objective, and the questions most of the class missed.",
@@ -46,17 +52,22 @@ export const TOOLS: readonly ToolInfo[] = [
     accent: "#a36307",
   },
   {
-    slug: "explain",
-    name: "Explain",
-    icon: Lightbulb,
-    students: "Students explain an idea in their own words, and DALAA asks follow-up questions until it's clear.",
-    teacher: "Where understanding breaks down, for each student and across the class.",
-    material: "A reading or lecture notes",
-    draft: "the key ideas to explain and the follow-up questions to ask",
+    slug: "oral-assessment",
+    name: "Oral Assessment",
+    status: "coming-soon",
+    icon: Microphone,
+    students: "Students answer questions out loud, and DALAA asks follow-ups the way an examiner would.",
+    teacher: "A score for each student, with the spoken answers that earned it.",
+    material: "A reading, lecture notes, or the questions you want asked",
+    draft: "the questions, the follow-ups to ask, and a rubric",
     accent: "#c2417a",
   },
 ];
 
 export function findTool(slug: string): ToolInfo | undefined {
   return TOOLS.find((t) => t.slug === slug);
+}
+
+export function isLive(tool: ToolInfo): boolean {
+  return tool.status === "live";
 }
