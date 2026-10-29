@@ -8,7 +8,7 @@ const content = { name: "Case: Harbor Bikes", body: "Harbor Bikes sells 1,200 bi
 describe("the chat prompt", () => {
   it("puts the persona, mode, scenario, goal, positions and material in", () => {
     const settings = draft();
-    const prompt = chatSystemPrompt(settings, content);
+    const prompt = chatSystemPrompt(settings, content, null);
     for (const part of [
       "You are Maya Ortiz, Owner of Harbor Bikes",
       settings.persona.background,
@@ -29,7 +29,7 @@ describe("the chat prompt", () => {
 
   it("leaves the rubric and touchpoints for the grader", () => {
     const settings = draft();
-    const prompt = chatSystemPrompt(settings, content);
+    const prompt = chatSystemPrompt(settings, content, null);
     for (const hidden of [
       ...settings.rubric.criteria.flatMap((c) => [c.label, c.description]),
       ...settings.touchpoints.flatMap((t) => [t.label, t.description]),
@@ -43,12 +43,12 @@ describe("the chat prompt", () => {
       positions: [],
       completion: { maxTurns: null, timeLimitMinutes: 20, question: "Should Maya open the store?", studentCanFinish: false },
     });
-    const prompt = chatSystemPrompt(settings, null);
+    const prompt = chatSystemPrompt(settings, null, null);
     expect(prompt).toContain("Should Maya open the store?");
     expect(prompt).not.toContain("Directions the student may take");
     expect(prompt).not.toContain("at most");
-    expect(prompt).not.toContain("<material>");
-    expect(chatSystemPrompt(draft(), content)).not.toContain("Make sure the conversation reaches this question");
+    expect(prompt).not.toContain("<material");
+    expect(chatSystemPrompt(draft(), content, null)).not.toContain("Make sure the conversation reaches this question");
   });
 
   it("replays the conversation in order and ends with the new message", () => {

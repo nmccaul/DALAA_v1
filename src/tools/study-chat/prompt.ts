@@ -8,6 +8,8 @@
  */
 
 import type { ModelMessage } from "ai";
+import type { Guide } from "@/content/guide";
+import { fence, GUIDE_RULE } from "./material";
 import { MODES } from "./modes";
 import type { StudyChatSettings } from "./schema";
 
@@ -25,7 +27,8 @@ const HELPFULNESS: Record<StudyChatSettings["persona"]["helpfulness"], string> =
 const list = (items: readonly { label: string; description: string }[]) =>
   items.map((item) => `- ${item.label}: ${item.description}`).join("\n");
 
-export function chatSystemPrompt(settings: StudyChatSettings, content: ChatContent): string {
+/** `guide` is the teacher's AI-only guide (src/content/guide.ts): the model uses it, the student never sees it. */
+export function chatSystemPrompt(settings: StudyChatSettings, content: ChatContent, guide: Guide | null): string {
   const { persona, completion } = settings;
   const [scenario] = settings.scenarios;
   const parts = [
@@ -48,7 +51,10 @@ export function chatSystemPrompt(settings: StudyChatSettings, content: ChatConte
     parts.push(`The student has at most ${completion.maxTurns} messages, so keep the conversation moving.`);
   }
   if (content !== null) {
-    parts.push(`What the student read before the chat ("${content.name}"):\n<material>\n${content.body}\n</material>`);
+    parts.push(`What the student read before the chat ("${content.name}"):\n${fence("student-reading", content.body)}`);
+  }
+  if (guide !== null) {
+    parts.push(`The teacher's guide ("${guide.name}"). ${GUIDE_RULE}\n${fence("ai-only-guide", guide.body)}`);
   }
   parts.push(
     [

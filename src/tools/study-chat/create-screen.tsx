@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
+import { getTaughtGuide } from "@/content/guide";
 import { getContent } from "@/content/store";
 import { db } from "@/db/client";
 import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
@@ -10,12 +11,15 @@ import { MODE_SLUGS, MODES } from "./modes";
 /**
  * New Study Chat: the material (paste, upload, or a Canvas page or file), then
  * the kind of chat, then the AI drafts it and the review opens. Which step is
- * showing comes from the URL: ?content=<id> once the material is saved.
+ * showing comes from the URL: ?content=<id> once the material is saved, and
+ * &guide=<id> once the teacher adds the optional AI-only guide.
  */
 export async function StudyChatCreate({ actor, course, searchParams }: CreateScreenProps) {
   const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);
   const here = keepPicker(`/courses/${course.id}/activities/new/study-chat`, addToCanvas);
   const content = typeof searchParams.content === "string" ? await getContent(db(), actor, course.id, searchParams.content) : null;
+  const guide =
+    content && typeof searchParams.guide === "string" ? await getTaughtGuide(db(), actor, course.id, searchParams.guide) : null;
 
   if (!content) {
     return (
@@ -45,10 +49,31 @@ export async function StudyChatCreate({ actor, course, searchParams }: CreateScr
             Change
           </Link>
         </p>
+        {guide ? (
+          <p className="text-muted">
+            Guide only the AI reads: <span className="font-medium text-text">{guide.name}</span>{" "}
+            <Link href={keepPicker(`${here.split("?")[0]}?content=${content.id}`, addToCanvas)} className="text-sm underline hover:text-text">
+              Remove
+            </Link>
+          </p>
+        ) : (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted hover:text-text">
+              Add a guide only the AI reads (answer key, teaching note)
+            </summary>
+            <div className="mt-3 flex flex-col gap-3 rounded-panel border border-border bg-surface p-4">
+              <p className="text-muted">
+                The AI uses it to steer the chat and to grade. Students never see it.
+              </p>
+              <MaterialForm courseId={course.id} creationKey={randomUUID()} addToCanvas={addToCanvas} guideFor={content.id} />
+            </div>
+          </details>
+        )}
       </div>
       <ModeForm
         courseId={course.id}
         contentId={content.id}
+        guideId={guide?.id ?? null}
         creationKey={randomUUID()}
         addToCanvas={addToCanvas}
         modes={MODE_SLUGS.map((slug) => ({ slug, label: MODES[slug].label, description: MODES[slug].description }))}

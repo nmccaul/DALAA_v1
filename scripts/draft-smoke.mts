@@ -26,6 +26,7 @@ const result = await draftSettings(db(), graderModel(), {}, {
   content: content.body,
   contentName: content.name,
   mode: arg as ModeSlug | "suggest",
+  guide: null,
 });
 console.log(JSON.stringify(result, null, 2));
 process.exit(result.ok ? 0 : 1);

@@ -16,6 +16,8 @@ export type NewActivity = {
   /** NULL until the activity has points; publishing needs them. */
   points: number | null;
   contentId: string | null;
+  /** The AI-only guide (src/content/guide.ts); NULL when there's none. */
+  guideId: string | null;
 };
 
 export type TaughtActivity = {
@@ -27,6 +29,7 @@ export type TaughtActivity = {
   points: number | null;
   settings: Record<string, unknown>;
   contentId: string | null;
+  guideId: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,11 +60,11 @@ export async function createActivity(
 
   // Through text: postgres.js would otherwise send the JSON string as a JSON string.
   const [inserted] = await db.query<{ id: string }>(
-    `insert into activities (course_id, tool, title, settings, points, content_id, creation_key, created_by)
-     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8)
+    `insert into activities (course_id, tool, title, settings, points, content_id, guide_id, creation_key, created_by)
+     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8, $9)
      on conflict (creation_key) do nothing
      returning id`,
-    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, activity.contentId, creationKey, actor.userId],
+    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, activity.contentId, activity.guideId, creationKey, actor.userId],
   );
   if (inserted) return { ok: true, id: inserted.id };
 
@@ -81,7 +84,7 @@ export async function getTaughtActivity(db: Db, actor: Actor, activityId: string
   const where = and({ text: "a.id = $1", values: [activityId] }, coursesTaughtBy(actor, "c"));
   const [row] = await db.query<TaughtActivity>(
     `select a.id, a.course_id as "courseId", a.tool, a.title, a.status, a.points::float8 as points,
-            a.settings, a.content_id as "contentId"
+            a.settings, a.content_id as "contentId", a.guide_id as "guideId"
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}`,

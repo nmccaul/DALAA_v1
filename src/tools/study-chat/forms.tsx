@@ -19,45 +19,54 @@ export function PickerField({ addToCanvas }: { addToCanvas: string | null }) {
   return addToCanvas ? <input type="hidden" name={PICKER_PARAM} value={addToCanvas} /> : null;
 }
 
-/** Paste the material, or upload it. A chosen file wins over pasted text. */
+/**
+ * Paste the material, or upload it. A chosen file wins over pasted text. With
+ * `guideFor` (the saved material's id) it takes the AI-only guide instead.
+ */
 export function MaterialForm({
   courseId,
   creationKey,
   addToCanvas,
+  guideFor = null,
 }: {
   courseId: string;
   creationKey: string;
   addToCanvas: string | null;
+  guideFor?: string | null;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(saveMaterialAction, {});
+  const id = (name: string) => (guideFor ? `guide-${name}` : name);
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="creationKey" value={creationKey} />
+      {guideFor ? <input type="hidden" name="guideFor" value={guideFor} /> : null}
       <PickerField addToCanvas={addToCanvas} />
       <div className="flex flex-col gap-2">
-        <label htmlFor="file" className="font-medium">
+        <label htmlFor={id("file")} className="font-medium">
           Upload a file
         </label>
         <p className="-mt-1 text-sm text-muted">A .pdf, .txt or .md file, up to 4 MB.</p>
-        <input id="file" name="file" type="file" accept=".pdf,.txt,.md" className="text-sm" />
+        <input id={id("file")} name="file" type="file" accept=".pdf,.txt,.md" className="text-sm" />
       </div>
       <p className="text-sm text-muted">Or paste it:</p>
       <div className="flex flex-col gap-2">
-        <label htmlFor="name" className="font-medium">
+        <label htmlFor={id("name")} className="font-medium">
           Title
         </label>
-        <input id="name" name="name" placeholder="Case: Harbor Bikes" autoComplete="off" className={inputStyles} />
+        <input id={id("name")} name="name" placeholder={guideFor ? "Harbor Bikes teaching note" : "Case: Harbor Bikes"} autoComplete="off" className={inputStyles} />
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="text" className="font-medium">
-          Text students will read
+        <label htmlFor={id("text")} className="font-medium">
+          {guideFor ? "Text only the AI reads" : "Text students will read"}
         </label>
-        <textarea id="text" name="text" rows={8} className={inputStyles} />
+        <textarea id={id("text")} name="text" rows={8} className={inputStyles} />
       </div>
       <Problem state={state} />
       <div>
-        <Button disabled={pending}>{pending ? "Reading…" : "Use this material"}</Button>
+        <Button variant={guideFor ? "secondary" : undefined} disabled={pending}>
+          {pending ? "Reading…" : guideFor ? "Add this guide" : "Use this material"}
+        </Button>
       </div>
     </form>
   );
@@ -67,12 +76,14 @@ export function MaterialForm({
 export function ModeForm({
   courseId,
   contentId,
+  guideId,
   creationKey,
   addToCanvas,
   modes,
 }: {
   courseId: string;
   contentId: string;
+  guideId: string | null;
   creationKey: string;
   addToCanvas: string | null;
   modes: readonly Pick<Mode, "slug" | "label" | "description">[];
@@ -95,6 +106,7 @@ export function ModeForm({
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="contentId" value={contentId} />
+      {guideId ? <input type="hidden" name="guideId" value={guideId} /> : null}
       <input type="hidden" name="creationKey" value={creationKey} />
       <PickerField addToCanvas={addToCanvas} />
       <fieldset className="flex flex-col gap-3">

@@ -23,13 +23,28 @@ export async function saveContent(
   creationKey: string,
   input: ContentInput,
 ): Promise<SaveResult> {
+  return saveTo(db, "course_content", actor, courseId, creationKey, input);
+}
+
+/**
+ * Saves to `course_content` (students read it) or `course_guides` (they never
+ * do, src/content/guide.ts). The two tables have the same shape.
+ */
+export async function saveTo(
+  db: Db,
+  table: "course_content" | "course_guides",
+  actor: Actor,
+  courseId: string,
+  creationKey: string,
+  input: ContentInput,
+): Promise<SaveResult> {
   if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: "That course isn't one you teach." };
 
   const read = await readContent(input);
   if (!read.ok) return read;
 
   const [inserted] = await db.query<SavedContent>(
-    `insert into course_content (course_id, source, name, body, creation_key, created_by)
+    `insert into ${table} (course_id, source, name, body, creation_key, created_by)
      values ($1, $2, $3, $4, $5, $6)
      on conflict (creation_key) do nothing
      returning id, source, name, body`,
@@ -38,7 +53,7 @@ export async function saveContent(
   if (inserted) return { ok: true, content: inserted };
 
   const [existing] = await db.query<SavedContent & { course_id: string; created_by: string }>(
-    "select id, source, name, body, course_id, created_by from course_content where creation_key = $1",
+    `select id, source, name, body, course_id, created_by from ${table} where creation_key = $1`,
     [creationKey],
   );
   if (existing.created_by !== actor.userId || existing.course_id !== courseId) {

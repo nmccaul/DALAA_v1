@@ -6,6 +6,7 @@
 
 import type { LanguageModel } from "ai";
 import { activityForKey, createActivity, getTaughtActivity, publishActivity, updateActivity } from "@/activities/store";
+import { getTaughtGuide } from "@/content/guide";
 import { getContent } from "@/content/store";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -18,6 +19,8 @@ export const STUDY_CHAT = "study-chat";
 
 export type CreateRequest = {
   contentId: string;
+  /** The AI-only guide the teacher added, if any (src/content/guide.ts). */
+  guideId: string | null;
   mode: ModeSlug | "suggest";
   /** Client-generated: a retry returns the first activity and drafts nothing new. */
   creationKey: string;
@@ -37,12 +40,14 @@ export async function createStudyChat(
 
   const content = await getContent(db, actor, courseId, request.contentId);
   if (!content) return { ok: false, reason: "We couldn't find that material. Add it again." };
+  const guide = request.guideId === null ? null : await getTaughtGuide(db, actor, courseId, request.guideId);
+  if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find that guide. Add it again." };
 
   const draft = await draftSettings(
     db,
     model,
     { userId: actor.userId, courseId },
-    { content: content.body, contentName: content.name, mode: request.mode },
+    { content: content.body, contentName: content.name, mode: request.mode, guide },
   );
   if (!draft.ok) return draft;
 
@@ -52,6 +57,7 @@ export async function createStudyChat(
     settings: draft.settings,
     points: rubricPoints(draft.settings),
     contentId: content.id,
+    guideId: guide?.id ?? null,
   });
   return saved.ok ? { ok: true, activityId: saved.id } : saved;
 }

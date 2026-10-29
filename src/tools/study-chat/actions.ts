@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
+import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
@@ -13,7 +14,11 @@ export type FormState = { error?: string; problems?: string[]; savedAt?: number 
 
 const newPath = (courseId: string) => `/courses/${courseId}/activities/new/study-chat`;
 
-/** Step 1: the material, pasted or uploaded. Back to the same page with ?content=. */
+/**
+ * Step 1: the material, pasted or uploaded. Back to the same page with
+ * ?content=. With `guideFor` (the saved material's id) it's the optional
+ * AI-only guide instead, and the page comes back with ?content=&guide=.
+ */
 export async function saveMaterialAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
@@ -24,9 +29,16 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
       ? { kind: "file" as const, name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }
       : { kind: "paste" as const, name, text: String(form.get("text") ?? "") };
 
-  const saved = await saveContent(db(), actor, courseId, String(form.get("creationKey") ?? ""), input);
+  const creationKey = String(form.get("creationKey") ?? "");
+  const guideFor = form.get("guideFor");
+  const saved = guideFor
+    ? await saveGuide(db(), actor, courseId, creationKey, input)
+    : await saveContent(db(), actor, courseId, creationKey, input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(keepPicker(`${newPath(courseId)}?content=${saved.content.id}`, pickerRequest(form.get(PICKER_PARAM))));
+  const query = guideFor
+    ? `content=${encodeURIComponent(String(guideFor))}&guide=${saved.content.id}`
+    : `content=${saved.content.id}`;
+  redirect(keepPicker(`${newPath(courseId)}?${query}`, pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
@@ -41,6 +53,7 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
 
   const created = await createStudyChat(db(), graderModel(), actor, courseId, {
     contentId: String(form.get("contentId") ?? ""),
+    guideId: form.get("guideId") ? String(form.get("guideId")) : null,
     mode,
     creationKey: String(form.get("creationKey") ?? ""),
   });
