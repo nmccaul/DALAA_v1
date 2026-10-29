@@ -87,6 +87,32 @@ reports show up under DALAA **Settings → Feedback reports**.
 4. Signing in with an email that already exists (e.g. after an LTI launch)
    links to that account; it never makes a second one.
 
+## Who signs in how
+- **Teachers.** Open DALAA from the Canvas course first (step 1). That makes
+  the account and makes it a teacher of that course. To use the DALAA site
+  without Canvas afterwards: **Settings → Sign in without Canvas**, set a
+  password, then sign in at `/sign-in` with the account's email and that
+  password. A password never makes anyone a teacher; teaching comes from the
+  Canvas launch (D-029).
+- **The shared test student.** The Canvas user `student@dalaa.test`, enrolled
+  as a student in course 42. Its password is `TEST_STUDENT_PASSWORD` in
+  `.env.local` (and Vercel). It's the same DALAA account from Canvas or from
+  `/sign-in`, once a launch or a **Sync with Canvas** has created it; before
+  that, signing in on the site gives a "Test Student" with no courses. It can
+  never be a teacher. Test-only: remove before the pilot.
+- **The shared test teacher.** `TEST_TEACHER_EMAIL` / `TEST_TEACHER_PASSWORD`
+  (step 8). Test-only.
+
+### What Nathan does in gitgrade first
+1. Add `TEST_STUDENT_EMAIL=student@dalaa.test` and a random
+   `TEST_STUDENT_PASSWORD` to `.env.local` and to Vercel production + preview,
+   then redeploy. Until then the test student login is off.
+2. Create the Canvas user `student@dalaa.test` (login ID the same email) and
+   enroll them in course 42 as a **Student**.
+3. Create Dr. Sampson's Canvas user and enroll them in course 42 as a
+   **Teacher**. Their first DALAA launch from the course makes them a teacher
+   there; they can then set a password from Settings.
+
 ## Known gaps (not bugs)
 - Teachers can't read a student's chat from the Grading tab yet.
 - Due times show in UTC.
