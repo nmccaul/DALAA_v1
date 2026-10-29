@@ -5,7 +5,18 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { canvasClient } from "./client";
 import { practiceCanvas } from "./practice/server";
-import { clientFor, connectPractice, connectWithToken, disconnect, getConnection } from "./connection";
+import {
+  beginOAuth,
+  clientFor,
+  connectPractice,
+  connectReturnPath,
+  connectWithToken,
+  disconnect,
+  finishOAuth,
+  getConnection,
+} from "./connection";
+import { CanvasError } from "./client";
+import type { OAuthTokens } from "./oauth";
 import { VaultError, openToken, sealToken } from "./vault";
 
 beforeAll(() => {
@@ -110,5 +121,117 @@ describe("canvas connections", () => {
         prof.userId,
       ]),
     ).rejects.toThrow(/check constraint/);
+  });
+
+  describe("OAuth", () => {
+    const HOUR = 3_600_000;
+    const tokens = (over: Partial<OAuthTokens> = {}): OAuthTokens => ({
+      accessToken: "oauth-access-1111",
+      refreshToken: "oauth-refresh-2222",
+      expiresAt: new Date(Date.now() + HOUR),
+      user: { id: 140, name: "Nathan" },
+      ...over,
+    });
+    const stored = async () =>
+      (
+        await db.query<{ token_ciphertext: string; refresh_ciphertext: string | null; token_expires_at: Date | null }>(
+          "select token_ciphertext, refresh_ciphertext, token_expires_at from canvas_connections",
+        )
+      )[0];
+
+    it("keeps ?next= on this site", () => {
+      expect(connectReturnPath("/courses/1")).toBe("/courses/1");
+      for (const bad of ["//evil.test", "https://evil.test", "", null, 5]) expect(connectReturnPath(bad)).toBe("/settings");
+    });
+
+    it("stores both tokens sealed and returns to where the teacher started", async () => {
+      const state = await beginOAuth(db, prof, "/courses/abc/new");
+      const result = await finishOAuth(db, prof, { code: "c", state, error: null }, async () => tokens());
+      expect(result).toEqual({ ok: true, next: "/courses/abc/new", canvasUserName: "Nathan" });
+      const row = await stored();
+      expect(row.token_ciphertext).not.toContain("oauth-access");
+      expect(openToken(row.token_ciphertext)).toBe("oauth-access-1111");
+      expect(openToken(row.refresh_ciphertext!)).toBe("oauth-refresh-2222");
+      expect(await getConnection(db, prof)).toMatchObject({ mode: "canvas", tokenLast4: "1111", canvasUserName: "Nathan" });
+    });
+
+    it("a state works once, only for the teacher who started it, and not after it expires", async () => {
+      const exchange = async () => tokens();
+      const state = await beginOAuth(db, prof, "/settings");
+      const other = { ...prof, userId: (await db.query<{ id: string }>(
+        "insert into users (institution_id, external_id, display_name) values ($1, 'other', 'Other') returning id",
+        [prof.institutionId],
+      ))[0].id };
+      expect(await finishOAuth(db, other, { code: "c", state, error: null }, exchange)).toEqual({ ok: false, reason: "expired" });
+      expect(await finishOAuth(db, prof, { code: "c", state, error: null }, exchange)).toMatchObject({ ok: true });
+      expect(await finishOAuth(db, prof, { code: "c", state, error: null }, exchange)).toEqual({ ok: false, reason: "expired" });
+
+      const late = await beginOAuth(db, prof, "/settings");
+      await db.query("update canvas_oauth_states set created_at = now() - interval '1 hour', expires_at = now() - interval '1 minute' where state = $1", [late]);
+      expect(await finishOAuth(db, prof, { code: "c", state: late, error: null }, exchange)).toEqual({ ok: false, reason: "expired" });
+      expect(await finishOAuth(db, prof, { code: "c", state: null, error: null }, exchange)).toEqual({ ok: false, reason: "expired" });
+    });
+
+    it("stores nothing when the teacher says no or Canvas refuses the code", async () => {
+      const denied = await beginOAuth(db, prof, "/settings");
+      expect(await finishOAuth(db, prof, { code: null, state: denied, error: "access_denied" }, async () => tokens())).toEqual({
+        ok: false,
+        reason: "denied",
+        next: "/settings",
+      });
+      const refused = await beginOAuth(db, prof, "/settings");
+      const reject = async (): Promise<OAuthTokens> => {
+        throw new CanvasError("token-rejected", 400);
+      };
+      expect(await finishOAuth(db, prof, { code: "c", state: refused, error: null }, reject)).toMatchObject({ reason: "rejected" });
+      const noRefresh = await beginOAuth(db, prof, "/settings");
+      expect(
+        await finishOAuth(db, prof, { code: "c", state: noRefresh, error: null }, async () => tokens({ refreshToken: null })),
+      ).toMatchObject({ reason: "rejected" });
+      expect(await getConnection(db, prof)).toBeNull();
+    });
+
+    it("refreshes a token about to expire, and leaves a fresh one alone", async () => {
+      await finishOAuth(db, prof, { code: "c", state: await beginOAuth(db, prof, "/"), error: null }, async () =>
+        tokens({ expiresAt: new Date(Date.now() + 2 * 60_000) }),
+      );
+      const refreshed: string[] = [];
+      const refresh = async (r: string) => {
+        refreshed.push(r);
+        return tokens({ accessToken: "oauth-access-3333", refreshToken: null, user: null });
+      };
+      expect((await clientFor(db, prof, { refresh }))?.mode).toBe("canvas");
+      expect(refreshed).toEqual(["oauth-refresh-2222"]);
+      const row = await stored();
+      expect(openToken(row.token_ciphertext)).toBe("oauth-access-3333");
+      expect(openToken(row.refresh_ciphertext!)).toBe("oauth-refresh-2222"); // kept
+      expect(new Date(row.token_expires_at!).getTime()).toBeGreaterThan(Date.now() + HOUR / 2);
+      expect((await getConnection(db, prof))?.tokenLast4).toBe("3333");
+
+      await clientFor(db, prof, { refresh });
+      expect(refreshed).toHaveLength(1);
+    });
+
+    it("uses the stored token when Canvas won't refresh it, so the next call says reconnect", async () => {
+      await finishOAuth(db, prof, { code: "c", state: await beginOAuth(db, prof, "/"), error: null }, async () =>
+        tokens({ expiresAt: new Date(Date.now() - 60_000) }),
+      );
+      const refuse = async (): Promise<OAuthTokens> => {
+        throw new CanvasError("token-rejected", 400);
+      };
+      expect((await clientFor(db, prof, { refresh: refuse }))?.mode).toBe("canvas");
+      expect(openToken((await stored()).token_ciphertext)).toBe("oauth-access-1111");
+    });
+
+    it("pasting a token or choosing practice clears the OAuth tokens", async () => {
+      await finishOAuth(db, prof, { code: "c", state: await beginOAuth(db, prof, "/"), error: null }, async () => tokens());
+      await connectWithToken(db, prof, "practice-good-1a2b", fakeCanvas);
+      expect(await stored()).toMatchObject({ refresh_ciphertext: null, token_expires_at: null });
+    });
+
+    it("the database refuses a refresh token without an expiry", async () => {
+      await connectWithToken(db, prof, "practice-good-1a2b", fakeCanvas);
+      await expect(db.query("update canvas_connections set refresh_ciphertext = 'x'")).rejects.toThrow(/check constraint/);
+    });
   });
 });
