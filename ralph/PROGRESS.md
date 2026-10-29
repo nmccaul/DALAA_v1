@@ -32,3 +32,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `src/lti/config.ts` builds the Canvas JSON config (login/launch/JWKS URLs, 5 AGS+NRPS scopes, the 3 custom fields, public privacy, course_navigation + assignment_selection "DALAA Study Chat").
 - Routes `/api/lti/jwks` (503 "LTI is not configured" without a key; 1 h cache header) and `/api/lti/config` (base = `APP_URL`, else request origin).
 - Tests: `src/lti/keys.test.ts`, `src/lti/config.test.ts`. Local curl: one RSA key, fields alg,e,kid,kty,n,use, no `d`.
+
+## 2026-10-29 06:42 UTC · T06 OIDC login initiation · done
+- `src/lti/login.ts`: `readLoginParams()` (GET query or POST form) and `beginLogin()`: requires iss/login_hint/target_link_uri, checks iss + client_id through `ensurePlatform` (client_id may be absent, then the registration's), stores a 32-byte state + nonce in `lti_launch_states` for 10 min, prunes rows expired over a day, and redirects to the platform's authorize URL (openid, id_token, form_post, prompt=none, redirect_uri, login_hint, state, nonce, lti_message_hint passed through).
+- Route `src/app/api/lti/login/route.ts` (GET and POST). 400 missing params, 403 unknown issuer/client, 503 when LTI env is missing.
+- `src/lti/config.ts` now has `ltiUrls()` and `appUrl(request)` so the login, launch and config routes read one place for endpoint paths.
+- Tests: `src/lti/login.test.ts` (good request, both issuers, missing client_id, unknown issuer, unknown client, missing params, unconfigured, GET/POST parsing).
+- redirect_uri is always DALAA's own launch URL (from APP_URL), never the request's target_link_uri; the launch (T07) checks target_link_uri in the token.
