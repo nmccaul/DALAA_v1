@@ -240,3 +240,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Tests: `gradeIfEnded` (not while in progress; grades once ended; another student's call does nothing), graded count in `queries.test.ts`. 318 green on Node 22. No component tests exist in the repo, so the result view is checked in the browser only.
 - Browser check (local, the T21c smoke student via NetID sign-in): a fresh 'grading' row showed "Being graded…"; writing a mock graded row while the page was open made the grade appear on the next poll with no reload. Light desktop and dark 390px look right. The mock row was deleted, so T22c can still grade attempt `feabae77-…` for real; no real grader call was made (0 grade rows in `ai_calls`).
 - **Nathan:** students now see touchpoint names after they finish (the task asked for it); if some touchpoints are meant to stay hidden, that needs a flag.
+
+## 2026-10-29 14:56 UTC · T22c Real grade · done
+- New `scripts/grade-smoke.mts` (local DB only): runs `gradeAttempt` with the real `GRADER_MODEL` (openai/gpt-5.2) on a given attempt, or on the newest ungraded `smoke.` chat, and prints the result and the grade ledger rows.
+- Graded the T21c chat (attempt `feabae77-…`) on the first try: 'graded', 8 of 10 (Questions 4/4, Recommendation 4/6), position "Wait", touchpoint "Cash flow" hit. One `ai_calls` row: 757 in / 368 out tokens, $0.006477.
+- Evidence check: the Recommendation quote survived (word for word from the student). The Questions quote and the touchpoint quote were dropped to NULL, so the grader probably paraphrased or stitched two messages together. That's the check doing its job, but **Nathan:** if quotes get dropped this often, the prompt may need to ask for one exact sentence per quote.
+- The grader's feedback asks the student for case figures (cost, payback) that the tiny practice case doesn't contain, the same fixture mismatch noted in T21c. Not a grader bug.
+- Surprise: the shell's default `node` is v20; on it, the 2 PDF tests in `src/content/read.test.ts` fail. On Node 22 (`.nvmrc`) all 318 pass. Run checks with Node 22.
