@@ -350,3 +350,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Lint, typecheck and 385 tests green on Node 22. Five migrations since checkpoint B, all additive (`teacher_scores` adds checks only on its own new nullable columns), applied to production first.
 - PR #104 opened and merged; production deploy `dalaa-v1-r4ae25e7d` Ready. Smoke: `/api/health` db up, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200, and the new `POST /api/feedback` answers 401 signed out.
 - Surprise: the env pull "failed" because `nvm use 22` puts a PATH without the global `vercel` first; pull before switching Node. `ralph/STATUS` is now `DONE`.
+
+## 2026-10-29 17:33 UTC · T29 Decision + docs · done
+- `docs/DECISIONS.md` D-029 (amends D-022, D-023): a signed-in user may set a password for their account's email (any domain; the form never takes an email); password sign-in then accepts any email the provider verifies, still through `admitByEmail` → `admit()`; a password never makes anyone staff; shared test student `TEST_STUDENT_EMAIL` / `TEST_STUDENT_PASSWORD`, never staff, test-only.
+- `.env.example` gains the two test-student vars; header comments in `src/auth/password.ts` and `src/auth/admit.ts` and the Canvas section of `CLAUDE.md` describe the new rules.
+- Code is unchanged: `signInWithPassword` still refuses non-school emails until T30, and the test student lands in T31, so the comments run one task ahead.
+- `ralph/STATUS` still says `DONE` from T28; T32 rewrites it. 385 tests green on Node 22.
