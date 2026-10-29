@@ -97,3 +97,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Migration additive (create table + indexes, RLS); applied locally only. Local `npm run migrate` needs `DATABASE_URL` set explicitly (it isn't read from `.env.local`).
 - `scripts/ai-smoke.mts` makes one real call per model. It failed: **AI Gateway requires a credit card on file** (`customer_verification_required`). The failed call was recorded as `ok=false`, NULL tokens/cost, which confirms the ledger path.
 - **Nathan:** add a card to the Vercel team's AI Gateway, then run `npx tsx --env-file=.env.local scripts/ai-smoke.mts` and mark T13b done. Production will need the same card (and OIDC) before T17/T21/T22 can do real calls; their mocked parts can proceed.
+
+## 2026-10-29 09:07 UTC · T14a Study Chat schema + modes + activities table · done
+- Split T14: T14a (schema, modes, table) done; T14b (catalog → registry, Study Chat live, Quizzer/Oral Assessment "Coming soon", pages that read `TOOLS`) added to TASKS.
+- `src/tools/study-chat/schema.ts`: strict zod object (unknown keys refused): mode, goal, `scenarios` (exactly one in v1), positions, touchpoints, persona (name, role, background, tone, helpfulness), completion (maxTurns / timeLimitMinutes / question all NULL for "not used", studentCanFinish; refuses a chat with no way to end), rubric (criteria with points, strictness strict/balanced/lenient). Every field carries a `title` (teacher label, for T19's search) and `description` (for T17's drafting model). `rubricPoints()` sums criteria.
+- `src/tools/study-chat/modes.ts`: the 10 modes (Explain, Apply, Liken to me, Case Chat, Debate, Pitch, Interview, Roleplay, Liken to us, Socratic), each with label, one-line description, prompt seed and persona/completion/rubric hints. Written fresh, MakeTheCase used for ideas only.
+- Additive migration `20261029090502_activities.sql` (RLS): settings must be a JSON object, a published activity must have points > 0, unique (course, resource link id) with NULLs unconstrained. Applied locally only. Content is not in settings; T15 adds it to the activity.
+- Tests: `src/tools/study-chat/schema.test.ts` (11) + an activities constraint test in `src/db/schema.test.ts`. 202 green.
+- Nathan: `activities.points` isn't forced to equal the rubric total; decide in T19 whether points come from the rubric or are set separately.
