@@ -54,3 +54,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `loadActor` (`src/auth/admit.ts`): `isStaff` is also true for an active instructor of an LTI-linked course (D-020); admin still only from the allowlist. Side effect: such a teacher can also set up other courses — Nathan, say if that's too broad.
 - Course term: Canvas doesn't send it, so LTI courses show "From Canvas" unless a `canvas_term` custom field is added (`$Canvas.term.name`) to the developer key. A Canvas course id already held by another DALAA course is stored as NULL rather than failing.
 - Tests: `src/lti/launch.test.ts` (10) run the real route with a signed fake launch (mocked db client, cookie jar, JWKS).
+
+## 2026-10-29 06:51 UTC · T08b New-tab fallback · done
+- Every verified launch now sets the cookie, makes a one-time login code (additive migration `20261029064935_lti_login_codes.sql`, RLS, 2 min, used once, path must be on DALAA's origin — a check constraint refuses `//host` and `/\host`) and 303s to `/api/lti/landed?code=`. If the session cookie came back for that user, the code is spent and the browser goes on to the course; otherwise it shows "Open DALAA in a new tab" (`target=_blank`) → `/api/lti/open` spends the code, starts the session first-party and lands on the same page.
+- `src/lti/handoff.ts` (create/pending/redeem/land), `src/lti/page.ts` (plain HTML page, escaped, system colors only so light/dark work), routes `src/app/api/lti/{landed,open}/route.ts`; `sessionUserId()` added to `src/auth/current.ts`.
+- Launch errors are now a plain HTML page with the same status codes (no more JSON inside Canvas).
+- Tests: `src/lti/handoff.test.ts` (use-once, expiry, path constraint, cookie present/blocked/other user, landed→open redirect, HTML escaping); `launch.test.ts` updated for the landed hop. Migration applied locally only; T09 applies it to production.
+- Nathan: the new-tab page is plain HTML (not the app shell), deliberately, since it answers a cross-site POST; check its look in Safari inside Canvas tomorrow.
