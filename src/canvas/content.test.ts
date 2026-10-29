@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
+import { beforeEach, describe, expect, it } from "vitest";
+import { testDb } from "@/test/db";
 import { MAX_UPLOAD_BYTES, readContent } from "@/content/read";
+import { createCourse } from "@/courses/create";
+import type { Actor } from "@/db/scope";
+import type { Db } from "@/db/types";
 import { canvasClient, type CanvasFile } from "./client";
-import { fetchCanvasFile, fetchCanvasPage, listCanvasContent } from "./content";
+import type { TeacherCanvas } from "./connection";
+import { fetchCanvasFile, fetchCanvasPage, listCanvasContent, listCourseCanvasContent, saveFromCanvas } from "./content";
+import { importCourse } from "./import";
 import { PRACTICE_TOKEN, practiceCanvas } from "./practice/server";
 
 const BASE = "https://dalaa.test/practice-canvas";
@@ -139,5 +146,76 @@ describe("fetchCanvasFile", () => {
       ok: false,
       reason: "That file isn't in Canvas anymore. Pick another.",
     });
+  });
+});
+
+describe("a course's Canvas content", () => {
+  let db: Db;
+  let prof: Actor;
+  let other: Actor;
+  let courseId: string;
+  const asPractice: () => TeacherCanvas = () => ({ client: practice().client, mode: "practice" });
+
+  beforeEach(async () => {
+    db = await testDb();
+    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
+    const actor = async (netId: string): Promise<Actor> => {
+      const [{ id }] = await db.query<{ id: string }>(
+        "insert into users (institution_id, external_id, display_name) values ($1, $2, $2) returning id",
+        [inst, netId],
+      );
+      return { userId: id, institutionId: inst, netId, displayName: netId, isStaff: true, isAdmin: false };
+    };
+    prof = await actor("prof");
+    other = await actor("other");
+    const imported = await importCourse(db, prof, asPractice(), 1101, randomUUID());
+    if (!imported.ok) throw new Error(imported.reason);
+    courseId = imported.courseId;
+  });
+
+  it("lists the linked Canvas course's pages and files", async () => {
+    const r = await listCourseCanvasContent(db, prof, asPractice(), courseId);
+    expect(r.ok && r.list.pages.map((p) => p.url)).toContain("case-harbor-bikes");
+  });
+
+  it("says why it can't list: not linked, the other Canvas, not theirs, connection refused", async () => {
+    const manual = await createCourse(db, prof, { creationKey: randomUUID(), code: "X", title: "X", term: "W", students: [] });
+    expect(await listCourseCanvasContent(db, prof, asPractice(), manual.courseId)).toEqual({ ok: false, reason: "not-linked" });
+    const real: TeacherCanvas = { client: practice().client, mode: "canvas" };
+    expect(await listCourseCanvasContent(db, prof, real, courseId)).toEqual({ ok: false, reason: "wrong-canvas" });
+    expect(await listCourseCanvasContent(db, other, asPractice(), courseId)).toEqual({ ok: false, reason: "not-yours" });
+    const expired: TeacherCanvas = { client: practice("expired").client, mode: "practice" };
+    expect(await listCourseCanvasContent(db, prof, expired, courseId)).toEqual({ ok: false, reason: "reconnect" });
+  });
+
+  it("saves a picked page once, even when the pick is sent twice", async () => {
+    const key = randomUUID();
+    const first = await saveFromCanvas(db, prof, asPractice(), courseId, key, { kind: "page", url: "case-harbor-bikes" });
+    expect(first).toMatchObject({ ok: true, content: { source: "canvas-page", name: "Case: Harbor Bikes" } });
+    expect(await saveFromCanvas(db, prof, asPractice(), courseId, key, { kind: "page", url: "case-harbor-bikes" })).toEqual(first);
+    expect(await db.query("select course_id from course_content")).toEqual([{ course_id: courseId }]);
+  });
+
+  it("saves a picked file", async () => {
+    expect(await saveFromCanvas(db, prof, asPractice(), courseId, randomUUID(), { kind: "file", id: 8001 })).toMatchObject({
+      ok: true,
+      content: { source: "canvas-file", name: "Harbor Bikes data.md" },
+    });
+  });
+
+  it("saves nothing for someone else's course, or a page that's gone", async () => {
+    expect(
+      await saveFromCanvas(db, other, asPractice(), courseId, randomUUID(), { kind: "page", url: "case-harbor-bikes" }),
+    ).toMatchObject({ ok: false, reconnect: false });
+    expect(await saveFromCanvas(db, prof, asPractice(), courseId, randomUUID(), { kind: "page", url: "gone" })).toEqual({
+      ok: false,
+      reason: "That page isn't in Canvas anymore. Pick another.",
+      reconnect: false,
+    });
+    const expired: TeacherCanvas = { client: practice("expired").client, mode: "practice" };
+    expect(
+      await saveFromCanvas(db, prof, expired, courseId, randomUUID(), { kind: "page", url: "case-harbor-bikes" }),
+    ).toMatchObject({ ok: false, reconnect: true });
+    expect(await db.query("select id from course_content")).toEqual([]);
   });
 });

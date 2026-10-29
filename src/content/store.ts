@@ -46,3 +46,14 @@ export async function saveContent(
   }
   return { ok: true, content: { id: existing.id, source: existing.source, name: existing.name, body: existing.body } };
 }
+
+/** One piece of a course's content, for the course's teachers; null if it isn't theirs. */
+export async function getContent(db: Db, actor: Actor, courseId: string, contentId: string): Promise<SavedContent | null> {
+  if (!(await getTaughtCourse(db, actor, courseId))) return null;
+  if (!/^[0-9a-f-]{36}$/i.test(contentId)) return null;
+  const [row] = await db.query<SavedContent>(
+    "select id, source, name, body from course_content where id = $1 and course_id = $2",
+    [contentId, courseId],
+  );
+  return row ?? null;
+}

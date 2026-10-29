@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { saveContent } from "./store";
+import { getContent, saveContent } from "./store";
 
 describe("saveContent", () => {
   let db: Db;
@@ -77,5 +77,14 @@ describe("saveContent", () => {
       );
     await addActivity(course);
     await expect(addActivity(await newCourse(prof))).rejects.toThrow(/foreign key/);
+  });
+
+  it("gets saved content back for the course's teachers only", async () => {
+    const r = await saveContent(db, prof, course, randomUUID(), paste("Sales fell."));
+    if (!r.ok) throw new Error(r.reason);
+    expect(await getContent(db, prof, course, r.content.id)).toEqual(r.content);
+    expect(await getContent(db, other, course, r.content.id)).toBeNull();
+    expect(await getContent(db, prof, await newCourse(prof), r.content.id)).toBeNull();
+    expect(await getContent(db, prof, course, "not-an-id")).toBeNull();
   });
 });
