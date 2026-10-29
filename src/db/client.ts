@@ -23,7 +23,8 @@ function sql(): postgres.Sql {
   return pool;
 }
 
-function wrap(conn: postgres.Sql | postgres.TransactionSql): Db {
+/** A `Db` over any postgres.js connection; scripts use it with their own short-lived one. */
+export function wrap(conn: postgres.Sql | postgres.TransactionSql): Db {
   return {
     query: async <T>(text: string, values: readonly unknown[] = []) =>
       (await conn.unsafe(text, values as postgres.ParameterOrJSON<never>[])) as unknown as T[],

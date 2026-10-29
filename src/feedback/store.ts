@@ -5,6 +5,7 @@
 
 import { feedbackReadableBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import type { Fix } from "./fixes";
 import { ReportInput, SCREENSHOT_MAX_BYTES, type Kind, type ReportContext } from "./report";
 
 /** More reports than this from one person in the window are dropped quietly. */
@@ -102,17 +103,21 @@ export async function listReports(db: Db, actor: Actor): Promise<ReportSummary[]
   );
 }
 
-export type ReportDetail = ReportSummary & { context: ReportContext; appCommit: string | null };
+export type ReportDetail = ReportSummary & { context: ReportContext; appCommit: string | null; fix: Fix | null };
 
-/** One report with its captured context, or NULL when it's not there or not the actor's to read. */
+/** One report with its captured context and what the bug loop did about it, or NULL when it's not there or not the actor's to read. */
 export async function getReport(db: Db, actor: Actor, id: string): Promise<ReportDetail | null> {
   const scope = feedbackReadableBy(actor);
   const [row] = await db.query<ReportDetail>(
     `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter, f.fixed_commit as "fixedCommit",
             f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt",
-            f.context, f.app_commit as "appCommit"
+            f.context, f.app_commit as "appCommit",
+            case when x.report_id is null then null else json_build_object(
+              'status', x.status, 'branch', x.branch, 'prUrl', x.pr_url, 'note', x.note, 'commit', x.commit_sha
+            ) end as fix
        from feedback_reports f
        join users u on u.id = f.user_id
+       left join feedback_fixes x on x.report_id = f.id
       where f.id::text = $${scope.values.length + 1} and (${scope.text})`,
     [...scope.values, id],
   );
