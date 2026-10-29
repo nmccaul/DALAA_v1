@@ -76,3 +76,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Sign-in page: email + password first, "New student? Create an account" (`?mode=create`), and the NetID dev sign-in folded under a small "Test sign-in with a NetID" (still behind `DEV_SIGN_IN`). Checked in a real browser at desktop and 390px (wrong password → "That email and password don't match."). I didn't do a real test-teacher login in the browser because the browser tool echoes typed values, and I didn't try Supabase signup against the live project.
 - Tests: `src/auth/password.test.ts` (15). Total 163 green.
 - **Nathan:** there's no rate limit on password attempts yet (Supabase rate-limits its own sign-in, but the test-teacher check doesn't). Fine for testing; add one before the pilot.
+
+## 2026-10-29 07:05 UTC · T11 Linking + empty state · done
+- Additive migration `20261029070131_users_email_unique.sql`: unique index on `users (institution_id, lower(email)) where email is not null`. No duplicates locally; **production couldn't be checked** (DB still unreachable, T09). If production has duplicate emails, the migration fails in its transaction at the next checkpoint and changes nothing; then merge or clear the duplicates by hand before rerunning.
+- `fillEmail` (`src/courses/students.ts`) is now the one way an email is written: fills a gap only, and skips an email another account holds instead of failing the sign-in. `admit()` and the LTI launch's `findOrCreateUser` use it; the launch no longer needs its "two accounts with this email" guard.
+- Student home (`src/app/page.tsx`): lists their courses (new `coursesTakenBy` scope + `listTakenCourses`), or "Open DALAA once from your Canvas course" when there are none. Checked in a real browser in light, dark and 390px with a local test student, then removed the test data.
+- Tests: index (case-insensitive, NULLs unconstrained), scope, query, and admit's email-fill rules. 167 green.
