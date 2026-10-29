@@ -3,17 +3,17 @@ import Link from "next/link";
 import { loadTaughtCourse } from "@/courses/load";
 import { isLive, TOOLS } from "@/tools/catalog";
 
-export const metadata: Metadata = { title: "New activity" };
+export const metadata: Metadata = { title: "Create assignment" };
 
-/** Step 1 of a new activity: what should students do? (PRD §5 step 5) */
+/** Step 1 of a new assignment: which type? (PRD §5 step 5) */
 export default async function NewActivityPage({ params }: PageProps<"/courses/[courseId]/activities/new">) {
   const { course } = await loadTaughtCourse((await params).courseId);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">What should your students do?</h2>
-        <p className="text-muted">Pick a tool. Each one has its own way of working, and they all share the same steps to set up.</p>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">What kind of assignment?</h2>
+        <p className="text-muted">Each type works differently for students, and they all take the same steps to set up.</p>
       </div>
 
       <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -61,7 +61,7 @@ export default async function NewActivityPage({ params }: PageProps<"/courses/[c
       </ul>
 
       <p className="text-sm text-muted">
-        Already made an activity in another course? Reuse it from your{" "}
+        Already made an assignment in another course? Reuse it from your{" "}
         <Link href="/library" className="underline hover:text-text">
           Library
         </Link>

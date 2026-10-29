@@ -7,7 +7,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { findTool, isLive } from "@/tools/catalog";
 
 export async function generateMetadata({ params }: PageProps<"/courses/[courseId]/activities/new/[tool]">): Promise<Metadata> {
-  return { title: `New ${findTool((await params).tool)?.name ?? "activity"}` };
+  return { title: `New ${findTool((await params).tool)?.name ?? "assignment"}` };
 }
 
 /**
@@ -36,7 +36,7 @@ export default async function ToolPreviewPage({ params }: PageProps<"/courses/[c
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/courses/${course.id}/activities/new`} className="-mb-2 text-sm text-muted hover:text-text">
-        ← All tools
+        ← All types
       </Link>
       <div className="flex items-center gap-3">
         <span style={{ color: tool.accent }}>
