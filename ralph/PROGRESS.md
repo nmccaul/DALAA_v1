@@ -355,4 +355,4 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `docs/DECISIONS.md` D-029 (amends D-022, D-023): a signed-in user may set a password for their account's email (any domain; the form never takes an email); password sign-in then accepts any email the provider verifies, still through `admitByEmail` → `admit()`; a password never makes anyone staff; shared test student `TEST_STUDENT_EMAIL` / `TEST_STUDENT_PASSWORD`, never staff, test-only.
 - `.env.example` gains the two test-student vars; header comments in `src/auth/password.ts` and `src/auth/admit.ts` and the Canvas section of `CLAUDE.md` describe the new rules.
 - Code is unchanged: `signInWithPassword` still refuses non-school emails until T30, and the test student lands in T31, so the comments run one task ahead.
-- `ralph/STATUS` still says `DONE` from T28; T32 rewrites it. 385 tests green on Node 22.
+- 385 tests green on Node 22.
