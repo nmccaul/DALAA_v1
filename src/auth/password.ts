@@ -2,11 +2,16 @@
  * Email + password sign-in outside Canvas (D-022). Supabase Auth only proves
  * the email and password belong together; `admit()` decides what they get.
  *
- * - Only `SCHOOL_EMAIL_DOMAINS` emails may create an account or sign in.
+ * - Only `SCHOOL_EMAIL_DOMAINS` emails may create an account themselves. A
+ *   signed-in user may set a password for the email already on their account,
+ *   any domain; so sign-in takes any email the provider verifies (D-029).
  * - The shared test teacher (D-023) is checked here, not in Supabase, and is
  *   staff only while `TEST_TEACHER_EMAIL` / `TEST_TEACHER_PASSWORD` are set.
- *   Test-only: remove before the pilot.
+ *   The shared test student (D-029, `TEST_STUDENT_EMAIL` / `_PASSWORD`) is
+ *   checked the same way and is never staff. Test-only: remove before the pilot.
  * - An email that matches an existing account signs in to that account (D-024).
+ * - A password never makes anyone staff: that is still the allowlist or
+ *   teaching an LTI course (D-020).
  */
 
 import { timingSafeEqual } from "node:crypto";

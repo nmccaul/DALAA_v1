@@ -173,6 +173,21 @@ serves older models, so testing uses `CHAT_MODEL=google/gemini-2.5-flash` and
 models (e.g. `gemini-3.8-flash`, `gpt-6.1-sol`) needs paid gateway credit and
 only an env change.
 
+### D-029 · Sign in without Canvas: set a password; a shared test student
+*2026-10-29, Nathan.* Amends D-022 and D-023.
+1. A signed-in user may set a DALAA password for the email already on their
+   account (Settings → "Sign in without Canvas"). Canvas or an earlier sign-in
+   already proved that email, so it needn't be a school domain; the form never
+   takes an email. Self-service signup stays school-domain-only (D-022).
+2. Password sign-in therefore accepts any email that has a Supabase account,
+   and still goes through `admitByEmail` → `admit()`. Staff status still comes
+   only from the allowlist or teaching an LTI course (D-020), never from having
+   a password.
+3. A shared test student, `TEST_STUDENT_EMAIL` / `TEST_STUDENT_PASSWORD`
+   (test-only like D-023; remove before the pilot), signs in to the account
+   with that email — the matching gitgrade Canvas user once a launch or roster
+   sync has created it — always as a student, never staff.
+
 ---
 
 ## Open

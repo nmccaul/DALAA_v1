@@ -112,8 +112,10 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
   A launch, sync or signup whose email matches an existing user links to it
   (D-024).
 - **Supabase Auth only proves identity; `admit()` decides** (D-022). Accounts
-  are admin-created and pre-confirmed, school-email domains only. The shared
-  test teacher (D-023) is test-only.
+  are admin-created and pre-confirmed; self-signup is school-email domains
+  only, but a signed-in user may set a password for their account's email
+  (D-029). A password never makes anyone staff. The shared test teacher
+  (D-023) and test student (D-029) are test-only.
 - **Roster sync adds and flags; it never deletes.**
 - **Grades post on an explicit push, never automatically** — through REST or
   AGS alike. An unconfirmed push
