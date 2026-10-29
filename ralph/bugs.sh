@@ -70,6 +70,7 @@ waiting() {
 if [[ ! -d $TREE ]]; then
   git fetch -q origin && git worktree add --detach "$TREE" "$REF" || exit 1
   ln -s "$REPO/.env.local" "$TREE/.env.local"
+  mkdir -p "$TREE/.vercel" && cp "$REPO/.vercel/project.json" "$TREE/.vercel/"
   (cd "$TREE" && npm ci --silent) || exit 1
 fi
 
