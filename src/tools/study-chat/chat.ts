@@ -66,7 +66,9 @@ function timeIsUp(settings: StudyChatSettings, attempt: Attempt): boolean {
 
 /**
  * Asks the check model whether the student has answered the chat's question.
- * A failed check means "not yet": it must never end a chat by accident.
+ * A failed check means "not yet": it must never end a chat by accident. Nor
+ * does it end while the AI's last reply is waiting on the student: ending
+ * there leaves the AI's own question hanging (feedback ad893b84).
  */
 async function questionAnswered(
   db: Db,
@@ -79,20 +81,21 @@ async function questionAnswered(
   if (question === null) return false;
   const transcript = turns.map((t) => `Student: ${t.message}\nAI: ${t.reply}`).join("\n\n");
   try {
-    const { answered } = await generateStructured(
+    const { answered, awaitingStudent } = await generateStructured(
       db,
       model,
       { purpose: "chat.check", userId: actor.userId, courseId: chat.activity.courseId },
-      z.object({ answered: z.boolean() }),
+      z.object({ answered: z.boolean(), awaitingStudent: z.boolean() }),
       {
         system:
-          "You check a conversation between a student and an AI. Say whether the student has given a real answer " +
-          "to the question below: a clear position or explanation in their own words, not a promise to answer later. " +
-          "Whether the answer is good doesn't matter.",
+          "You check a conversation between a student and an AI. `answered`: has the student given a real answer " +
+          "to every part of the question below: a clear position or explanation in their own words, not a promise " +
+          "to answer later? Whether the answer is good doesn't matter. `awaitingStudent`: does the AI's last reply " +
+          "ask the student to explain, justify or add something they haven't given yet?",
         prompt: `Question: ${question}\n\nConversation:\n${transcript}`,
       },
     );
-    return answered;
+    return answered && !awaitingStudent;
   } catch (error) {
     console.error("chat.check failed:", error instanceof Error ? error.message : error);
     return false;
