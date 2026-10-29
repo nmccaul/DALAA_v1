@@ -72,10 +72,18 @@ A report id, full or its first 8 characters. Call it `$ID`.
    test`, a small PR to `main`. Mention the report's short id in the commit
    message (`… (feedback 84b05db6)`).
 
-6. **Close it.** After the fix is merged and deployed, an admin opens
-   `/settings/feedback/<id>` and clicks **Mark resolved** with the fix's short
-   SHA (blank when nothing needed changing). There is no hook that does it for
-   you.
+6. **Record and close it** (D-030; add `--prod` for production's reports):
+   - `npm run feedback -- claim $ID --branch fix/feedback-<short>` before you
+     start, so no other pass takes it.
+   - `npm run feedback -- record $ID <status> [--pr URL] [--commit SHA]
+     [--note "…"]` with `in_progress` (PR waiting for Nathan), `wont_fix`
+     (works as designed), `cant_reproduce`, or `needs_nathan` (an idea or a
+     decision). The note is what Nathan reads on the admin page: say plainly
+     what you found.
+   - `npm run feedback -- resolve $ID <merge sha>` once the fix is merged and
+     deployed; it resolves the report and marks the fix `fixed`. An admin can
+     also click **Mark resolved** on `/settings/feedback/<id>`.
+   - `npm run feedback -- list` shows what's still open.
 
 7. **`.bugs/` stays local.** It's gitignored; never commit it. Screenshots can
    show student names, work and grades. Delete the folder when you're done.

@@ -6,11 +6,20 @@ import { requireActor } from "@/auth/current";
 import { LocalTime } from "@/components/local-time";
 import { Button, PageHeader, inputStyles } from "@/components/ui";
 import { db } from "@/db/client";
+import type { FixStatus } from "@/feedback/fixes";
 import { kindLabel } from "@/feedback/report";
 import { getReport } from "@/feedback/store";
 import { resolveReportAction } from "../actions";
 
 export const metadata: Metadata = { title: "Feedback report" };
+
+const fixLabel: Record<FixStatus, string> = {
+  in_progress: "Being worked on",
+  fixed: "Fixed",
+  wont_fix: "Works as designed",
+  cant_reproduce: "Couldn't reproduce",
+  needs_nathan: "Waiting for Nathan to decide",
+};
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -79,6 +88,23 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
             </li>
           ))}
         </LogList>
+
+        {report.fix && (
+          <section className="flex flex-col gap-2">
+            <h2 className="font-display text-lg font-semibold">What the bug loop did</h2>
+            <dl className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-5">
+              <Row label="Outcome">{fixLabel[report.fix.status]}</Row>
+              {report.fix.prUrl && (
+                <Row label="Pull request">
+                  <a href={report.fix.prUrl} className="underline" target="_blank" rel="noreferrer">{report.fix.prUrl}</a>
+                </Row>
+              )}
+              {report.fix.branch && <Row label="Branch"><span className="font-mono text-sm" translate="no">{report.fix.branch}</span></Row>}
+              {report.fix.commit && <Row label="Fixed in"><span className="font-mono text-sm" translate="no">{report.fix.commit}</span></Row>}
+              {report.fix.note && <Row label="Note"><span className="whitespace-pre-wrap">{report.fix.note}</span></Row>}
+            </dl>
+          </section>
+        )}
 
         <section className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-5">
           {report.status === "resolved" ? (

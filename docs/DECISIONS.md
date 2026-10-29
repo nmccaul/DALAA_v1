@@ -188,6 +188,23 @@ only an env change.
    with that email — the matching gitgrade Canvas user once a launch or roster
    sync has created it — always as a student, never staff.
 
+### D-030 · A bug loop works through feedback reports; it merges only small fixes
+*2026-10-29, Nathan.*
+1. After testing, Nathan starts `ralph/bugs.sh` by hand. It takes one open
+   feedback report per pass (bugs and confusing pages before ideas, oldest
+   first) and runs until none is left. What it did is a row in
+   `feedback_fixes` (`npm run feedback -- claim|record|resolve`), shown on the
+   admin report page.
+2. **Small fixes are merged and deployed by the loop; everything else becomes a
+   PR Nathan merges.** Small means all checks green, no migration, nothing under
+   `src/auth/`, `src/lti/`, `src/canvas/` or grade sending, no dependency
+   changes, and under ~200 changed lines. This standing self-merge is only for
+   the bug loop's small fixes; "don't merge your own PR" holds everywhere else.
+3. Ideas are never built, only written down (`docs/IDEAS.md`) for Nathan.
+4. The loop reads production's reports, so `list` and `show` run in a read-only
+   transaction, and the writes touch only `feedback_fixes` and the report's
+   resolve columns. No SQL by hand against production.
+
 ---
 
 ## Open

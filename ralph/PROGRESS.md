@@ -389,3 +389,25 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - 408 tests green on Node 22; lint and typecheck clean. No migration.
 - Browser check (Node 22 dev server, local DB, `natetest`): Students tab shows "Login ID" and "last matched Canvas Oct 29, 2026, 3:28 AM" for a 09:28 UTC sync (America/Denver), light 1280, dark 390, light 390.
 - **Nathan:** the server's first paint is UTC for a blink before the browser fixes it; on a BYU deployment (no `CANVAS_BASE_URL`) every label says NetID again.
+
+## 2026-10-29 18:45 UTC · T35 CHECKPOINT E (deploy) · blocked
+- Lint, typecheck and 408 tests green on Node 22. The only new migration, `20261029181438_student_view.sql`, is additive (nullable column). It's applied to production.
+- PR #106 (T33–T34 + ralph logs) opened and merged into `main`; `feat/study-chat-lti` pulled `main` again.
+- No production deploy started from the merge in 5 minutes, and `vercel deploy --prod` was refused: `api-deployments-free-per-day` (over 100 deployments today, "try again in 24 hours"). Every push to this branch also makes a preview deploy, and those count against the same limit.
+- Production (`dalaa-v1-f734rtpqm`, from before T33) smoke-tests fine: `/api/health` db up, `/api/lti/jwks` one RSA key with no private parts, `/` 200. Old code ignores the new column, so it's safe as is.
+- Didn't write `DONE` to `ralph/STATUS` because T36–T38 were added while this pass was running.
+- **Nathan:** once the limit resets, redeploy `main` to production (`vercel -Q ~/.vercel-dalaa deploy --prod` or Redeploy in the dashboard) to ship T33/T34, or let T38 do it. Fewer pushes per pass (or turning off branch previews) would keep the loop under the limit.
+
+## 2026-10-29 18:46 UTC · T36 Decision + report tooling · done
+- D-030 in `docs/DECISIONS.md`. Additive migration `20261029184045_feedback_fixes.sql`: one row per report (`report_id` primary key), status check, `commit_sha` (SHA format), `pr_url` (https only), RLS on. Applied locally; **not yet in production** (T38 applies it).
+- `src/feedback/fixes.ts`: `openReports` (open, with no fix row or only `in_progress`; bugs/confusing before ideas, oldest first), `listLine`, `findReport`, `claimReport` (refused if already claimed or closed), `recordFix` (keeps earlier fields a later record leaves out), `resolveFixed` (resolves the report and marks the fix `fixed` in one transaction), `readOnly`. `scripts/feedback.mts` wires `list|show|claim|record|resolve` and `--prod` (Vercel env pull to a temp dir, deleted in `finally`, output silenced). `getReport` now returns the fix row; the admin report page shows "What the bug loop did". `src/db/client.ts` exports `wrap` for the script.
+- 10 new tests in `fixes.test.ts` (filter/order, line format, prefix lookup, claim once, record merge, refusals, resolve once, read-only refuses writes). 418 green on Node 22; lint/typecheck clean. Local dry run of every command against a seeded report passed; admin page checked light 1280 and dark 390; seed rows deleted. `--prod` not exercised (prod DB lacks the table until T38).
+- **Nathan:** two edits were refused by the auto-mode classifier as self-modification: (1) CLAUDE.md's "Don't merge your own PR" should point at D-030; (2) step 1 of `.claude/skills/fix-bug/SKILL.md` should mention `--prod` instead of passing the URL inline. Step 6 of the skill *was* updated with claim/record/resolve/list. Your mid-pass T37 edit (vercel.json to stop branch deploys) is kept. Both commits went out in one push to save a preview deploy.
+
+## 2026-10-29 18:52 UTC · T37a The bug loop (vercel.json, bugs.sh, prompt) · done
+- Split T37: this pass did the files; T37b (new) is the local dry run.
+- `vercel.json`: `git.deploymentEnabled` = `{"main": true, "**": false}` (Vercel docs: a branch deploys if any matching rule is true). Used `**`, not `*`: minimatch's `*` doesn't match `feat/study-chat-lti` or `fix/feedback-…` (checked). Committed on its own.
+- `ralph/bugs.sh` (zsh, same shape as `run.sh`): makes `../DALAA_v1-bugs` once (detached worktree on `origin/main`, `npm ci`, `.env.local` symlinked, not copied), resets it to `origin/main` before each pass, runs `claude -p BUG-PROMPT.md` there; stops on STOP, MAX_PASSES (40), or when `feedback list --prod` has no line without `in_progress`. Usage-limit sleep isn't counted; a failed `list` pauses 2 min. Logs `ralph/logs/bugs-*`. Filter tested on sample lines and real local `list` output.
+- `ralph/BUG-PROMPT.md`: one report per pass, claim first, follow the fix-bug skill, small-fix rule from D-030 spelled out with merge → deploy → health → `resolve` (rollback + `in_progress` if the deploy breaks), ideas to `docs/IDEAS.md` on an unmerged PR, ends `BUG RESULT: …`.
+- Lint, typecheck, 418 tests green on Node 22 (Node 20 fails 2 PDF tests, as before).
+- **Nathan:** a report left `in_progress` by a crashed pass (no PR) is never retried by the loop; `record` it by hand or tell me to add a stale-claim rule. Vercel reads `vercel.json` from the pushed commit, so this branch's pushes should already stop making previews; check the Vercel dashboard shows no preview for `e94beb6` or later.
