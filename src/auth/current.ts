@@ -13,9 +13,14 @@ import { SESSION_COOKIE, sessionCookieOptions, sessionSecret, signSession, verif
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 const production = () => process.env.NODE_ENV === "production";
 
-export async function currentActor(): Promise<Actor | null> {
+/** Who the session cookie names, if it's valid; nothing read from the database. */
+export async function sessionUserId(): Promise<string | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  const userId = verifySession(token, sessionSecret(), nowSeconds());
+  return verifySession(token, sessionSecret(), nowSeconds());
+}
+
+export async function currentActor(): Promise<Actor | null> {
+  const userId = await sessionUserId();
   return userId ? loadActor(db(), userId) : null;
 }
 

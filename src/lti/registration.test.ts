@@ -114,7 +114,7 @@ describe("lti schema", () => {
     const rows = await db.query<{ relname: string; relrowsecurity: boolean }>(
       "select relname, relrowsecurity from pg_class where relname like 'lti\\_%' and relkind = 'r' order by relname",
     );
-    expect(rows.map((r) => r.relname)).toEqual(["lti_contexts", "lti_deployments", "lti_launch_states", "lti_platforms"]);
+    expect(rows.map((r) => r.relname)).toEqual(["lti_contexts", "lti_deployments", "lti_launch_states", "lti_login_codes", "lti_platforms"]);
     expect(rows.every((r) => r.relrowsecurity)).toBe(true);
   });
 });

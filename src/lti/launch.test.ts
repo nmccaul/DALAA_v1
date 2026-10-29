@@ -116,6 +116,16 @@ describe("LTI launch sign-in", () => {
     return POST(new Request(launchUrl, { method: "POST", body: form }));
   }
 
+  /** Every launch goes through /api/lti/landed with a login code for the right path. */
+  async function landsOn(res: Response) {
+    const location = new URL(res.headers.get("location")!);
+    expect(location.origin + location.pathname).toBe("https://dalaa.example.com/api/lti/landed");
+    const [row] = await db.query<{ path: string }>("select path from lti_login_codes where code = $1", [
+      location.searchParams.get("code"),
+    ]);
+    return row.path;
+  }
+
   const signedInAs = () => verifySession(h.jar.get(SESSION_COOKIE)?.value, SECRET, Math.floor(Date.now() / 1000));
 
   it("a teacher's first launch creates the user, course and membership and sets the cookie", async () => {
@@ -133,7 +143,7 @@ describe("LTI launch sign-in", () => {
     const members = await db.query("select role, status from course_members where course_id = $1", [course.id]);
     expect(members).toEqual([{ role: "instructor", status: "active" }]);
 
-    expect(res.headers.get("location")).toBe(`https://dalaa.example.com/courses/${course.id}`);
+    expect(await landsOn(res)).toBe(`/courses/${course.id}`);
     expect(signedInAs()).toBe(user.id);
     // Staff for that course without the allowlist (D-020), but not admin.
     expect(await loadActor(db, user.id)).toMatchObject({ isStaff: true, isAdmin: false });
@@ -150,7 +160,7 @@ describe("LTI launch sign-in", () => {
   it("a student joins the course and goes home, without becoming staff", async () => {
     const res = await launch({ loginId: "sam@example.edu", email: "sam@example.edu", name: "Sam" });
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe("https://dalaa.example.com/");
+    expect(await landsOn(res)).toBe("/");
     const [user] = await db.query<{ id: string }>("select id from users where external_id = 'sam@example.edu'");
     expect(signedInAs()).toBe(user.id);
     const [m] = await db.query("select role from course_members where user_id = $1", [user.id]);
@@ -175,7 +185,8 @@ describe("LTI launch sign-in", () => {
   it("a student can't open a course no instructor has launched", async () => {
     const res = await launch({ context: "ctx-new", loginId: "lee@example.edu" });
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "Your instructor hasn't opened DALAA in this course yet. Try again later." });
+    expect(res.headers.get("content-type")).toMatch(/^text\/html/);
+    expect(await res.text()).toContain("Your instructor hasn&#39;t opened DALAA in this course yet. Try again later.");
     expect(h.jar.has(SESSION_COOKIE)).toBe(false);
     const [{ n }] = await db.query<{ n: number }>("select count(*)::int as n from users where external_id = 'lee@example.edu'");
     expect(n).toBe(0);
@@ -195,6 +206,7 @@ describe("LTI launch sign-in", () => {
     form.set("state", "x".repeat(40));
     const res = await POST(new Request(launchUrl, { method: "POST", body: form }));
     expect(res.status).toBe(401);
+    expect(res.headers.get("content-type")).toMatch(/^text\/html/);
     expect(h.jar.has(SESSION_COOKIE)).toBe(false);
   });
 
