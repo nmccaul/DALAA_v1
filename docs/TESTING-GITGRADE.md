@@ -113,6 +113,32 @@ reports show up under DALAA **Settings → Feedback reports**.
    **Teacher**. Their first DALAA launch from the course makes them a teacher
    there; they can then set a password from Settings.
 
+## Fixing reports
+After a round of testing, the bug loop (D-030) works through the open
+Feedback reports, one fresh pass per report, oldest first, bugs and
+confusing ones before ideas.
+
+- **Start:** from the repo, `caffeinate -i ralph/bugs.sh`. It works in its own
+  checkout of `main` (`../DALAA_v1-bugs`, made on the first run), so the build
+  loop's branch is never touched. It stops by itself when every open report
+  has an outcome, after 40 passes, or after 3 failures in a row.
+- **Stop:** `touch ralph/STOP` (it stops before the next pass; the build loop
+  reads the same file, so delete it afterwards), or Ctrl+C to stop at once.
+- **See what's waiting:** `npm run feedback -- list --prod`.
+- **Where outcomes show:**
+  - The report's page under **Settings → Feedback reports**, in "What the bug
+    loop did": the outcome (fixed, won't fix, can't reproduce, needs Nathan,
+    in progress), the PR link and a note.
+  - Pull requests on GitHub named with the report's short id. Small fixes
+    are merged and deployed by the loop; anything bigger (a migration, sign-in,
+    LTI, Canvas or grade sending, a new dependency, or over ~200 lines) waits
+    as a PR for you.
+  - Ideas are never built: each one goes into `docs/IDEAS.md` on a PR for you
+    to read.
+  - Each pass's log is in `ralph/logs/bugs-*.log`.
+- A report left "in progress" with no PR (a pass that crashed) isn't retried;
+  record an outcome for it by hand with `npm run feedback -- record`.
+
 ## Known gaps (not bugs)
 - Teachers can't read a student's chat from the Grading tab yet.
 - No extra credit: a teacher score can't exceed the points.
