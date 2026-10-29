@@ -254,3 +254,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - A student's course-menu launch (no activity) now lands on `/?course=<courseId>` (`studentHomePath` in `src/attempts/store.ts`, used by `src/lti/launch.ts`; launch test updated).
 - I added a fourth status, "Submitted, being graded", for finished but not yet graded chats; the task listed three. Browser check with the local smoke students: light 1280, dark 390 and light 390 look right, and the graded one reads "Graded: 8 of 10". Fixed a long display name overflowing the heading at 390px. I added two demo activities (one published, one draft) to the local smoke course; the draft didn't show.
 - **Nathan:** due times are formatted in the server's time zone (UTC on Vercel), as on the teacher's list already. Worth fixing everywhere at once later.
+
+## 2026-10-29 15:12 UTC · T23 CHECKPOINT B (deploy) · done
+- Lint, typecheck and 319 tests green on Node 22; branch already pushed. The one migration since checkpoint A (`20261029143229_results.sql`: create table + RLS) is additive and was applied to production first.
+- PR #103 (`feat/study-chat-lti` → `main`) opened and merged; branch pulled `main`.
+- Production deploy `dalaa-v1-7oq5x133c` Ready from the merge; it also picks up the D-028 model env values. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200.
+- Surprise: the first `vercel env pull` wrote no file and printed nothing useful; a retry worked. The migrate step now checks the URL starts with `postgres` before running.
+- **Nathan:** VERIFY IN MORNING: a student chat on production now grades with the real `GRADER_MODEL` (not yet exercised against production).
