@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button, inputStyles } from "@/components/ui";
 import type { Exchange } from "./prompt";
@@ -44,6 +45,7 @@ export function ChatRoom({
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishing, startFinish] = useTransition();
   const end = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const { maxTurns, timeLimitMinutes, studentCanFinish } = view.limits;
   const left = minutesLeft(startedAt, timeLimitMinutes, now);
@@ -56,6 +58,11 @@ export function ChatRoom({
     const timer = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(timer);
   }, [startedAt, timeLimitMinutes, ended]);
+
+  // The chat ended here: fetch the page again so the grade (or "Being graded…") shows under it.
+  useEffect(() => {
+    if (ended !== null && initialEnded === null) router.refresh();
+  }, [ended, initialEnded, router]);
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest" });

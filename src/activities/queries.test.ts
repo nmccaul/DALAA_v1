@@ -34,14 +34,23 @@ describe("listCourseActivities", () => {
     const sooner = await activity("Case 1", "published", 12.5, "2027-01-20T23:59:00Z");
 
     // Finished attempts count as submitted; one still in progress doesn't.
+    // Of those, only one with a saved grade counts as graded.
+    const attempts: string[] = [];
     for (const [netId, status] of [["s1", "completed"], ["s2", "completed"], ["s3", "in_progress"]] as const) {
       const student = await actorFor(netId);
-      await db.query(
+      const [{ id }] = await db.query<{ id: string }>(
         `insert into attempts (activity_id, user_id, status, ended_by, completed_at)
-         values ($1, $2, $3, $4, $5)`,
+         values ($1, $2, $3, $4, $5) returning id`,
         [sooner, student.userId, status, status === "completed" ? "student" : null, status === "completed" ? new Date() : null],
       );
+      attempts.push(id);
     }
+    await db.query(
+      `insert into results (attempt_id, status, score, max_score, criteria, touchpoints, feedback, graded_at)
+       values ($1, 'graded', 8, 12.5, '[]', '[]', 'Good.', now())`,
+      [attempts[0]],
+    );
+    await db.query("insert into results (attempt_id) values ($1)", [attempts[1]]);
 
     const rows = await listCourseActivities(db, prof, course);
     expect(rows.map((r) => r.id)).toEqual([sooner, later, undated]);
@@ -53,7 +62,7 @@ describe("listCourseActivities", () => {
       points: 12.5,
       dueAt: new Date("2027-01-20T23:59:00Z"),
       submitted: 2,
-      graded: 0,
+      graded: 1,
     });
     expect(rows[1]).toMatchObject({ submitted: 0 });
     expect(rows[2]).toMatchObject({ status: "draft", points: null, dueAt: null });

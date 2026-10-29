@@ -17,7 +17,7 @@ export type ActivityRow = {
   dueAt: Date | null;
   /** Students who have finished their attempt. */
   submitted: number;
-  /** 0 until the grader writes results (T22). */
+  /** Finished attempts with a grade saved. */
   graded: number;
 };
 
@@ -33,7 +33,8 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
   return db.query<ActivityRow>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points, a.due_at as "dueAt",
             (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
-            0 as graded
+            (select count(*)::int from attempts t join results r on r.attempt_id = t.id
+              where t.activity_id = a.id and r.status = 'graded') as graded
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}

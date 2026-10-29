@@ -13,7 +13,8 @@
 import { NoObjectGeneratedError, type LanguageModel } from "ai";
 import { z } from "zod";
 import { generateStructured } from "@/ai/call";
-import { getFinishedAttempt } from "@/attempts/store";
+import { getAttempt, getFinishedAttempt } from "@/attempts/store";
+import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { claimGrading, failGrading, getResult, saveGrade, type GradedResult, type Result } from "@/results/store";
 import { doneTurns } from "./chat";
@@ -197,4 +198,14 @@ export async function gradeAttempt(db: Db, model: LanguageModel, attemptId: stri
   }
   await failGrading(db, attemptId);
   return getResult(db, attemptId);
+}
+
+/**
+ * Grades the student's chat if it has ended, once a turn or a "Finish" is
+ * saved (or the page finds it ended without a grade). Does nothing while the
+ * chat goes on.
+ */
+export async function gradeIfEnded(db: Db, model: LanguageModel, actor: Actor, activityId: string): Promise<void> {
+  const attempt = await getAttempt(db, actor, activityId);
+  if (attempt?.status === "completed") await gradeAttempt(db, model, attempt.id);
 }

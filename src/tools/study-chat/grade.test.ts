@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { claimGrading, getResult, saveGrade } from "@/results/store";
 import { testDb } from "@/test/db";
+import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
-import { gradeAttempt, gradePrompt, toResult } from "./grade";
+import { gradeAttempt, gradeIfEnded, gradePrompt, toResult } from "./grade";
 import { answering, draft } from "./test-fixtures";
 
 const TURNS = [
@@ -28,6 +29,7 @@ describe("grading a Study Chat", () => {
   let db: Db;
   let activity: string;
   let attempt: string;
+  let student: Actor;
 
   const grades = () => db.query("select id from ai_calls where purpose = 'grade'");
 
@@ -38,10 +40,11 @@ describe("grading a Study Chat", () => {
       "insert into users (institution_id, external_id, display_name) values ($1, 'prof', 'Prof') returning id",
       [inst],
     );
-    const [{ id: student }] = await db.query<{ id: string }>(
+    const [{ id: studentId }] = await db.query<{ id: string }>(
       "insert into users (institution_id, external_id, display_name) values ($1, 'student', 'Student') returning id",
       [inst],
     );
+    student = { userId: studentId, institutionId: inst, netId: "student", displayName: "Student", isStaff: false, isAdmin: false };
     const [{ id: course }] = await db.query<{ id: string }>(
       "insert into courses (institution_id, code, title, term, created_by) values ($1, 'C', 'C', 'W27', $2) returning id",
       [inst, prof],
@@ -54,7 +57,7 @@ describe("grading a Study Chat", () => {
     [{ id: attempt }] = await db.query<{ id: string }>(
       `insert into attempts (activity_id, user_id, status, ended_by, completed_at)
        values ($1, $2, 'completed', 'student', now()) returning id`,
-      [activity, student],
+      [activity, studentId],
     );
     for (const [i, t] of TURNS.entries()) {
       await db.query(
@@ -148,6 +151,21 @@ describe("grading a Study Chat", () => {
     await claimGrading(db, attempt);
     const [row] = await db.query<{ score: unknown }>("select score from results");
     expect(row.score).toBeNull();
+  });
+
+  it("grades the student's chat once it has ended, and not before", async () => {
+    await db.query("update attempts set status = 'in_progress', ended_by = null, completed_at = null");
+    const model = answering(answer());
+    await gradeIfEnded(db, model, student, activity);
+    expect(model.doGenerateCalls).toHaveLength(0);
+    expect(await getResult(db, attempt)).toBeNull();
+
+    await db.query("update attempts set status = 'completed', ended_by = 'question', completed_at = now()");
+    await gradeIfEnded(db, model, student, activity);
+    expect(await getResult(db, attempt)).toMatchObject({ status: "graded", score: 8.5 });
+
+    const other = { ...student, userId: randomUUID() };
+    await expect(gradeIfEnded(db, answering(answer()), other, activity)).resolves.toBeUndefined();
   });
 
   it("gives 0 without a model call when no message got a reply", async () => {
