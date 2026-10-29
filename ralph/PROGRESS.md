@@ -46,3 +46,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Route `src/app/api/lti/launch/route.ts` (POST): for now a verified launch only returns `{ ok, messageType }`; T08 replaces this with sign-in.
 - Tests `src/lti/validate.test.ts` (14): good, deep linking, bad signature, wrong aud, multi-aud/azp, wrong iss, replayed state, nonce from another login, burned state, unknown deployment, expired token, expired state, bad version/type/missing claims, form parsing.
 - Not checked: target_link_uri against our own origin (left to T08, which decides where to redirect).
+
+## 2026-10-29 06:48 UTC · T08a Launch → session · done
+- Split T08: T08a (sign-in from a launch) done; T08b (new-tab fallback with one-time code, plain error page) added to TASKS.
+- `src/lti/launch.ts`: `signInFromLaunch()` — login ID from `login_id` custom field, else email; links to an existing user by email (only when exactly one matches; their login ID and real name are kept); course found via `lti_contexts` or, on an instructor's first launch, created with a creation key derived from (platform, context) so two simultaneous first launches make one course; membership role follows the Canvas course role (institution roles ignored). A student arriving before any instructor launch is refused before anything is written.
+- `/api/lti/launch` now starts the session and 303-redirects to `/courses/<id>` (instructor) or `/` (student), always on DALAA's own origin (target_link_uri is not used for redirects).
+- `loadActor` (`src/auth/admit.ts`): `isStaff` is also true for an active instructor of an LTI-linked course (D-020); admin still only from the allowlist. Side effect: such a teacher can also set up other courses — Nathan, say if that's too broad.
+- Course term: Canvas doesn't send it, so LTI courses show "From Canvas" unless a `canvas_term` custom field is added (`$Canvas.term.name`) to the developer key. A Canvas course id already held by another DALAA course is stored as NULL rather than failing.
+- Tests: `src/lti/launch.test.ts` (10) run the real route with a signed fake launch (mocked db client, cookie jar, JWKS).
