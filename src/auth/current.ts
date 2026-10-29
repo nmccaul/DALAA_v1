@@ -8,9 +8,10 @@ import { redirect } from "next/navigation";
 import { db } from "@/db/client";
 import type { Actor } from "@/db/scope";
 import { loadActor } from "./admit";
-import { SESSION_COOKIE, SESSION_SECONDS, sessionSecret, signSession, verifySession } from "./session";
+import { SESSION_COOKIE, sessionCookieOptions, sessionSecret, signSession, verifySession } from "./session";
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
+const production = () => process.env.NODE_ENV === "production";
 
 export async function currentActor(): Promise<Actor | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -25,17 +26,16 @@ export async function requireActor(): Promise<Actor> {
 }
 
 export async function startSession(userId: string): Promise<void> {
-  (await cookies()).set(SESSION_COOKIE, signSession(userId, sessionSecret(), nowSeconds()), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_SECONDS,
-  });
+  (await cookies()).set(
+    SESSION_COOKIE,
+    signSession(userId, sessionSecret(), nowSeconds()),
+    sessionCookieOptions(production()),
+  );
 }
 
 export async function endSession(): Promise<void> {
-  (await cookies()).delete(SESSION_COOKIE);
+  // Same attributes as when set, or the browser drops it inside the Canvas iframe.
+  (await cookies()).set(SESSION_COOKIE, "", { ...sessionCookieOptions(production()), maxAge: 0 });
 }
 
 /** v1 serves one institution (D-018); which one is configuration, not code. */

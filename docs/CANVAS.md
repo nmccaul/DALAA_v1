@@ -15,7 +15,7 @@ real 50-student roster is unproven. Port the design and the rules, not the Pytho
 - Issuer `https://login.byu.edu/oauth2/default`; scopes `openid profile email`;
   NetID = `preferred_username`. CAS only as fallback (BYU is retiring it).
 - `users.external_id` = **NetID**. Never Okta's `sub`.
-- Session: HMAC-signed `HttpOnly; Secure; SameSite=Lax` cookie.
+- Session: HMAC-signed `HttpOnly` cookie; `Secure; SameSite=None` in production so it works inside the Canvas iframe (D-020), `Lax` locally.
 - State/nonce/PKCE verifier and `intent` (student vs staff) in a short-lived signed
   cookie — never read `intent` from the query string.
 - Staff are never created by sign-in; unknown NetID asking for staff is refused.
