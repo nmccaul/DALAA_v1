@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { listStudentAssignments, type StudentAssignment } from "@/activities/queries";
 import { takePath } from "@/attempts/store";
 import { currentActor } from "@/auth/current";
+import { FeedbackButton } from "@/components/feedback";
 import { Landing } from "@/components/landing";
 import { Logo } from "@/components/logo";
 import { EmptyState } from "@/components/ui";
@@ -49,7 +50,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const courses = only.length > 0 ? only : taken;
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-10">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pt-10 pb-24">
       <Logo height={32} />
       <h1 className="font-display text-3xl font-semibold tracking-tight break-words">Hi, {actor.displayName}</h1>
       {courses.length === 0 ? (
@@ -121,6 +122,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <form action={signOut}>
         <button className="text-sm text-muted underline hover:text-text">Sign out</button>
       </form>
+      <FeedbackButton />
     </main>
   );
 }

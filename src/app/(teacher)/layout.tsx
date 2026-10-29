@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import { FeedbackButton } from "@/components/feedback";
 import { Logo } from "@/components/logo";
 import { Tabs } from "@/components/tabs";
 import { signOut } from "../sign-in/actions";
@@ -39,9 +40,10 @@ export default async function TeacherLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
+      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 pt-10 pb-24 sm:px-6">
         {children}
       </main>
+      <FeedbackButton />
     </>
   );
 }

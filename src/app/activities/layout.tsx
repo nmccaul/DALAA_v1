@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireActor } from "@/auth/current";
+import { FeedbackButton } from "@/components/feedback";
 import { Logo } from "@/components/logo";
 import { signOut } from "../sign-in/actions";
 
@@ -22,9 +23,10 @@ export default async function StudentLayout({ children }: LayoutProps<"/activiti
           </div>
         </div>
       </header>
-      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
+      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-8 pb-24 sm:px-6">
         {children}
       </main>
+      <FeedbackButton />
     </>
   );
 }
