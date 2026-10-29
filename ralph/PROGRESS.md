@@ -155,3 +155,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Additive migration `20261029093339_activity_due.sql`: `activities.due_at timestamptz` (NULL = no due date). Applied locally; goes to production at the next checkpoint.
 - Browser check with 3 temporary assignments on natetest's BUS M 361 (removed after): light desktop, dark 390px, and the dark mobile picker all look right.
 - Reminder: run tests on Node 22 (PATH=~/.nvm/versions/node/v22.23.3/bin); the default node 20 fails the PDF tests.
+
+## 2026-10-29 09:48 UTC · T19a Create flow: content → mode → draft → publish · done
+- T19 split into T19a (this) and T19b (editing the cards + search box). New flow at `/courses/[id]/activities/new/study-chat`: material (upload .pdf/.txt/.md, paste, or "Use a Canvas page or file" → T16c picker with `next`), then mode cards + "Suggest for me", a "DALAA is drafting your chat…" state, then the draft is saved and `/courses/[id]/activities/[activityId]` shows read-only summary cards + Publish. Assignment titles in the list now link there.
+- Chassis: `src/activities/store.ts` (`createActivity` idempotent by creation key, `getTaughtActivity`, `publishActivity`); tool: `src/tools/study-chat/create.ts` (`createStudyChat` skips the AI on a retried key; `publishStudyChat` re-checks the schema). `src/tools/screens.ts` maps each live tool to its create/review screens so the chassis routes never branch on a tool name; the old "isn't built yet" walkthrough page is gone. Server-action body limit raised to 4.5 MB for uploads (`next.config.ts`).
+- Additive migration `20261029094043_activity_creation_key.sql` (`creation_key uuid not null default gen_random_uuid()` + unique). Applied locally; goes to production at the next checkpoint.
+- Surprise: the browser check caught that postgres.js double-encodes a JSON string param into jsonb (the check constraint refused it); PGlite tests didn't. Fixed with `$4::text::jsonb`. Any future jsonb write needs the same cast.
+- Tests: `create.test.ts` (5), `screens.test.ts`; Harbor Bikes draft fixture moved to `test-fixtures.ts`. 268 green. Browser: step 1, mode cards, "Suggest for me" (refused cleanly, AI Gateway still blocked), and review + Publish (with a fixture draft, removed after) in light, dark and 390px.
+- **Nathan:** a real draft end to end needs the AI Gateway card (T13b/T17b).
