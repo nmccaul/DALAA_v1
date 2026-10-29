@@ -23,3 +23,19 @@ export async function upsertStudent(
   );
   return user.id;
 }
+
+/**
+ * Give an account its email if it has none and no other account in the
+ * institution already holds it (one account per email, D-024). A real email is
+ * never replaced, and a taken one is skipped rather than failing the sign-in.
+ */
+export async function fillEmail(tx: Db, userId: string, email: string | null): Promise<void> {
+  if (!email) return;
+  await tx.query(
+    `update users u set email = $2
+      where u.id = $1 and u.email is null
+        and not exists (select 1 from users o
+                         where o.institution_id = u.institution_id and lower(o.email) = lower($2))`,
+    [userId, email],
+  );
+}

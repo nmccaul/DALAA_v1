@@ -1,4 +1,4 @@
-import { and, coursesTaughtBy, type Actor } from "@/db/scope";
+import { and, coursesTakenBy, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 
 export type CourseCard = {
@@ -25,6 +25,20 @@ export async function listTaughtCourses(db: Db, actor: Actor): Promise<CourseCar
        from courses c
       where ${scope.text}
       order by c.created_at desc, c.code`,
+    scope.values,
+  );
+}
+
+export type StudentCourse = { id: string; code: string; title: string; term: string };
+
+/** The student's home list: courses they're on the roster of, by code. */
+export async function listTakenCourses(db: Db, actor: Actor): Promise<StudentCourse[]> {
+  const scope = coursesTakenBy(actor, "c");
+  return db.query<StudentCourse>(
+    `select c.id, c.code, c.title, c.term
+       from courses c
+      where ${scope.text}
+      order by c.code, c.term`,
     scope.values,
   );
 }

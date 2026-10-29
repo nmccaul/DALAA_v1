@@ -30,6 +30,19 @@ describe("core schema", () => {
     await expect(addUser("jdoe")).rejects.toThrow(/duplicate key/);
   });
 
+  it("gives an email to one account only, ignoring case; no email is unconstrained", async () => {
+    const withEmail = (netId: string, email: string | null) =>
+      db.query("insert into users (institution_id, external_id, display_name, email) values ($1, $2, 'x', $3)", [
+        inst,
+        netId,
+        email,
+      ]);
+    await withEmail("e1", "Ann@School.edu");
+    await expect(withEmail("e2", "ann@school.edu")).rejects.toThrow(/duplicate key/);
+    await withEmail("e3", null);
+    await withEmail("e4", null);
+  });
+
   it("refuses to put a student in another course's section", async () => {
     const course = async (code: string) =>
       (

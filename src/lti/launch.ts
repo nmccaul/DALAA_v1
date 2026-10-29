@@ -14,6 +14,7 @@
  */
 
 import { normalizeNetId } from "@/auth/admit";
+import { fillEmail } from "@/courses/students";
 import type { Db } from "@/db/types";
 import type { LaunchClaims } from "./validate";
 
@@ -97,31 +98,32 @@ async function findOrCreateUser(
     "select id from users where institution_id = $1 and external_id = $2",
     [institutionId, loginId],
   );
-  const byEmail = byId || !email ? [] : await tx.query<{ id: string }>(
-    "select id from users where institution_id = $1 and lower(email) = $2 limit 2",
+  // At most one: an email belongs to one account (unique index, D-024).
+  const [byEmail] = byId || !email ? [] : await tx.query<{ id: string }>(
+    "select id from users where institution_id = $1 and lower(email) = $2",
     [institutionId, email],
   );
-  // Two accounts with this email: don't guess which one is theirs.
-  const linked = byId ?? (byEmail.length === 1 ? byEmail[0] : undefined);
+  const linked = byId ?? byEmail;
   if (linked) {
     // Fill gaps only: a real name or email is never replaced.
     await tx.query(
-      `update users set email = coalesce(email, $2),
-              display_name = case when display_name = external_id then coalesce($3, display_name)
-                                  else display_name end
+      `update users set display_name = case when display_name = external_id then coalesce($2, display_name)
+                                            else display_name end
         where id = $1`,
-      [linked.id, email, name],
+      [linked.id, name],
     );
+    await fillEmail(tx, linked.id, email);
     return linked.id;
   }
 
   const [user] = await tx.query<{ id: string }>(
-    `insert into users (institution_id, external_id, display_name, email)
-     values ($1, $2, coalesce($3, $2), $4)
-     on conflict (institution_id, external_id) do update set email = coalesce(users.email, excluded.email)
+    `insert into users (institution_id, external_id, display_name)
+     values ($1, $2, coalesce($3, $2))
+     on conflict (institution_id, external_id) do update set display_name = users.display_name
      returning id`,
-    [institutionId, loginId, name, email],
+    [institutionId, loginId, name],
   );
+  await fillEmail(tx, user.id, email);
   return user.id;
 }
 

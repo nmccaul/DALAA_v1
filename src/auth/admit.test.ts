@@ -91,6 +91,22 @@ describe("admit", () => {
     expect(await admit(db, inst, { netId: "Stu@Example.edu" })).toEqual({ ok: true, userId: id });
   });
 
+  it("fills a missing email, but never replaces one or takes one another account holds", async () => {
+    const stu = await enrol("stu1");
+    await allow("prof1");
+
+    expect(await admit(db, inst, { netId: "stu1", email: "shared@byu.edu" })).toEqual({ ok: true, userId: stu });
+    expect(await admit(db, inst, { netId: "stu1", email: "other@byu.edu" })).toEqual({ ok: true, userId: stu });
+    expect(await admit(db, inst, { netId: "prof1", email: "SHARED@byu.edu" })).toMatchObject({ ok: true });
+    const emailOf = async (netId: string) =>
+      (await db.query<{ email: string | null }>("select email from users where external_id = $1", [netId]))[0].email;
+    expect(await emailOf("stu1")).toBe("shared@byu.edu");
+    expect(await emailOf("prof1")).toBeNull();
+
+    await admit(db, inst, { netId: "prof1", email: "prof1@byu.edu" });
+    expect(await emailOf("prof1")).toBe("prof1@byu.edu");
+  });
+
   it("refuses strangers and flagged students, and never creates them", async () => {
     await enrol("gone", "flagged");
     expect(await admit(db, inst, { netId: "stranger" })).toEqual({ ok: false, reason: "not-on-roster" });

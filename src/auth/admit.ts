@@ -13,7 +13,7 @@
 
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { upsertStudent } from "@/courses/students";
+import { fillEmail, upsertStudent } from "@/courses/students";
 import { testTeacherLoginId } from "./password";
 
 export type Identity = { netId: string; displayName?: string; email?: string };
@@ -51,14 +51,14 @@ export async function admit(
   if (staff || netId === testTeacherLoginId()) {
     // Never overwrite a real value with a blank.
     const [user] = await db.query<{ id: string }>(
-      `insert into users (institution_id, external_id, display_name, email)
-       values ($1, $2, coalesce($3, $2), $4)
+      `insert into users (institution_id, external_id, display_name)
+       values ($1, $2, coalesce($3, $2))
        on conflict (institution_id, external_id) do update
-         set display_name = coalesce($3, users.display_name),
-             email        = coalesce($4, users.email)
+         set display_name = coalesce($3, users.display_name)
        returning id`,
-      [institutionId, netId, name, email],
+      [institutionId, netId, name],
     );
+    await fillEmail(db, user.id, email);
     return { ok: true, userId: user.id };
   }
 
@@ -72,8 +72,7 @@ export async function admit(
   if (!student && !options.newStudent) return { ok: false, reason: "not-on-roster" };
 
   const userId = student?.id ?? (await upsertStudent(db, institutionId, netId, name));
-  // Fill a gap only; a real email is never replaced.
-  if (email) await db.query("update users set email = coalesce(email, $2) where id = $1", [userId, email]);
+  await fillEmail(db, userId, email);
   return { ok: true, userId };
 }
 
