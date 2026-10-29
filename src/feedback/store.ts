@@ -5,7 +5,7 @@
 
 import { feedbackReadableBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { ReportInput, SCREENSHOT_MAX_BYTES, type ReportContext } from "./report";
+import { ReportInput, SCREENSHOT_MAX_BYTES, type Kind, type ReportContext } from "./report";
 
 /** More reports than this from one person in the window are dropped quietly. */
 const RATE_LIMIT = 6;
@@ -78,11 +78,12 @@ export async function saveReport(db: Db, actor: Actor, input: unknown, appCommit
 
 export type ReportSummary = {
   id: string;
-  kind: "bug" | "confusing" | "idea";
+  kind: Kind;
   note: string;
   url: string;
   status: "open" | "resolved";
   reporter: string;
+  fixedCommit: string | null;
   hasScreenshot: boolean;
   createdAt: Date;
 };
@@ -91,7 +92,7 @@ export type ReportSummary = {
 export async function listReports(db: Db, actor: Actor): Promise<ReportSummary[]> {
   const scope = feedbackReadableBy(actor);
   return db.query<ReportSummary>(
-    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter,
+    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter, f.fixed_commit as "fixedCommit",
             f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt"
        from feedback_reports f
        join users u on u.id = f.user_id
@@ -107,7 +108,7 @@ export type ReportDetail = ReportSummary & { context: ReportContext; appCommit: 
 export async function getReport(db: Db, actor: Actor, id: string): Promise<ReportDetail | null> {
   const scope = feedbackReadableBy(actor);
   const [row] = await db.query<ReportDetail>(
-    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter,
+    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter, f.fixed_commit as "fixedCommit",
             f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt",
             f.context, f.app_commit as "appCommit"
        from feedback_reports f
@@ -128,4 +129,23 @@ export async function getScreenshot(db: Db, actor: Actor, id: string): Promise<{
     [...scope.values, id],
   );
   return row ?? null;
+}
+
+/**
+ * Marks a report resolved, with the short SHA of the fix when there was one.
+ * Admin only; resolving twice keeps the first time and commit.
+ */
+export async function resolveReport(db: Db, actor: Actor, id: string, fixedCommit: string | null): Promise<boolean> {
+  const commit = fixedCommit?.trim().toLowerCase() || null;
+  if (commit !== null && !/^[0-9a-f]{7,40}$/.test(commit)) return false;
+  const scope = feedbackReadableBy(actor);
+  const n = scope.values.length;
+  const rows = await db.query<{ id: string }>(
+    `update feedback_reports f
+        set status = 'resolved', resolved_at = now(), fixed_commit = $${n + 2}
+      where f.id::text = $${n + 1} and f.status = 'open' and (${scope.text})
+      returning f.id`,
+    [...scope.values, id, commit],
+  );
+  return rows.length === 1;
 }

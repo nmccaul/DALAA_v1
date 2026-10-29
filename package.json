@@ -10,6 +10,7 @@
     "test": "vitest run",
     "migrate": "tsx scripts/migrate.mts",
     "staff": "tsx scripts/staff.mts",
+    "feedback": "tsx scripts/feedback.mts",
     "db:local": "pglite-server -p 54329 -m 10 -d .pgdata"
   },
   "dependencies": {

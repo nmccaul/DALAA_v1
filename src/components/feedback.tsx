@@ -2,20 +2,12 @@
 
 import { ChatCircleDots } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
-import { NOTE_MAX, SCREENSHOT_MAX_BYTES, type ReportInput } from "@/feedback/report";
+import { KINDS, NOTE_MAX, SCREENSHOT_MAX_BYTES, type Kind, type ReportInput } from "@/feedback/report";
 import { installRing } from "@/feedback/ring";
 import { Button, inputStyles } from "./ui";
 
 // Start remembering console warnings and errors as soon as any signed-in page loads.
 const recent = typeof window === "undefined" ? null : installRing(window);
-
-const KINDS = [
-  { value: "bug", label: "Something's broken" },
-  { value: "confusing", label: "Something's confusing" },
-  { value: "idea", label: "An idea" },
-] as const;
-
-type Kind = (typeof KINDS)[number]["value"];
 
 /** Decoded size of a base64 data URL. */
 function dataUrlBytes(dataUrl: string): number {

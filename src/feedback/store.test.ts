@@ -3,7 +3,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { ReportInput } from "./report";
-import { decodeScreenshot, getReport, getScreenshot, listReports, saveReport } from "./store";
+import { decodeScreenshot, getReport, getScreenshot, listReports, resolveReport, saveReport } from "./store";
 
 // A 1×1 PNG.
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -128,6 +128,29 @@ describe("reading reports", () => {
     expect(await listReports(db, student)).toEqual([]);
     expect(await getReport(db, student, id)).toBeNull();
     expect(await getScreenshot(db, student, id)).toBeNull();
+  });
+});
+
+describe("resolveReport", () => {
+  it("marks a report resolved with the fix's commit, once", async () => {
+    const { id } = (await saveReport(db, student, input(), null)) as { id: string };
+    expect(await resolveReport(db, admin, id, "ABC1234")).toBe(true);
+    expect(await getReport(db, admin, id)).toMatchObject({ status: "resolved", fixedCommit: "abc1234" });
+    expect(await resolveReport(db, admin, id, "def5678")).toBe(false);
+    expect(await getReport(db, admin, id)).toMatchObject({ fixedCommit: "abc1234" });
+  });
+
+  it("resolves without a commit, and refuses one that isn't a SHA", async () => {
+    const { id } = (await saveReport(db, student, input(), null)) as { id: string };
+    expect(await resolveReport(db, admin, id, "main; drop")).toBe(false);
+    expect(await resolveReport(db, admin, id, "  ")).toBe(true);
+    expect(await getReport(db, admin, id)).toMatchObject({ status: "resolved", fixedCommit: null });
+  });
+
+  it("lets nobody but an admin resolve", async () => {
+    const { id } = (await saveReport(db, student, input(), null)) as { id: string };
+    expect(await resolveReport(db, student, id, null)).toBe(false);
+    expect(await getReport(db, admin, id)).toMatchObject({ status: "open" });
   });
 });
 
