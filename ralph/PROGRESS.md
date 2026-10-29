@@ -455,3 +455,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Create step 2's checkbox says "Defend always asks for it."; the review screen's toggle is disabled for Defend. No migration.
 - Tests: schema refine, Defend draft validates (prompt carries seed/rubric/turn limit/work note), suggest excludes Defend, create forces work on, chat prompt test. 449 green on Node 22; lint and typecheck clean. Not checked in a browser (task asks for tests only; markup change is one line + a disabled attribute).
 - PRD §8 note now lists eleven modes. **Nathan:** the turn limit for Defend is a hint to the drafting model (8), not enforced; say if you want it forced.
+
+## 2026-10-29 20:36 UTC · T41a Sample-student trial engine · done
+- Split T41: T41a (this, the engine) and T41b (review-screen button, real trial, browser check).
+- `src/tools/study-chat/trial.ts`: `runTrial(db, {student, reply, check, grader}, teacher, activityId, "struggling"|"strong")`. The simulated student gets only the student view (title, persona name/role, question), the reading and its own work; never the situation, guide, positions, touchpoints or rubric. It talks with the real `chatSystemPrompt` until the chat's turn limit, the question check, or a cap of 12 turns, then `gradeTurns` grades it. When the chat asks for student work, the sample student writes some first. Nothing saved to attempts/chat_turns/results/attempt_work; every call is ledgered as `trial`. The time limit is ignored in a trial.
+- Additive migration `20261029203334_sample_trials.sql` (one row per teacher while a trial runs, RLS on; a row older than 10 min is taken over). Applied locally; **not yet in production** (T43 applies it).
+- Refactors with no behavior change: `questionAnswered` in `chat.ts` is exported and takes a ledger context + question; `gradeTurns` in `grade.ts` is the grader loop without saving, used by `gradeAttempt` and the trial.
+- 7 tests in `trial.test.ts` (question ends it, turn limit, cap, hidden material kept from the sample student, work, one at a time + stale takeover, AI failure frees the slot, students refused). 456 green on Node 22; lint and typecheck clean.
