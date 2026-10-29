@@ -47,3 +47,7 @@ skills-lock.json
 
 # Local database from `npm run db:local`
 /.pgdata
+
+# overnight loop logs
+/ralph/logs/
+/ralph/STOP
