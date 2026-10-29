@@ -64,4 +64,23 @@ describe("core schema", () => {
       ),
     ).rejects.toThrow(/foreign key/);
   });
+  it("keeps activities well-formed: object settings, points once published, one per Canvas link", async () => {
+    const [{ id: course }] = await db.query<{ id: string }>(
+      "insert into courses (institution_id, code, title, term, created_by) values ($1, 'ACT', 'ACT', 'W27', $2) returning id",
+      [inst, prof],
+    );
+    const add = (settings: string, status: string, points: number | null, link: string | null) =>
+      db.query(
+        `insert into activities (course_id, tool, title, settings, status, points, lti_resource_link_id, created_by)
+         values ($1, 'study-chat', 'Harbor Bikes', $2::jsonb, $3, $4, $5, $6)`,
+        [course, settings, status, points, link, prof],
+      );
+    await expect(add("[]", "draft", null, null)).rejects.toThrow(/check constraint/);
+    await expect(add("{}", "published", null, null)).rejects.toThrow(/check constraint/);
+    await expect(add("{}", "draft", 0, null)).rejects.toThrow(/check constraint/);
+    await add("{}", "draft", null, null);
+    await add("{}", "draft", null, null);
+    await add("{}", "published", 10, "rl-1");
+    await expect(add("{}", "published", 10, "rl-1")).rejects.toThrow(/duplicate key/);
+  });
 });
