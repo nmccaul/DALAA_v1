@@ -13,6 +13,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -172,6 +173,8 @@ async function run(db: Db): Promise<string | void> {
   console.log(`Resolved ${id.slice(0, 8)} in ${arg}.`);
 }
 
+// Locally, the same .env.local the app reads (variables already set win).
+if (!opts.prod && existsSync(".env.local")) process.loadEnvFile(".env.local");
 const sql = postgres(opts.prod ? await productionUrl() : databaseUrl(), { max: 1, prepare: false });
 try {
   const problem = await run(wrap(sql));
