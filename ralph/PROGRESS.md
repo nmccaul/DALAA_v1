@@ -369,3 +369,9 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - 5 new tests in `password.test.ts` (links to a synced account with a different login ID, new account with no courses, allowlist + LTI-instructor refusals, wrong password incl. one Supabase holds, signup refused). 398 green on Node 22; lint and typecheck clean. No migration, no UI change (sign-in page footnote untouched).
 - **Not done — needs Nathan (T31b):** writing the env vars to `.env.local` and Vercel was denied by the permission classifier (secret-store write). Add `TEST_STUDENT_EMAIL=student@dalaa.test` and a random `TEST_STUDENT_PASSWORD` locally and in Vercel production + preview; until then the test student can't sign in anywhere.
 - Note: "never staff" is enforced at sign-in. If the linked account later becomes staff (e.g. enrolled as a teacher), an existing session would read staff fresh from `loadActor`; say if `loadActor` should exclude it too.
+
+## 2026-10-29 17:49 UTC · T32 CHECKPOINT D (deploy) + guide · done
+- `docs/TESTING-GITGRADE.md` gains "Who signs in how" (teachers: Canvas launch first, then Settings → Sign in without Canvas; the shared test student `student@dalaa.test`; the shared test teacher) and "What Nathan does in gitgrade first" (env vars, create + enroll the student, create + enroll Dr. Sampson as Teacher).
+- Lint, typecheck and 398 tests green on Node 22. No migrations since checkpoint C, so nothing applied to production.
+- PR #105 opened and merged; production deploy `dalaa-v1-drm1ic0df` Ready. Smoke: `/api/health` db up, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200.
+- **Nathan:** T31b is still blocked: the test student login stays off until `TEST_STUDENT_EMAIL` / `TEST_STUDENT_PASSWORD` are in `.env.local` and Vercel (then redeploy). Every task is now `[x]` or `[!]`; `ralph/STATUS` is `DONE`.
