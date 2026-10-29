@@ -416,3 +416,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - New "Fixing reports" section in `docs/TESTING-GITGRADE.md`: start (`caffeinate -i ralph/bugs.sh`, own worktree on `main`), when it stops by itself, stop (`touch ralph/STOP` or Ctrl+C), `feedback list --prod`, and where outcomes show (admin report page's "What the bug loop did", PRs by short id, `docs/IDEAS.md` PRs, `ralph/logs/bugs-*.log`).
 - Docs only; lint, typecheck and 421 tests green on Node 22.
 - **Nathan:** `ralph/STOP` is read by both `run.sh` and `bugs.sh`, so stopping one stops the other until the file is deleted (the guide says so). Say if you want separate stop files.
+
+## 2026-10-29 20:03 UTC · T39 Attempts keep what they were graded against · done
+- Additive migration `20261029200051_attempt_settings.sql`: nullable `attempts.settings` jsonb (object check). `startAttempt` copies the activity's settings in the insert; `getTakenActivity` and `getFinishedAttempt` read `coalesce(attempt copy, activity settings)`, so the chat, completion checks, student page and grader all follow the copy without tool code knowing. `sendTurn` reopens the chat after starting the attempt so even a first message uses the copy. Applied locally; **not yet in production** (T43 applies it).
+- Old attempts are left NULL (not backfilled) and read live settings, to keep the migration additive. Recorded as D-031 (Nathan to confirm).
+- Results already stored label + max per criterion; unchanged.
+- Review screen shows "N students have started; changes apply to new attempts only." (`countStartedAttempts` in `src/attempts/store.ts`). Not checked in a browser this pass.
+- 6 new tests (chat under old settings after an edit, new attempt gets the edit, grader uses the copy, NULL fallback in chat and grader, note wording). 426 green on Node 22.
+- `npm run migrate` doesn't read `.env.local`; ran it with the local URL from the README.
