@@ -2,7 +2,8 @@ import { db } from "@/db/client";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { listRoster } from "@/courses/queries";
-import { syncAction } from "./actions";
+import { isLtiCourse } from "@/lti/roster";
+import { ltiSyncAction, syncAction } from "./actions";
 
 const SYNC_ERRORS: Record<string, string> = {
   reconnect: "Canvas didn't accept your saved token. It may have expired. Reconnect Canvas in Settings.",
@@ -12,6 +13,9 @@ const SYNC_ERRORS: Record<string, string> = {
   "wrong-canvas":
     "This course came from practice Canvas, but you're connected to your real Canvas (or the other way round). Switch in Settings to sync it.",
   "not-linked": "This course isn't connected to Canvas yet.",
+  "no-class-list": "Canvas hasn't shared this course's class list yet. Open DALAA from the course in Canvas once, then try again.",
+  refused:
+    "Canvas wouldn't share this course's class list. Ask your Canvas admin to allow DALAA to read course members.",
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -28,6 +32,7 @@ export default async function CourseStudentsPage({
     return typeof v === "string" && Number(v) > 0 ? Number(v) : 0;
   };
   const roster = await listRoster(db(), actor, course.id);
+  const fromLti = await isLtiCourse(db(), course.id);
   const hasSections = roster.some((s) => s.section);
 
   // After "Bring in" (PR #81): how many were added, and why anyone wasn't.
@@ -70,14 +75,14 @@ export default async function CourseStudentsPage({
         <p role="alert" className="rounded-control bg-danger-soft px-4 py-3 text-danger">{syncError}</p>
       )}
 
-      {course.canvasLinked ? (
+      {course.canvasLinked || fromLti ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">
             {course.canvasSyncedAt
               ? `Class list last matched Canvas ${dateTime.format(course.canvasSyncedAt)}.`
               : "Class list from Canvas."}
           </p>
-          <form action={syncAction}>
+          <form action={fromLti ? ltiSyncAction : syncAction}>
             <input type="hidden" name="courseId" value={course.id} />
             <Button variant="secondary">Sync with Canvas</Button>
           </form>

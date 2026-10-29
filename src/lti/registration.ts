@@ -53,7 +53,7 @@ export function envRegistration(env: Record<string, string | undefined> = proces
   };
 }
 
-type PlatformRow = {
+export type PlatformRow = {
   id: string;
   institution_id: string;
   issuer: string;
@@ -63,7 +63,7 @@ type PlatformRow = {
   jwks_url: string;
 };
 
-const toPlatform = (r: PlatformRow): Platform => ({
+export const toPlatform = (r: PlatformRow): Platform => ({
   id: r.id,
   institutionId: r.institution_id,
   issuer: r.issuer,

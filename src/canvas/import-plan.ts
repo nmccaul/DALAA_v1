@@ -13,7 +13,13 @@
 import { normalizeNetId } from "@/auth/admit";
 import type { CanvasEnrollment, CanvasSection } from "./client";
 
-export type PlannedStudent = { netId: string; name: string; canvasSectionId: number | null };
+export type PlannedStudent = {
+  netId: string;
+  name: string;
+  canvasSectionId: number | null;
+  /** Links to an existing account holding it (D-024). REST rosters don't carry one. */
+  email?: string | null;
+};
 
 export type ImportPlan = {
   sections: { canvasSectionId: number; name: string }[];

@@ -69,6 +69,14 @@ export async function signInFromLaunch(db: Db, claims: LaunchClaims): Promise<Si
     }
     const userId = await findOrCreateUser(tx, institutionId, loginId, email, name);
     courseId ??= await createLtiCourse(tx, claims, userId);
+    // Where "Sync with Canvas" reads the class list (src/lti/roster.ts); the latest launch wins.
+    if (claims.nrps) {
+      await tx.query(
+        `update lti_contexts set memberships_url = $3
+          where platform_id = $1 and context_id = $2 and memberships_url is distinct from $3`,
+        [claims.platform.id, context.id, claims.nrps.membershipsUrl],
+      );
+    }
 
     // Canvas is the authority on who is in its course and in what role.
     await tx.query(

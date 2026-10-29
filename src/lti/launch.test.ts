@@ -80,7 +80,14 @@ describe("LTI launch sign-in", () => {
   beforeEach(() => h.jar.clear());
 
   /** A full launch through the route: login, signed id_token, form POST. */
-  async function launch(opts: { context?: string; roles?: string[]; loginId?: string; email?: string; name?: string }) {
+  async function launch(opts: {
+    context?: string;
+    roles?: string[];
+    loginId?: string;
+    email?: string;
+    name?: string;
+    membershipsUrl?: string;
+  }) {
     const login = await beginLogin(
       db,
       inst,
@@ -102,6 +109,12 @@ describe("LTI launch sign-in", () => {
       [`${LTI}roles`]: opts.roles ?? LEARNER,
       [`${LTI}context`]: { id: opts.context ?? "ctx-42", title: "DALAA Test", label: "DT 101" },
       [`${LTI}custom`]: { login_id: opts.loginId, canvas_course_id: 42 },
+      ...(opts.membershipsUrl && {
+        "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice": {
+          context_memberships_url: opts.membershipsUrl,
+          service_versions: ["2.0"],
+        },
+      }),
     })
       .setProtectedHeader({ alg: "RS256", kid: "k" })
       .setIssuer(CANVAS_CLOUD_ISSUER)
@@ -213,5 +226,18 @@ describe("LTI launch sign-in", () => {
   it("signInFromLaunch refuses a launch outside a course", async () => {
     const claims = { context: undefined, roles: TEACHER, custom: {}, email: "t@example.edu" } as unknown as LaunchClaims;
     expect(await signInFromLaunch(db, claims)).toEqual({ ok: false, status: 400, error: "Open DALAA from a course in Canvas." });
+  });
+
+  it("remembers the latest memberships URL for roster sync", async () => {
+    const url = (n: number) => `https://canvas.example.edu/api/lti/courses/${n}/names_and_roles`;
+    const stored = async () =>
+      (await db.query<{ memberships_url: string | null }>("select memberships_url from lti_contexts where context_id = 'ctx-nrps'"))[0]
+        .memberships_url;
+    await launch({ context: "ctx-nrps", roles: TEACHER, loginId: "nrps.teacher", membershipsUrl: url(1) });
+    expect(await stored()).toBe(url(1));
+    await launch({ context: "ctx-nrps", roles: LEARNER, loginId: "nrps.student" });
+    expect(await stored()).toBe(url(1));
+    await launch({ context: "ctx-nrps", roles: LEARNER, loginId: "nrps.student", membershipsUrl: url(2) });
+    expect(await stored()).toBe(url(2));
   });
 });

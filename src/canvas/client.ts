@@ -61,6 +61,18 @@ export type CanvasEnrollment = {
   };
 };
 
+/** A member of a course from LTI Names and Role Provisioning (NRPS v2). */
+export type NrpsMember = {
+  user_id: string;
+  /** Missing means Active (NRPS v2). */
+  status?: "Active" | "Inactive" | "Deleted";
+  name?: string;
+  email?: string;
+  roles: string[];
+  /** Present when asked for a resource link: carries custom fields such as login_id. */
+  message?: Record<string, unknown>[];
+};
+
 export type CanvasConfig = {
   baseUrl: string;
   token: string;
@@ -77,11 +89,11 @@ export function canvasClient(config: CanvasConfig) {
   const maxPages = config.maxPages ?? 50;
   const base = config.baseUrl.replace(/\/+$/, "");
 
-  async function request(url: string): Promise<Response> {
+  async function request(url: string, accept = "application/json"): Promise<Response> {
     let res: Response;
     try {
       res = await doFetch(url, {
-        headers: { Authorization: `Bearer ${config.token}`, Accept: "application/json" },
+        headers: { Authorization: `Bearer ${config.token}`, Accept: accept },
         signal: AbortSignal.timeout(timeoutMs),
         cache: "no-store",
       });
@@ -125,6 +137,21 @@ export function canvasClient(config: CanvasConfig) {
     return items;
   }
 
+  /** Every NRPS page from an absolute memberships URL, following Link: rel="next". */
+  async function nrpsMembers(url: string): Promise<NrpsMember[]> {
+    const members: NrpsMember[] = [];
+    let next: string | null = url;
+    for (let page = 0; next; page++) {
+      if (page >= maxPages) throw new CanvasError("too-many-pages");
+      const res: Response = await request(next, "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
+      const body = (await res.json().catch(() => null)) as { members?: unknown } | null;
+      if (!body || !Array.isArray(body.members)) throw new CanvasError("bad-response", res.status);
+      members.push(...(body.members as NrpsMember[]));
+      next = nextLink(res.headers.get("link"));
+    }
+    return members;
+  }
+
   return {
     /** Who the token belongs to. Used to verify a token before storing it. */
     self: () => getOne<CanvasUser>("/api/v1/users/self"),
@@ -144,6 +171,9 @@ export function canvasClient(config: CanvasConfig) {
         `/api/v1/courses/${courseId}/enrollments?type[]=StudentEnrollment` +
           "&state[]=active&state[]=invited&state[]=completed&state[]=inactive",
       ),
+
+    /** The class list through LTI NRPS; the token is an LTI service token (src/lti/services.ts). */
+    nrpsMembers,
   };
 }
 
