@@ -92,20 +92,31 @@ human says otherwise.
 
 ---
 
-## Canvas (REST API, not LTI — see `docs/DECISIONS.md`)
+## Canvas (REST for BYU, LTI 1.3 for gitgrade — see `docs/DECISIONS.md` D-004, D-020)
 
 Detailed design: `docs/CANVAS.md`. Non-negotiables:
 
-- **All Canvas HTTP goes through one client module.** No page calls Canvas
-  directly. This also keeps the door open to LTI later.
-- **Each teacher uses their own token.** No lending, no fallback, no shared admin
+- **All Canvas HTTP goes through service modules** — `src/canvas/` (REST) and
+  `src/lti/` (LTI launch, NRPS, AGS, deep linking). No page calls Canvas
+  directly.
+- **LTI is written fresh from the spec.** Never copy from `scholarly`. OIDC
+  state and nonce live in Postgres (expiring, one use), not cookies; accept an
+  `iss` only from the allowed list.
+- **Each teacher uses their own token** (REST path). No lending, no fallback, no shared admin
   token. Encrypt at rest; the key never lives with the ciphertext; the UI shows
   only the last 4 characters. Never log headers, tokens, or request bodies.
-- **Identity is the BYU NetID** (`users.external_id`), not the SSO provider's
-  opaque `sub`. Roster sync creates students before they ever sign in; keying on
-  anything else gives every student a second, empty account.
+- **Identity is the login ID** (`users.external_id`): the BYU NetID, or a
+  lowercased email on Canvases whose login IDs are emails (D-025) — never the
+  SSO provider's opaque `sub`. Roster sync creates students before they ever
+  sign in; keying on anything else gives every student a second, empty account.
+  A launch, sync or signup whose email matches an existing user links to it
+  (D-024).
+- **Supabase Auth only proves identity; `admit()` decides** (D-022). Accounts
+  are admin-created and pre-confirmed, school-email domains only. The shared
+  test teacher (D-023) is test-only.
 - **Roster sync adds and flags; it never deletes.**
-- **Grades post on an explicit push, never automatically.** An unconfirmed push
+- **Grades post on an explicit push, never automatically** — through REST or
+  AGS alike. An unconfirmed push
   is never recorded as sent. A grade edited in Canvas is a category to report,
   never something to overwrite. A points disagreement refuses; it never rescales.
 - **NULL is not zero.** Unscored, in progress, and never attempted are different.
