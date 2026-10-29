@@ -153,8 +153,9 @@ Canvas specifics: `CANVAS.md`.
 | — | External tools (Adam Jensen) | Join via the tool-builder contract | Not started |
 
 *For the gitgrade test build the first tool is **Study Chat** (D-021): read
-content, then chat in one of ten modes (Explain, Apply, LikenToMe, Case Chat,
-Debate, Pitch, Interview, Roleplay, Liken2Us, Socratic), graded by AI. The BYU
+content, then chat in one of eleven modes (Explain, Apply, LikenToMe, Case Chat,
+Debate, Pitch, Interview, Roleplay, Liken2Us, Socratic, and Defend, where an
+AI examiner questions students about their own work), graded by AI. The BYU
 pilot choice (D-008) is still open.*
 
 ## 9. Tool-builder contract (draft — "how the DALAA model works")

@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import { MODE_SLUGS } from "./modes";
+import { MODE_SLUGS, MODES } from "./modes";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -38,7 +38,12 @@ const LabeledItem = z.strictObject({
 
 export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 
-export const StudyChatSettings = z
+/**
+ * Every setting, without the rules that tie one setting to another. The draft
+ * is generated against this (draft.ts) because "Students bring their own work"
+ * is the teacher's switch, set after the model answers.
+ */
+export const StudyChatFields = z
   .strictObject({
     mode: z.enum(MODE_SLUGS).meta({ title: "Mode", description: "The kind of chat this is." }),
     // The teacher's switch on the create flow, not the AI's: drafting keeps it
@@ -124,6 +129,11 @@ export const StudyChatSettings = z
       .meta({ title: "Grading", description: "What the AI grader scores the chat on." }),
   })
   .meta({ title: "Study Chat settings" });
+
+export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
+  message: "A Defend chat is about each student's own work, so “Students bring their own work” stays on.",
+  path: ["studentWork"],
+});
 
 export type StudyChatSettings = z.infer<typeof StudyChatSettings>;
 

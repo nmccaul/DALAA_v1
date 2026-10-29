@@ -4,6 +4,7 @@ import { testDb } from "@/test/db";
 import type { Db } from "@/db/types";
 import { draftPrompt, draftSettings } from "./draft";
 import { MODE_SLUGS, MODES } from "./modes";
+import { StudyChatSettings } from "./schema";
 import { answering, draft } from "./test-fixtures";
 
 /** Everything the model was sent on its first call, as one string. */
@@ -41,10 +42,29 @@ describe("Study Chat drafting", () => {
 
   it("offers every mode when asked to suggest, and keeps the model's choice", async () => {
     const model = answering(draft({ mode: "debate" }));
-    const result = await draftSettings(db, model, {}, { ...harbor, mode: "suggest" });
-    expect(result).toMatchObject({ ok: true, settings: { mode: "debate" } });
+    const result = await draftSettings(db, model, {}, { ...harbor, studentWork: true, mode: "suggest" });
+    expect(result).toMatchObject({ ok: true, settings: { mode: "debate", studentWork: true } });
     for (const slug of MODE_SLUGS) expect(sent(model)).toContain(`- ${slug}: ${MODES[slug].label}.`);
     expect(sent(model)).not.toContain(MODES["case-chat"].promptSeed);
+  });
+
+  it("doesn't suggest Defend unless students bring their own work, and turns it on if the model picks it anyway", async () => {
+    const model = answering(draft({ mode: "defend", studentWork: false }));
+    const result = await draftSettings(db, model, {}, { ...harbor, mode: "suggest" });
+    expect(result).toMatchObject({ ok: true, settings: { mode: "defend", studentWork: true } });
+    expect(sent(model)).not.toContain("- defend:");
+    expect(sent(model)).toContain("- debate:");
+  });
+
+  it("drafts a Defend chat that validates, about each student's own work", async () => {
+    const model = answering(draft({ mode: "debate", studentWork: false, completion: { maxTurns: 8, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
+    const result = await draftSettings(db, model, {}, { ...harbor, mode: "defend" });
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.settings).toMatchObject({ mode: "defend", studentWork: true, completion: { maxTurns: 8 } });
+    expect(StudyChatSettings.safeParse(result.settings).success).toBe(true);
+    for (const part of [MODES.defend.promptSeed, MODES.defend.hints.rubric, "a turn limit", "Each student adds their own work"]) {
+      expect(sent(model)).toContain(part);
+    }
   });
 
   it("asks once more when the draft doesn't fit the schema", async () => {

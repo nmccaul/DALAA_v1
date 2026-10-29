@@ -103,6 +103,14 @@ describe("creating a Study Chat", () => {
     expect(JSON.stringify(model.doGenerateCalls[0].prompt)).toContain("Each student adds their own work");
   });
 
+  it("turns on 'Students bring their own work' for a Defend chat even when the switch was left off", async () => {
+    const model = answering(draft({ studentWork: false }));
+    const request = { contentId: content, guideId: null, mode: "defend" as const, studentWork: false, creationKey: randomUUID() };
+    const result = await createStudyChat(db, model, prof, course, request);
+    if (!result.ok) throw new Error(result.reason);
+    expect((await getTaughtActivity(db, prof, result.activityId))?.settings).toMatchObject({ mode: "defend", studentWork: true });
+  });
+
   it("publishes for the course's teacher only, and only settings that fit the schema", async () => {
     const result = await createStudyChat(db, answering(draft()), prof, course, {
       contentId: content,

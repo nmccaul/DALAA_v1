@@ -27,6 +27,15 @@ describe("the chat prompt", () => {
     }
   });
 
+  it("runs a Defend chat as an examiner of the student's own work", () => {
+    const work = { name: "My essay.docx", body: "Second stores fail when cash flow is seasonal." };
+    const prompt = chatSystemPrompt(draft({ mode: "defend", studentWork: true }), content, null, work);
+    expect(prompt).toContain(`What kind of conversation this is: ${MODES.defend.promptSeed}`);
+    expect(prompt).toContain('The student\'s own work ("My essay.docx")');
+    expect(prompt).toMatch(/<material role="student-work">[\s\S]*Second stores fail when cash flow is seasonal\.[\s\S]*<\/material>/);
+    expect(prompt.indexOf(MODES.defend.promptSeed)).toBeLessThan(prompt.indexOf("Second stores fail"));
+  });
+
   it("leaves the rubric and touchpoints for the grader", () => {
     const settings = draft();
     const prompt = chatSystemPrompt(settings, content, null, null);

@@ -6,6 +6,7 @@ import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
 import { cardOf, FIELDS, fieldId } from "./fields";
 import { PickerField } from "./forms";
+import { MODES } from "./modes";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 
 type S = StudyChatSettings;
@@ -249,6 +250,7 @@ export function StudyChatEditor({
                 id={fieldId(["studentWork"])}
                 type="checkbox"
                 checked={s.studentWork}
+                disabled={MODES[s.mode].needsStudentWork}
                 onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
               />
               {settingTitle(["studentWork"])}

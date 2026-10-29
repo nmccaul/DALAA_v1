@@ -22,7 +22,7 @@ export type CreateRequest = {
   /** The AI-only guide the teacher added, if any (src/content/guide.ts). */
   guideId: string | null;
   mode: ModeSlug | "suggest";
-  /** The "Students bring their own work" switch: the draft keeps it as set here. */
+  /** The "Students bring their own work" switch: the draft keeps it as set here (on for a mode that needs it). */
   studentWork: boolean;
   /** Client-generated: a retry returns the first activity and drafts nothing new. */
   creationKey: string;
@@ -52,7 +52,7 @@ export async function createStudyChat(
     { content: content.body, contentName: content.name, mode: request.mode, guide, studentWork: request.studentWork },
   );
   if (!draft.ok) return draft;
-  const settings = { ...draft.settings, studentWork: request.studentWork };
+  const { settings } = draft;
 
   const saved = await createActivity(db, actor, courseId, request.creationKey, {
     tool: STUDY_CHAT,
