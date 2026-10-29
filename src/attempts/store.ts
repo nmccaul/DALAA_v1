@@ -37,6 +37,9 @@ export type TakenActivity = {
 /** Where a student takes an activity (src/app/activities/[activityId]). */
 export const takePath = (activityId: string) => `/activities/${activityId}`;
 
+/** The student home (src/app/page.tsx), showing one course's assignments. */
+export const studentHomePath = (courseId: string) => `/?course=${courseId}`;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ATTEMPT_COLUMNS = `id, activity_id as "activityId", status, ended_by as "endedBy",
