@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { buttonStyles } from "@/components/ui";
-import { TOOLS } from "@/tools/catalog";
+import { isLive, TOOLS } from "@/tools/catalog";
 
 const WALKTHROUGH_URL = "https://calendly.com/nathanmccauley10/30min";
 
@@ -147,7 +147,10 @@ export function Landing() {
                     <span style={{ color: tool.accent }}>
                       <Icon size={30} weight="duotone" aria-hidden />
                     </span>
-                    <span className="font-display text-xl font-semibold">{tool.name}</span>
+                    <span className="flex flex-col">
+                      <span className="font-display text-xl font-semibold">{tool.name}</span>
+                      {!isLive(tool) && <span className="text-sm text-muted">Coming soon</span>}
+                    </span>
                   </span>
                   <p className="text-lg">{tool.students}</p>
                   <p className="text-muted">

@@ -4,21 +4,22 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui";
 import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
-import { findTool, TOOLS } from "@/tools/catalog";
+import { findTool, isLive } from "@/tools/catalog";
 
 export async function generateMetadata({ params }: PageProps<"/courses/[courseId]/activities/new/[tool]">): Promise<Metadata> {
   return { title: `New ${findTool((await params).tool)?.name ?? "activity"}` };
 }
 
 /**
- * How setting up this tool will work. A walkthrough only: the same five steps
- * every tool will share (PRD §5 steps 6 to 8), with this tool's specifics.
+ * How setting up a live tool works: the same five steps every tool shares
+ * (PRD §5 steps 6 to 8), with this tool's specifics. Tools that are coming
+ * soon have no page. Still a walkthrough until the create flow lands (T19).
  */
 export default async function ToolPreviewPage({ params }: PageProps<"/courses/[courseId]/activities/new/[tool]">) {
   const { courseId, tool: slug } = await params;
   const { course } = await loadTaughtCourse(courseId);
   const tool = findTool(slug);
-  if (!tool) notFound();
+  if (!tool || !isLive(tool)) notFound();
   const Icon = tool.icon;
 
   const steps = [
@@ -77,18 +78,6 @@ export default async function ToolPreviewPage({ params }: PageProps<"/courses/[c
         </Button>
         <span className="text-sm text-muted">Coming soon</span>
       </div>
-      <p className="text-sm text-muted">
-        Or look at{" "}
-        {TOOLS.filter((t) => t.slug !== tool.slug).map((t, i, rest) => (
-          <span key={t.slug}>
-            <Link href={`/courses/${course.id}/activities/new/${t.slug}`} className="underline hover:text-text">
-              {t.name}
-            </Link>
-            {i < rest.length - 1 ? " or " : ""}
-          </span>
-        ))}
-        .
-      </p>
     </div>
   );
 }
