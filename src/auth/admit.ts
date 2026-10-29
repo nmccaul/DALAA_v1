@@ -6,7 +6,7 @@
  * - On the staff allowlist (or the shared test teacher, D-023) → first sign-in
  *   creates the account (no form).
  * - Already on a course roster as an active student → signed in.
- * - A school email proven by password sign-in (`newStudent`, D-024) → signed
+ * - An email proven by password sign-in (`newStudent`, D-024, D-029) → signed
  *   in, and a student account with no courses is made if they have none.
  * - Anyone else is refused; no other sign-in creates a student.
  */

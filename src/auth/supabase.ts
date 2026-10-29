@@ -33,4 +33,27 @@ export const supabasePasswords: PasswordProvider = {
     if (error.code === "weak_password") return "weak";
     throw error;
   },
+
+  async setPassword(email, password) {
+    const made = await supabasePasswords.create(email, password);
+    if (made !== "exists") return made === "created" ? "set" : "weak";
+    const id = await findUserId(email);
+    if (!id) throw new Error("Supabase says the email exists but no user has it");
+    const { error } = await admin().auth.admin.updateUserById(id, { password, email_confirm: true });
+    if (!error) return "set";
+    if (error.code === "weak_password") return "weak";
+    throw error;
+  },
 };
+
+/** The admin API can't look a user up by email, so page through them. Pilot-sized. */
+async function findUserId(email: string): Promise<string | null> {
+  const perPage = 1000;
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin().auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const found = data.users.find((u) => u.email?.toLowerCase() === email);
+    if (found) return found.id;
+    if (data.users.length < perPage) return null;
+  }
+}

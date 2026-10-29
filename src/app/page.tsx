@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { listStudentAssignments, type StudentAssignment } from "@/activities/queries";
 import { takePath } from "@/attempts/store";
 import { currentActor } from "@/auth/current";
+import { passwordSettingEmail } from "@/auth/password";
 import { FeedbackButton } from "@/components/feedback";
 import { Landing } from "@/components/landing";
 import { Logo } from "@/components/logo";
+import { SetPassword } from "@/components/set-password";
 import { EmptyState } from "@/components/ui";
 import { listTakenCourses } from "@/courses/queries";
 import { db } from "@/db/client";
@@ -44,8 +46,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const actor = await currentActor();
   if (!actor) return <Landing />;
   if (actor.isStaff) redirect("/courses");
-  const [taken, assignments] = await Promise.all([listTakenCourses(db(), actor), listStudentAssignments(db(), actor)]);
-  const { course } = await searchParams;
+  const [taken, assignments, email] = await Promise.all([
+    listTakenCourses(db(), actor),
+    listStudentAssignments(db(), actor),
+    passwordSettingEmail(db(), actor.userId),
+  ]);
+  const { course, password } = await searchParams;
   const only = taken.filter((c) => c.id === course);
   const courses = only.length > 0 ? only : taken;
 
@@ -118,6 +124,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           )}
           <p className="text-sm text-muted">You can also open each assignment from Canvas.</p>
         </>
+      )}
+      {email && (
+        <details className="text-sm" open={typeof password === "string"}>
+          <summary className="cursor-pointer text-muted hover:text-text">Sign in without Canvas</summary>
+          <div className="mt-4 text-base">
+            <SetPassword email={email} status={typeof password === "string" ? password : undefined} back="/" />
+          </div>
+        </details>
       )}
       <form action={signOut}>
         <button className="text-sm text-muted underline hover:text-text">Sign out</button>

@@ -1,5 +1,11 @@
 # Progress
 
+## Final summary (2026-10-29 16:28 UTC, end of the overnight run)
+All tasks T01–T28 are done; production (https://dalaa-v1.vercel.app) runs the full Study Chat loop as an LTI 1.3 tool on gitgrade: launch from Canvas (with a new-tab fallback), roster sync over NRPS, a Study Chat drafted by AI from a Canvas page/upload/paste with 10 modes, deep linking to add it as a Canvas assignment, the student chat with limits, AI grading with evidence quotes, teacher scores and disputes, sending grades back over AGS with the push rules, and a Feedback button with mark-up and an admin list. Outside Canvas: Supabase email sign-in, school-domain signup, the shared test teacher.
+- **Start here:** `docs/TESTING-GITGRADE.md` walks the whole loop in course 42.
+- **Not yet exercised on production:** a real launch from gitgrade, deep linking, the Canvas page picker (OAuth), a real grade, and a real AGS send. Every "VERIFY IN MORNING" note below is covered by the guide.
+- **Decisions waiting on Nathan** (search "**Nathan:**" below): extra credit, students seeing the Feedback button in Canvas, touchpoint names visible to students, dispute deadline, teachers reading the chat from Grading (worth a task), UTC due times, test-teacher sign-in rate limit, Node 22 as the shell default.
+
 One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI key 10000000000013 + deployment, API key 10000000000014, test course 42, env vars, AI Gateway key. See ralph/PLAN.md.
 
 ## 2026-10-29 06:23 UTC · T01 Decisions + docs · done
@@ -338,3 +344,28 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Pure model in `src/feedback/annotate.ts` (marks in the picture's own pixels, `undo`, `drawMarks`, `flatten` that steps JPEG quality 0.8/0.6/0.4 to stay under 3 MB, else keeps the unmarked one); `dataUrlBytes` moved there from the button. 8 tests in `annotate.test.ts` with a recording fake context (no jsdom/testing-library in the repo, so no component render test). `ReportContext.annotated` is optional (older reports lack it); store test checks it round-trips. Admin report page says "The reporter marked up this picture."
 - Cmd/Ctrl+Shift+F and `window.dispatchEvent(new Event("open-feedback"))` open the panel (`useEffectEvent`, React 19.2). No new library. No migration. 385 tests green on Node 22.
 - Browser check (Node 22 dev server, local DB, `natetest`): light 1280 circled and boxed, undid a third mark, sent; the row had `annotated: true` and a 36 KB JPEG, and the admin page showed the marks. Dark 390: opened via the event, drew, Escape kept the panel. Real touch wasn't emulated (mouse only). Local test report deleted afterwards.
+
+## 2026-10-29 16:28 UTC · T28 CHECKPOINT C (deploy) + morning test guide · done
+- New `docs/TESTING-GITGRADE.md`: teacher launch from course 42 → sync → create from the Harbor Bikes page → add via "DALAA Study Chat" → Student View chat, finish, dispute → resolve, send grades → gradebook checks, plus outside-Canvas sign-in. Button labels checked against the code. Final summary added at the top of this file.
+- Lint, typecheck and 385 tests green on Node 22. Five migrations since checkpoint B, all additive (`teacher_scores` adds checks only on its own new nullable columns), applied to production first.
+- PR #104 opened and merged; production deploy `dalaa-v1-r4ae25e7d` Ready. Smoke: `/api/health` db up, `/api/lti/jwks` one RSA key with a kid and no private parts, `/` 200, and the new `POST /api/feedback` answers 401 signed out.
+- Surprise: the env pull "failed" because `nvm use 22` puts a PATH without the global `vercel` first; pull before switching Node. `ralph/STATUS` is now `DONE`.
+
+## 2026-10-29 17:33 UTC · T29 Decision + docs · done
+- `docs/DECISIONS.md` D-029 (amends D-022, D-023): a signed-in user may set a password for their account's email (any domain; the form never takes an email); password sign-in then accepts any email the provider verifies, still through `admitByEmail` → `admit()`; a password never makes anyone staff; shared test student `TEST_STUDENT_EMAIL` / `TEST_STUDENT_PASSWORD`, never staff, test-only.
+- `.env.example` gains the two test-student vars; header comments in `src/auth/password.ts` and `src/auth/admit.ts` and the Canvas section of `CLAUDE.md` describe the new rules.
+- Code is unchanged: `signInWithPassword` still refuses non-school emails until T30, and the test student lands in T31, so the comments run one task ahead.
+- 385 tests green on Node 22.
+
+## 2026-10-29 17:42 UTC · T30 Sign in without Canvas (set a password) · done
+- New `setOwnPassword` in `src/auth/password.ts`: the session's own email (users.email, else an email login ID) gets a password via the new `PasswordProvider.setPassword` (Supabase: `createUser` with `email_confirm`, or `updateUserById` when it exists; the admin API has no lookup by email, so it pages `listUsers`). Refused for the shared test teacher/student emails, accounts with no email, mismatched or short passwords, and when the email would sign in to a *different* account (same lookup as sign-in, now shared as `loginIdForEmail`).
+- `signInWithPassword` no longer checks the school domain (provider still verifies); `createAccount` still does. The existing test for an unconfigured test teacher now expects "password" instead of "not-school-email".
+- UI: `src/components/set-password.tsx`, a "Sign in without Canvas" section on Settings, and a collapsed "Sign in without Canvas" on the student home. Shown only when Supabase is configured and the account has a non-shared email. Action `setPasswordAction` in `src/app/sign-in/actions.ts` (back-link limited to `/settings` or `/`).
+- Tests: 5 new in `password.test.ts` (LTI teacher → staff via course, student not staff, any-domain sign-in but no non-school signup, email-elsewhere, refusals) and `src/app/sign-in/actions.test.ts` (signed-out/forged cookie can't set; a form `email` field is ignored; no open redirect). 393 green on Node 22.
+- Browser check (local DB, real Supabase): seeded an LTI teacher `lti.t30@dalaa.test` locally, set a password on Settings, signed out, signed in at `/sign-in`, landed on `/courses` with its LTI course. Light 1280 and dark 390 look right; added `scroll-mt-24` so the sticky header doesn't hide the section after the redirect. The Supabase test login was deleted afterwards; the local seed rows remain (local only). Student-home variant not checked in a browser.
+
+## 2026-10-29 17:45 UTC · T31 Shared test student · partial
+- `src/auth/password.ts`: new `testStudentEmail()` (null unless `TEST_STUDENT_PASSWORD` is set). `signInWithPassword` checks it before Supabase with `secretsMatch`, then `admitTestStudent`: links via the same `loginIdForEmail` lookup (the account a launch/sync made for that email), else a new "Test Student" with no courses. Refused (as a plain wrong-password) if that login is on the allowlist, is the test teacher, or already counts as staff (e.g. teaches an LTI course), so the shared password never opens a staff account. `createAccount` now refuses both shared logins via `isSharedLogin`, configured or not.
+- 5 new tests in `password.test.ts` (links to a synced account with a different login ID, new account with no courses, allowlist + LTI-instructor refusals, wrong password incl. one Supabase holds, signup refused). 398 green on Node 22; lint and typecheck clean. No migration, no UI change (sign-in page footnote untouched).
+- **Not done — needs Nathan (T31b):** writing the env vars to `.env.local` and Vercel was denied by the permission classifier (secret-store write). Add `TEST_STUDENT_EMAIL=student@dalaa.test` and a random `TEST_STUDENT_PASSWORD` locally and in Vercel production + preview; until then the test student can't sign in anywhere.
+- Note: "never staff" is enforced at sign-in. If the linked account later becomes staff (e.g. enrolled as a teacher), an existing session would read staff fresh from `loadActor`; say if `loadActor` should exclude it too.

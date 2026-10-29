@@ -3,9 +3,9 @@
 import { redirect } from "next/navigation";
 import { db } from "@/db/client";
 import { admit } from "@/auth/admit";
-import { endSession, institutionId, startSession } from "@/auth/current";
+import { endSession, institutionId, requireActor, startSession } from "@/auth/current";
 import { devPasswordMatches, devSignInEnabled } from "@/auth/dev";
-import { createAccount, signInWithPassword, type PasswordAdmission } from "@/auth/password";
+import { createAccount, setOwnPassword, signInWithPassword, type PasswordAdmission } from "@/auth/password";
 import { supabasePasswords } from "@/auth/supabase";
 
 async function finish(result: PasswordAdmission, from: string): Promise<never> {
@@ -26,6 +26,18 @@ export async function passwordSignIn(form: FormData): Promise<void> {
 export async function createStudentAccount(form: FormData): Promise<void> {
   const result = await createAccount(db(), await institutionId(), credentials(form), supabasePasswords);
   await finish(result, "mode=create&");
+}
+
+/** "Sign in without Canvas": the signed-in person sets a password for their own email (D-029). */
+export async function setPasswordAction(form: FormData): Promise<void> {
+  const back = form.get("back") === "/settings" ? "/settings" : "/";
+  const result = await setOwnPassword(
+    db(),
+    await requireActor(),
+    { password: String(form.get("password") ?? ""), confirm: String(form.get("confirm") ?? "") },
+    supabasePasswords,
+  );
+  redirect(`${back}?password=${result.ok ? "set" : result.reason}#password`);
 }
 
 export async function devSignIn(form: FormData): Promise<void> {

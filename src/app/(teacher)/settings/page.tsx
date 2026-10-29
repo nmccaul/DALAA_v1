@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requireActor } from "@/auth/current";
+import { passwordSettingEmail } from "@/auth/password";
+import { SetPassword } from "@/components/set-password";
 import { Button, ButtonLink, PageHeader } from "@/components/ui";
 import { getConnection, type ConnectionSummary } from "@/canvas/connection";
 import { db } from "@/db/client";
@@ -27,9 +29,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const actor = await requireActor();
-  const canvas = await getConnection(db(), actor);
+  const [canvas, email] = await Promise.all([getConnection(db(), actor), passwordSettingEmail(db(), actor.userId)]);
+  const { password } = await searchParams;
   return (
     <>
       <PageHeader title="Settings" />
@@ -46,6 +49,11 @@ export default async function SettingsPage() {
             <Button variant="secondary">Sign out</Button>
           </form>
         </Section>
+        {email && (
+          <Section title="Sign in without Canvas">
+            <SetPassword email={email} status={typeof password === "string" ? password : undefined} back="/settings" />
+          </Section>
+        )}
         <Section title="Canvas">
           <CanvasStatus connection={canvas} />
         </Section>
