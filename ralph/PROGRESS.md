@@ -469,3 +469,11 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Shared `ResultBreakdown` (`src/results/breakdown.tsx`) pulled out of `StudentResult` so the student view and the trial show criteria and points the same way; `Bubble` exported from `chat-room.tsx`. New `trialEnding` wording + test. 457 green on Node 22; lint and typecheck clean.
 - Real trial (local, `natetest`, seeded Harbor Bikes draft in BUS M 361, 4-message limit, deleted after): struggling student, ended on the question after 3 messages, graded 4 of 10. Checked at light 1280 and dark 390 (no sideways scroll), no console errors.
 - **Nathan:** the trial uses the *saved* settings (the panel says so), so unsaved card edits aren't tried. The question check ended this trial though the grader said there was no clear recommendation, so the check may be lenient; worth a look when tuning T42. Grader feedback reads "You…" (written to a student), even in a trial.
+
+## 2026-10-29 20:47 UTC · T42a Tracking engine · done
+- Split T42 into T42a (this), T42c (student meter + "Show students their progress" setting) and T42d (Grading tab per-student + class view, grader evidence).
+- Additive migration `20261029204423_chat_progress.sql`: `chat_touchpoints` (attempt + key primary key, so once covered stays covered and re-tracking a turn adds nothing) and `chat_positions` (one per attempt, latest position wins; a turn with none keeps it). RLS on both. Applied locally; **not yet in production** (T43 applies it).
+- `src/tools/study-chat/progress.ts` is the only reader/writer: `trackProgress` (own structured call, purpose `chat.track`, on the check model; names matched case/space-insensitively to the attempt's settings; unknown names ignored; never throws) and `readProgress`. Key = normalized label (`itemKey`), so the class view can group across attempts.
+- `finishTurn` in `chat.ts` runs tracking alongside the question check, and also on the turn that ends the chat. No call when a chat has no touchpoints or positions.
+- 6 tests in `progress.test.ts`. 463 green on Node 22; lint and typecheck clean. No UI yet, so no browser check.
+- **Nathan:** this adds one cheap model call per reply for chats with touchpoints or positions. The sample-student trial doesn't track (it isn't an attempt).
