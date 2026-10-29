@@ -19,6 +19,7 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import { ADD_WORK_FIRST, ENDED, REPLY_FAILED } from "./student-messages";
+import { trackProgress } from "./progress";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
 import { MAX_MESSAGE_LENGTH } from "./student-view";
@@ -104,7 +105,10 @@ export async function questionAnswered(
   }
 }
 
-/** Saves a reply, then ends the attempt if this turn reached a limit. */
+/**
+ * Saves a reply, tracks what the student has covered (progress.ts), then ends
+ * the attempt if this turn reached a limit.
+ */
 async function finishTurn(
   db: Db,
   models: ChatModels,
@@ -116,14 +120,17 @@ async function finishTurn(
 ): Promise<Attempt> {
   await db.query("update chat_turns set status = 'done', reply = $2, replied_at = now() where id = $1", [turnId, reply]);
   const turns = await doneTurns(db, attempt.id);
+  const ctx = { userId: actor.userId, courseId: chat.activity.courseId };
+  const tracked = trackProgress(db, models.check, { ...ctx, purpose: "chat.track" }, chat.settings, attempt.id, turnId, turns);
   const { maxTurns } = chat.settings.completion;
-  if (maxTurns !== null && turns.length >= maxTurns) return completeAttempt(db, attempt.id, "turns");
-  if (timeIsUp(chat.settings, attempt)) return completeAttempt(db, attempt.id, "time");
-  const ctx = { purpose: "chat.check", userId: actor.userId, courseId: chat.activity.courseId };
-  if (await questionAnswered(db, models.check, ctx, chat.settings.completion.question, turns)) {
-    return completeAttempt(db, attempt.id, "question");
+  let ended: Attempt["endedBy"] = null;
+  if (maxTurns !== null && turns.length >= maxTurns) ended = "turns";
+  else if (timeIsUp(chat.settings, attempt)) ended = "time";
+  else if (await questionAnswered(db, models.check, { ...ctx, purpose: "chat.check" }, chat.settings.completion.question, turns)) {
+    ended = "question";
   }
-  return attempt;
+  await tracked;
+  return ended === null ? attempt : completeAttempt(db, attempt.id, ended);
 }
 
 /**
