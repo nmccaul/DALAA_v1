@@ -10,6 +10,9 @@ MAX_PASSES=${MAX_PASSES:-80}
 LOGS=ralph/logs
 mkdir -p "$LOGS"
 
+# A Mac notification when the loop ends, for whatever reason.
+notify() { osascript -e "display notification \"$1\" with title \"DALAA $2\" sound name \"Glass\"" 2>/dev/null; }
+
 # Guards (2026-10-29: a dry run retried a failing command every 2 minutes for
 # 20+ minutes and a pass waited on it): every pass has a wall-clock limit, and
 # the loop stops after MAX_FAILS failures in a row instead of retrying forever.
@@ -45,6 +48,7 @@ failed() {
   echo "Failure $fails of $MAX_FAILS in a row: $1"
   if (( fails >= MAX_FAILS )); then
     echo "Stopping: $MAX_FAILS failures in a row. Read the last log; nothing more will run until it's fixed."
+    notify "Stopped after $MAX_FAILS failures in a row" "build loop"
     exit 3
   fi
 }
@@ -74,3 +78,4 @@ while (( pass < MAX_PASSES )); do
     fails=0
   fi
 done
+notify "Finished: $(tail -n 1 ralph/logs/loop.out 2>/dev/null)" "build loop"

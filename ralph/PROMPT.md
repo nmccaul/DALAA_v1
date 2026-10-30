@@ -48,9 +48,9 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
    table/index, add nullable column). If any isn't, mark the checkpoint
    `BLOCKED: non-additive migration` and stop.
 3. Apply them to production first:
-   `S=$(mktemp -d)/p.env; vercel -Q ~/.vercel-dalaa env pull "$S" --environment=production --yes >/dev/null`
+   `D=$(mktemp -d); vercel -Q ~/.vercel-dalaa env pull "$D/p.env" --environment=production --yes >/dev/null` (pull before switching Node with nvm, which drops the global `vercel` from PATH)
    then run `DATABASE_URL=` set to that file's `POSTGRES_URL_NON_POOLING` value
-   with `npm run migrate`, and finally `rm -rf "$(dirname "$S")"`.
+   with `npm run migrate`, and finally `rm -r "$D"`.
    Never print the file or the URL.
 4. Open or reuse a PR from `feat/study-chat-lti` to `main` (`gh pr create` /
    `gh pr view`). The body summarizes what's in it. No Claude attribution.
