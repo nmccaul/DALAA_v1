@@ -171,7 +171,7 @@ export async function runTrial(
       }
     }
 
-    const grade = await gradeTurns(db, models.grader, ctx, settings, turns, guide, work);
+    const grade = await gradeTurns(db, models.grader, ctx, settings, turns, guide, work, null);
     return { ok: true, trial: { opening, work, turns, endedBy, grade } };
   } catch (error) {
     console.error("trial failed:", error instanceof Error ? error.message : error);

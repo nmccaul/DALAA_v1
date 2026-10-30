@@ -3,6 +3,9 @@
  * the rubric, the strictness, the touchpoints and the positions, and its
  * answer becomes a result in the shape every tool shares (src/results/store.ts).
  *
+ * What the live check tracked during the chat (progress.ts) is given as
+ * evidence; the grader still judges from the transcript.
+ *
  * Only the student's own words are graded; the AI's replies are there for
  * context. An evidence quote the student didn't write is dropped (NULL), never
  * shown: a made-up quote is worse than none when a student disputes a grade.
@@ -22,6 +25,7 @@ import { claimGrading, failGrading, getResult, saveGrade, type GradedResult, typ
 import { doneTurns } from "./chat";
 import { STUDY_CHAT } from "./create";
 import { fence } from "./material";
+import { readProgress, type ChatProgress } from "./progress";
 import type { Exchange } from "./prompt";
 import { STRICTNESS, StudyChatSettings } from "./schema";
 
@@ -69,6 +73,7 @@ export function gradePrompt(
   turns: readonly Exchange[],
   guide: Guide | null,
   work: StudentWork | null,
+  tracked: ChatProgress | null,
 ): { system: string; prompt: string } {
   const [scenario] = settings.scenarios;
   const system = [
@@ -93,6 +98,18 @@ export function gradePrompt(
       : "Positions: none. Answer null.",
   ];
   if (settings.completion.question !== null) parts.push(`The question the student had to answer: ${settings.completion.question}`);
+  if (tracked !== null && (settings.touchpoints.length > 0 || settings.positions.length > 0)) {
+    const names = (items: readonly { label: string }[]) => (items.length > 0 ? items.map((t) => t.label).join(", ") : "none");
+    parts.push(
+      "What a quick check thought after each reply during the chat. It can be wrong: judge touchpoints and the position from the transcript.\n" +
+        [
+          settings.touchpoints.length > 0 ? `- Touchpoints it thought the student brought up: ${names(tracked.touchpoints)}` : null,
+          settings.positions.length > 0 ? `- Position it thought the student took: ${tracked.position?.label ?? "none"}` : null,
+        ]
+          .filter((line) => line !== null)
+          .join("\n"),
+    );
+  }
   if (work !== null) {
     parts.push(`The student's own work ("${work.name}"), which the conversation is about. Grade how the student talks about it:\n${fence("student-work", work.body)}`);
   }
@@ -196,7 +213,16 @@ export async function gradeAttempt(db: Db, model: LanguageModel, attemptId: stri
   }
 
   const ctx = { purpose: "grade", userId: finished.userId, courseId: finished.activity.courseId };
-  const graded = await gradeTurns(db, model, ctx, settings, turns, await aiGuide(db, finished.activity.id), await getStudentWork(db, attemptId));
+  const graded = await gradeTurns(
+    db,
+    model,
+    ctx,
+    settings,
+    turns,
+    await aiGuide(db, finished.activity.id),
+    await getStudentWork(db, attemptId),
+    await readProgress(db, attemptId),
+  );
   if (graded) await saveGrade(db, attemptId, graded);
   else await failGrading(db, attemptId);
   return getResult(db, attemptId);
@@ -204,7 +230,8 @@ export async function gradeAttempt(db: Db, model: LanguageModel, attemptId: stri
 
 /**
  * Asks the grader about a transcript with at least one exchange, up to twice.
- * NULL when no answer fit the rubric. Saves nothing: `gradeAttempt` saves a
+ * NULL when no answer fit the rubric. `tracked` is NULL when nothing was
+ * tracked (a trial). Saves nothing: `gradeAttempt` saves a
  * student's grade; the sample-student trial (trial.ts) only shows it.
  */
 export async function gradeTurns(
@@ -215,8 +242,9 @@ export async function gradeTurns(
   turns: readonly Exchange[],
   guide: Guide | null,
   work: StudentWork | null,
+  tracked: ChatProgress | null,
 ): Promise<GradedResult | null> {
-  const prompt = gradePrompt(settings, turns, guide, work);
+  const prompt = gradePrompt(settings, turns, guide, work, tracked);
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
       return toResult(settings, await generateStructured(db, model, ctx, GraderAnswer, prompt), turns);

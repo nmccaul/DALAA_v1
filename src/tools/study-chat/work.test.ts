@@ -136,7 +136,7 @@ describe("students bring their own work", () => {
   });
 
   it("gives the grader the work, fenced, as material to grade against", () => {
-    const { prompt } = gradePrompt(draft({ studentWork: true }), [{ message: "Hi", reply: "Hello" }], null, { name: "Essay", body: ESSAY });
+    const { prompt } = gradePrompt(draft({ studentWork: true }), [{ message: "Hi", reply: "Hello" }], null, { name: "Essay", body: ESSAY }, null);
     expect(prompt).toContain(`<material role="student-work">\n${ESSAY}\n</material>`);
   });
 });

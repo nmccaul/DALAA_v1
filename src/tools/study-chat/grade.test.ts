@@ -69,14 +69,37 @@ describe("grading a Study Chat", () => {
   });
 
   it("asks with the rubric, strictness, touchpoints, positions and the whole transcript", () => {
-    const { system, prompt } = gradePrompt(draft(), TURNS, null, null);
+    const { system, prompt } = gradePrompt(draft(), TURNS, null, null, null);
     expect(system).toContain("Be fair.");
     expect(prompt).toContain("Recommendation (6 points): Makes a recommendation backed by evidence.");
     expect(prompt).toContain("Cash flow: Notices the seasonal cash squeeze.");
     expect(prompt).toContain("Wait: Fix cash flow first.");
     expect(prompt).toContain("AI: Thanks for coming in.");
     expect(prompt).toContain("Student: Then I'd wait");
-    expect(gradePrompt(draft({ rubric: { ...draft().rubric, strictness: "strict" } }), TURNS, null, null).system).toContain("Be strict.");
+    expect(gradePrompt(draft({ rubric: { ...draft().rubric, strictness: "strict" } }), TURNS, null, null, null).system).toContain("Be strict.");
+  });
+
+  it("gives the grader what the live check tracked as evidence, to check against the transcript", () => {
+    const tracked = { touchpoints: [{ key: "cash flow", label: "Cash flow" }], position: { key: "wait", label: "Wait" } };
+    const { prompt } = gradePrompt(draft(), TURNS, null, null, tracked);
+    expect(prompt).toContain("It can be wrong: judge touchpoints and the position from the transcript.");
+    expect(prompt).toContain("- Touchpoints it thought the student brought up: Cash flow");
+    expect(prompt).toContain("- Position it thought the student took: Wait");
+    const none = gradePrompt(draft(), TURNS, null, null, { touchpoints: [], position: null }).prompt;
+    expect(none).toContain("brought up: none");
+    expect(none).toContain("took: none");
+    expect(gradePrompt(draft(), TURNS, null, null, null).prompt).not.toContain("quick check");
+    expect(gradePrompt(draft({ touchpoints: [], positions: [] }), TURNS, null, null, tracked).prompt).not.toContain("quick check");
+  });
+
+  it("reads the attempt's tracked progress into the grader's prompt", async () => {
+    const [{ id: turn }] = await db.query<{ id: string }>("select id from chat_turns where attempt_id = $1 limit 1", [attempt]);
+    await db.query("insert into chat_touchpoints (attempt_id, key, label, turn_id) values ($1, 'cash flow', 'Cash flow', $2)", [attempt, turn]);
+    const grader = answering(answer());
+    await gradeAttempt(db, grader, attempt);
+    const sent = JSON.stringify(grader.doGenerateCalls[0].prompt);
+    expect(sent).toContain("brought up: Cash flow");
+    expect(sent).toContain("took: none");
   });
 
   it("stores the result in the shared shape, totalled, with the student's own quotes", async () => {

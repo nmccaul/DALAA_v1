@@ -125,3 +125,67 @@ export async function studentProgress(db: Db, settings: StudyChatSettings, attem
     position: settings.positions.length > 0 && position ? position.label : null,
   };
 }
+
+/** One student's tracked progress, for their teacher. `total`: touchpoints in the attempt's own settings (D-031). */
+export type AttemptProgress = ChatProgress & { total: number };
+
+/** How many students covered each touchpoint and took each position. */
+export type Tally = { label: string; students: number };
+
+export type ClassProgress = {
+  /** Students who started: what every tally is "of". */
+  started: number;
+  touchpoints: Tally[];
+  positions: Tally[];
+  byAttempt: Map<string, AttemptProgress>;
+};
+
+/**
+ * The teacher's view of an activity's tracked progress across `attemptIds`
+ * (attempts the caller has already checked the teacher may read; any not on
+ * this activity are ignored). Tallies list the current settings' items first,
+ * in order, even with no students, then any an attempt tracked under older
+ * settings, grouped by key.
+ */
+export async function classProgress(
+  db: Db,
+  activityId: string,
+  settings: Pick<StudyChatSettings, "touchpoints" | "positions">,
+  attemptIds: readonly string[],
+): Promise<ClassProgress> {
+  const attempts = await db.query<{ id: string; total: number }>(
+    `select t.id, coalesce(jsonb_array_length(coalesce(t.settings, a.settings)->'touchpoints'), 0)::int as total
+       from attempts t join activities a on a.id = t.activity_id
+      where t.activity_id = $1 and t.id = any($2::uuid[])`,
+    [activityId, [...attemptIds]],
+  );
+  const ids = attempts.map((t) => t.id);
+  const touched = await db.query<Tracked & { attemptId: string }>(
+    `select attempt_id as "attemptId", key, label from chat_touchpoints where attempt_id = any($1::uuid[]) order by created_at, key`,
+    [ids],
+  );
+  const taken = await db.query<Tracked & { attemptId: string }>(
+    `select attempt_id as "attemptId", key, label from chat_positions where attempt_id = any($1::uuid[])`,
+    [ids],
+  );
+
+  const byAttempt = new Map<string, AttemptProgress>(attempts.map((t) => [t.id, { touchpoints: [], position: null, total: t.total }]));
+  for (const { attemptId, ...item } of touched) byAttempt.get(attemptId)!.touchpoints.push(item);
+  for (const { attemptId, ...item } of taken) byAttempt.get(attemptId)!.position = item;
+
+  const tally = (current: readonly { label: string }[], rows: readonly Tracked[]): Tally[] => {
+    const counts = new Map<string, Tally>(current.map((item) => [itemKey(item.label), { label: item.label, students: 0 }]));
+    for (const { key, label } of rows) {
+      const row = counts.get(key) ?? { label, students: 0 };
+      row.students += 1;
+      counts.set(key, row);
+    }
+    return [...counts.values()];
+  };
+  return {
+    started: attempts.length,
+    touchpoints: tally(settings.touchpoints, touched),
+    positions: tally(settings.positions, taken),
+    byAttempt,
+  };
+}
