@@ -13,6 +13,7 @@ export const FIELDS: { path: string[]; more?: boolean; card?: string }[] = [
   { path: ["scenarios", "opening"], more: true },
   { path: ["positions"] },
   { path: ["touchpoints"] },
+  { path: ["showProgress"], card: "touchpoints" },
   { path: ["persona", "name"] },
   { path: ["persona", "title"] },
   { path: ["persona", "helpfulness"] },

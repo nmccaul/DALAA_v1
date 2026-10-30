@@ -102,9 +102,13 @@ export async function draftSettings(
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
       const draft = await generateStructured(db, model, { ...ctx, purpose: "draft" }, StudyChatFields, prompt);
-      // The teacher's choices of mode and of student work win over the model's.
+      // The teacher's choices of mode and of student work win over the model's;
+      // showing progress is the teacher's too, set by create.ts.
       const mode = request.mode === "suggest" ? draft.mode : request.mode;
-      return { ok: true, settings: StudyChatSettings.parse({ ...draft, mode, studentWork: studentWork(mode, request.studentWork) }) };
+      return {
+        ok: true,
+        settings: StudyChatSettings.parse({ ...draft, mode, studentWork: studentWork(mode, request.studentWork), showProgress: false }),
+      };
     } catch (error) {
       if (NoObjectGeneratedError.isInstance(error) && attempt < ATTEMPTS) continue;
       console.error("study-chat draft failed:", error instanceof Error ? error.name : "unknown error");

@@ -43,6 +43,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
       initialTurns={chat.turns}
       startedAt={attempt?.startedAt.toISOString() ?? null}
       ended={endedReason}
+      progress={chat.progress}
     />
   );
 

@@ -6,7 +6,7 @@ import { Button, inputStyles } from "@/components/ui";
 import type { Exchange } from "./prompt";
 import { finishChatAction } from "./student-actions";
 import { ENDED, REPLY_FAILED } from "./student-messages";
-import { MAX_MESSAGE_LENGTH, type StudentChatView } from "./student-view";
+import { MAX_MESSAGE_LENGTH, progressLines, type StudentChatView, type StudentProgress } from "./student-view";
 import { readTurnEvents } from "./turn-stream";
 
 /** The message waiting for its reply. `key` is reused when it's sent again, so a retry never counts twice. */
@@ -26,6 +26,7 @@ export function ChatRoom({
   initialTurns,
   startedAt: initialStart,
   ended: initialEnded,
+  progress: initialProgress,
 }: {
   activityId: string;
   view: StudentChatView;
@@ -34,12 +35,15 @@ export function ChatRoom({
   startedAt: string | null;
   /** Why the chat is over; NULL while it goes on. */
   ended: string | null;
+  /** The progress meter; NULL unless the teacher shows it. */
+  progress: StudentProgress | null;
 }) {
   const [turns, setTurns] = useState(initialTurns);
   const [pending, setPending] = useState<Pending | null>(null);
   const [draft, setDraft] = useState("");
   const [ended, setEnded] = useState(initialEnded);
   const [startedAt, setStartedAt] = useState(initialStart);
+  const [progress, setProgress] = useState(initialProgress);
   const [now, setNow] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -102,6 +106,7 @@ export function ChatRoom({
       } else if (event.type === "reply") {
         setTurns((t) => [...t, { message, reply: event.reply }]);
         setPending(null);
+        if (event.progress) setProgress(event.progress);
         if (event.ended) setEnded(event.ended);
       } else {
         setPending({ key, message, reply: "", failed: event.reason });
@@ -143,6 +148,7 @@ export function ChatRoom({
               : `Time left: ${left} ${left === 1 ? "minute" : "minutes"}`}
           </span>
         )}
+        {progress && progressLines(progress).map((line) => <span key={line}>{line}</span>)}
       </div>
 
       <div role="log" aria-live="polite" className="flex flex-col gap-3">

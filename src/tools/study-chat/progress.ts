@@ -15,6 +15,7 @@ import { generateStructured, type AiCallContext } from "@/ai/call";
 import type { Db } from "@/db/types";
 import type { Exchange } from "./prompt";
 import type { StudyChatSettings } from "./schema";
+import type { StudentProgress } from "./student-view";
 
 /** A touchpoint or position as it was in the attempt's settings. */
 export type Tracked = { key: string; label: string };
@@ -104,4 +105,23 @@ export async function readProgress(db: Db, attemptId: string): Promise<ChatProgr
   );
   const [position] = await db.query<Tracked>("select key, label from chat_positions where attempt_id = $1", [attemptId]);
   return { touchpoints, position: position ?? null };
+}
+
+/**
+ * The student's meter for an attempt, or NULL when the teacher hasn't turned
+ * on "Show students their progress" (then nothing tracked is read for the
+ * student at all). `settings` are the attempt's own (D-031); `attemptId` is
+ * NULL before the student starts.
+ */
+export async function studentProgress(db: Db, settings: StudyChatSettings, attemptId: string | null): Promise<StudentProgress | null> {
+  if (!settings.showProgress || (settings.touchpoints.length === 0 && settings.positions.length === 0)) return null;
+  const { touchpoints, position } = attemptId === null ? { touchpoints: [], position: null } : await readProgress(db, attemptId);
+  const keys = new Set(settings.touchpoints.map((t) => itemKey(t.label)));
+  return {
+    points:
+      settings.touchpoints.length === 0
+        ? null
+        : { covered: touchpoints.filter((t) => keys.has(t.key)).length, total: settings.touchpoints.length },
+    position: settings.positions.length > 0 && position ? position.label : null,
+  };
 }

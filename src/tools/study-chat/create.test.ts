@@ -103,6 +103,18 @@ describe("creating a Study Chat", () => {
     expect(JSON.stringify(model.doGenerateCalls[0].prompt)).toContain("Each student adds their own work");
   });
 
+  it("keeps the teacher's 'Show students their progress' switch, off unless they turned it on", async () => {
+    const saved = async (showProgress: boolean | undefined) => {
+      const request = { contentId: content, guideId: null, mode: "case-chat" as const, studentWork: false, showProgress, creationKey: randomUUID() };
+      const result = await createStudyChat(db, answering(draft({ showProgress: !showProgress })), prof, course, request);
+      if (!result.ok) throw new Error(result.reason);
+      return (await getTaughtActivity(db, prof, result.activityId))?.settings;
+    };
+    expect(await saved(true)).toMatchObject({ showProgress: true });
+    expect(await saved(false)).toMatchObject({ showProgress: false });
+    expect(await saved(undefined)).toMatchObject({ showProgress: false });
+  });
+
   it("turns on 'Students bring their own work' for a Defend chat even when the switch was left off", async () => {
     const model = answering(draft({ studentWork: false }));
     const request = { contentId: content, guideId: null, mode: "defend" as const, studentWork: false, creationKey: randomUUID() };

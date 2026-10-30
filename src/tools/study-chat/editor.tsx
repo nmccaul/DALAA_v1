@@ -265,8 +265,22 @@ export function StudyChatEditor({
         )}
         {card(
           "touchpoints",
-          <Items items={s.touchpoints} none="None tracked." />,
-          <ItemsEditor path={["touchpoints"]} items={s.touchpoints} max={12} onChange={(v) => change((d) => void (d.touchpoints = v))} />,
+          <>
+            <Items items={s.touchpoints} none="None tracked." />
+            {s.showProgress && <p className="text-muted">Students see their progress as they chat.</p>}
+          </>,
+          <>
+            <ItemsEditor path={["touchpoints"]} items={s.touchpoints} max={12} onChange={(v) => change((d) => void (d.touchpoints = v))} />
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                id={fieldId(["showProgress"])}
+                type="checkbox"
+                checked={s.showProgress}
+                onChange={(e) => change((d) => void (d.showProgress = e.target.checked))}
+              />
+              {settingTitle(["showProgress"])}
+            </label>
+          </>,
         )}
         {card(
           "persona",

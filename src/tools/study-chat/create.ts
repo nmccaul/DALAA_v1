@@ -24,6 +24,8 @@ export type CreateRequest = {
   mode: ModeSlug | "suggest";
   /** The "Students bring their own work" switch: the draft keeps it as set here (on for a mode that needs it). */
   studentWork: boolean;
+  /** The "Show students their progress" switch; off when missing. */
+  showProgress?: boolean;
   /** Client-generated: a retry returns the first activity and drafts nothing new. */
   creationKey: string;
 };
@@ -52,7 +54,7 @@ export async function createStudyChat(
     { content: content.body, contentName: content.name, mode: request.mode, guide, studentWork: request.studentWork },
   );
   if (!draft.ok) return draft;
-  const { settings } = draft;
+  const settings = { ...draft.settings, showProgress: request.showProgress ?? false };
 
   const saved = await createActivity(db, actor, courseId, request.creationKey, {
     tool: STUDY_CHAT,

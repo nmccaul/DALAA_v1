@@ -73,6 +73,12 @@ export const StudyChatFields = z
         title: "Touchpoints",
         description: "Points the teacher wants to see whether each student brings up (for example, cost or culture).",
       }),
+    // The teacher's switch, like `studentWork`: drafting leaves it off and
+    // create.ts sets it. Missing in settings saved before it existed: off.
+    showProgress: z.boolean().default(false).meta({
+      title: "Show students their progress",
+      description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
+    }),
     persona: z
       .strictObject({
         name: text(80).meta({ title: "Name" }),

@@ -175,4 +175,36 @@ describe("live touchpoint tracking", () => {
     await send("Hi");
     expect(await trackCalls()).toHaveLength(0);
   });
+
+  describe("the student's meter", () => {
+    const show = (on: boolean) =>
+      db.query("update activities set settings = $2::text::jsonb where id = $1", [activity, JSON.stringify({ ...settings, showProgress: on })]);
+
+    it("sends nothing tracked to the student when the teacher hasn't turned it on", async () => {
+      await show(false);
+      expect((await readChat(db, student, activity))?.progress).toBeNull();
+      state.track = { touchpoints: ["Cash flow"], position: "Wait" };
+      expect(await send("Cash is tight, so wait.")).toMatchObject({ ok: true, progress: null });
+      expect((await readChat(db, student, activity))?.progress).toBeNull();
+    });
+
+    it("counts touchpoints covered and names the student's position when it's on, after each reply", async () => {
+      await show(true);
+      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 0, total: 2 }, position: null });
+      state.track = { touchpoints: ["Cash flow"], position: null };
+      expect(await send("Cash is tight.")).toMatchObject({ ok: true, progress: { points: { covered: 1, total: 2 }, position: null } });
+      state.track = { touchpoints: ["Lease terms"], position: "Wait" };
+      expect(await send("Lease is long, so wait.")).toMatchObject({ progress: { points: { covered: 2, total: 2 }, position: "Wait" } });
+      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 2, total: 2 }, position: "Wait" });
+    });
+
+    it("shows a replayed turn the same meter", async () => {
+      await show(true);
+      state.track = { touchpoints: ["Cash flow"], position: null };
+      const key = randomUUID();
+      await sendTurn(db, models, student, activity, { clientKey: key, message: "Cash." }).then(settle);
+      const replay = await sendTurn(db, models, student, activity, { clientKey: key, message: "Cash." });
+      expect(replay).toMatchObject({ kind: "replay", progress: { points: { covered: 1, total: 2 }, position: null } });
+    });
+  });
 });

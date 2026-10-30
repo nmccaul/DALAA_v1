@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { studentView } from "./student-view";
+import { progressLines, studentView } from "./student-view";
 import { draft } from "./test-fixtures";
 
 describe("studentView", () => {
@@ -30,5 +30,13 @@ describe("studentView", () => {
     ];
     for (const text of hidden) expect(sent).not.toContain(text);
     expect(sent).not.toMatch(/rubric|strictness|helpfulness|touchpoint|position/i);
+  });
+});
+
+describe("progressLines", () => {
+  it("names what the meter counts", () => {
+    expect(progressLines({ points: { covered: 2, total: 4 }, position: null })).toEqual(["Points covered — 2 of 4"]);
+    expect(progressLines({ points: { covered: 0, total: 3 }, position: "Wait" })).toEqual(["Points covered — 0 of 3", "Your position: Wait"]);
+    expect(progressLines({ points: null, position: null })).toEqual([]);
   });
 });

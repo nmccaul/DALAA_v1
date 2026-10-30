@@ -19,10 +19,10 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import { ADD_WORK_FIRST, ENDED, REPLY_FAILED } from "./student-messages";
-import { trackProgress } from "./progress";
+import { studentProgress, trackProgress } from "./progress";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
-import { MAX_MESSAGE_LENGTH } from "./student-view";
+import { MAX_MESSAGE_LENGTH, type StudentProgress } from "./student-view";
 
 /** The model that replies, and the cheap one that checks whether the question was answered. */
 export type ChatModels = { reply: LanguageModel; check: LanguageModel };
@@ -35,12 +35,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A turn key is a browser-made UUID; `sendTurn` refuses anything else. */
 export const validTurnKey = (key: string) => UUID.test(key);
 
-export type TurnOutcome = { ok: true; reply: string; attempt: Attempt } | { ok: false; reason: string };
+/** `progress`: the student's meter after this turn; NULL unless the teacher shows it. */
+export type TurnOutcome = { ok: true; reply: string; attempt: Attempt; progress: StudentProgress | null } | { ok: false; reason: string };
 
 export type SendResult =
   | { kind: "refused"; reason: string }
   /** This key already has a reply. */
-  | { kind: "replay"; reply: string; attempt: Attempt }
+  | { kind: "replay"; reply: string; attempt: Attempt; progress: StudentProgress | null }
   /** A new reply: read `textStream` as it's written; `done` settles once it's saved (or failed). */
   | { kind: "stream"; textStream: AsyncIterable<string>; done: Promise<TurnOutcome> };
 
@@ -174,7 +175,9 @@ export async function sendTurn(
     "select id, status, reply from chat_turns where attempt_id = $1 and client_key = $2",
     [attempt.id, input.clientKey],
   );
-  if (existing?.status === "done") return { kind: "replay", reply: existing.reply!, attempt };
+  if (existing?.status === "done") {
+    return { kind: "replay", reply: existing.reply!, attempt, progress: await studentProgress(db, chat.settings, attempt.id) };
+  }
   if (existing?.status === "pending") return { kind: "refused", reason: "That message is still being answered." };
 
   if (attempt.status === "in_progress" && timeIsUp(chat.settings, attempt)) {
@@ -219,7 +222,8 @@ export async function sendTurn(
     try {
       const reply = (await stream.done).trim();
       if (reply === "") throw new Error("The model sent an empty reply");
-      return { ok: true, reply, attempt: await finishTurn(db, models, actor, chat, started, claimed.id, reply) };
+      const finished = await finishTurn(db, models, actor, chat, started, claimed.id, reply);
+      return { ok: true, reply, attempt: finished, progress: await studentProgress(db, chat.settings, started.id) };
     } catch (error) {
       console.error("chat.reply failed:", error instanceof Error ? error.message : error);
       await db.query("update chat_turns set status = 'failed' where id = $1 and status = 'pending'", [claimed.id]);
@@ -261,19 +265,25 @@ export async function finishChat(
 
 /**
  * The student's chat so far: their attempt (NULL before they start), every
- * finished exchange, and the work they added (NULL when there's none).
+ * finished exchange, the work they added (NULL when there's none), and their
+ * progress meter (NULL unless the teacher shows it).
  */
 export async function readChat(
   db: Db,
   actor: Actor,
   activityId: string,
-): Promise<{ attempt: Attempt | null; turns: Exchange[]; work: StudentWork | null } | null> {
+): Promise<{ attempt: Attempt | null; turns: Exchange[]; work: StudentWork | null; progress: StudentProgress | null } | null> {
   const chat = await openChat(db, actor, activityId);
   if ("reason" in chat) return null;
   let attempt = await getAttempt(db, actor, activityId);
   if (attempt?.status === "in_progress" && timeIsUp(chat.settings, attempt)) {
     attempt = await completeAttempt(db, attempt.id, "time");
   }
-  if (!attempt) return { attempt, turns: [], work: null };
-  return { attempt, turns: await doneTurns(db, attempt.id), work: await getStudentWork(db, attempt.id) };
+  if (!attempt) return { attempt, turns: [], work: null, progress: await studentProgress(db, chat.settings, null) };
+  return {
+    attempt,
+    turns: await doneTurns(db, attempt.id),
+    work: await getStudentWork(db, attempt.id),
+    progress: await studentProgress(db, chat.settings, attempt.id),
+  };
 }

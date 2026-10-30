@@ -5,6 +5,7 @@ import { Button, inputStyles } from "@/components/ui";
 import { PICKER_PARAM } from "@/lti/picker";
 import { draftAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
+import { settingTitle } from "./schema";
 
 function Problem({ state }: { state: FormState }) {
   return state.error ? (
@@ -151,6 +152,13 @@ export function ModeForm({
         <span className="flex flex-col gap-1">
           <span className="font-medium">Students bring their own work</span>
           <span className="text-sm text-muted">Each student adds their paper, code or plan before the chat, and the chat is about it. Defend always asks for it.</span>
+        </span>
+      </label>
+      <label className="flex items-start gap-3">
+        <input type="checkbox" name="showProgress" className="mt-1 shrink-0" />
+        <span className="flex flex-col gap-1">
+          <span className="font-medium">{settingTitle(["showProgress"])}</span>
+          <span className="text-sm text-muted">As they chat, students see how many of your touchpoints they&apos;ve covered and the position they&apos;ve taken.</span>
         </span>
       </label>
       <Problem state={state} />

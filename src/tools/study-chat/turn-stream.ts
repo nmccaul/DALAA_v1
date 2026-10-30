@@ -8,11 +8,12 @@
 
 import type { SendResult } from "./chat";
 import { ENDED, REPLY_FAILED } from "./student-messages";
+import type { StudentProgress } from "./student-view";
 
 export type TurnEvent =
   | { type: "text"; text: string }
-  /** `ended`: why the chat is over now; NULL while it goes on. */
-  | { type: "reply"; reply: string; ended: string | null }
+  /** `ended`: why the chat is over now; NULL while it goes on. `progress`: NULL unless the teacher shows it. */
+  | { type: "reply"; reply: string; ended: string | null; progress: StudentProgress | null }
   | { type: "failed"; reason: string };
 
 type Ending = { status: "in_progress" | "completed"; endedBy: keyof typeof ENDED | null };
@@ -36,7 +37,7 @@ export function turnResponse(result: SendResult): { response: Response; settled:
   if (result.kind === "replay") {
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(line({ type: "reply", reply: result.reply, ended: endedReason(result.attempt) }));
+        controller.enqueue(line({ type: "reply", reply: result.reply, ended: endedReason(result.attempt), progress: result.progress }));
         controller.close();
       },
     });
@@ -70,7 +71,7 @@ export function turnResponse(result: SendResult): { response: Response; settled:
       // A failed call reports itself through `done`.
     }
     const outcome = await result.done;
-    send(outcome.ok ? { type: "reply", reply: outcome.reply, ended: endedReason(outcome.attempt) } : { type: "failed", reason: outcome.reason });
+    send(outcome.ok ? { type: "reply", reply: outcome.reply, ended: endedReason(outcome.attempt), progress: outcome.progress } : { type: "failed", reason: outcome.reason });
     if (open) controller.close();
   })();
   return { response: ndjson(body), settled };

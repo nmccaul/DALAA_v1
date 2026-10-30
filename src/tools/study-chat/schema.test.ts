@@ -6,6 +6,7 @@ import { rubricPoints, settingProblems, settingTitle, StudyChatSettings } from "
 const valid = (): StudyChatSettings => ({
   mode: "case-chat",
   studentWork: false,
+  showProgress: false,
   goal: "Recommend whether Harbor Bikes should open a second store, using evidence from the case.",
   scenarios: [
     {
