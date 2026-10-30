@@ -196,6 +196,13 @@ describe("a course's Canvas content", () => {
     expect(await db.query("select course_id from course_content")).toEqual([{ course_id: courseId }]);
   });
 
+  it("saves a pick as an AI-only guide, kept out of what students read", async () => {
+    const saved = await saveFromCanvas(db, prof, asPractice(), courseId, randomUUID(), { kind: "page", url: "case-harbor-bikes" }, "guide");
+    expect(saved).toMatchObject({ ok: true, content: { source: "canvas-page", name: "Case: Harbor Bikes" } });
+    expect(await db.query("select course_id from course_guides")).toEqual([{ course_id: courseId }]);
+    expect(await db.query("select id from course_content")).toEqual([]);
+  });
+
   it("saves a picked file", async () => {
     expect(await saveFromCanvas(db, prof, asPractice(), courseId, randomUUID(), { kind: "file", id: 8001 })).toMatchObject({
       ok: true,

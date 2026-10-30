@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { startAttempt } from "@/attempts/store";
+import { countStartedAttempts, getTakenActivity, startAttempt } from "@/attempts/store";
 import { saveContent } from "@/content/store";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
@@ -184,6 +184,39 @@ describe("a student's Study Chat", () => {
     await setSettings(draft({ completion: { maxTurns: 5, timeLimitMinutes: null, question: null, studentCanFinish: false } }));
     await send("One");
     expect(await finishChat(db, student, activity)).toEqual({ ok: false, reason: "This chat ends on its own." });
+  });
+
+  it("keeps chatting under the settings it started with after the teacher edits; a new attempt gets the edit (D-031)", async () => {
+    expect(await send("One")).toMatchObject({ ok: true });
+    const edited = draft({
+      persona: { ...draft().persona, name: "Sam Lee" },
+      completion: { maxTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: false },
+    });
+    await setSettings(edited);
+
+    expect(await send("Two")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
+    expect(await send("Three")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
+    const system = JSON.stringify(models.reply.doStreamCalls[2].prompt[0]);
+    expect(system).toContain("Maya Ortiz");
+    expect(system).not.toContain("Sam Lee");
+    expect((await getTakenActivity(db, student, activity))?.settings).toEqual(draft());
+    expect(await finishChat(db, student, activity)).toMatchObject({ ok: true, attempt: { endedBy: "student" } });
+
+    await db.query("insert into course_members (course_id, user_id, role) values ($1, $2, 'student')", [course, outsider.userId]);
+    expect(await getTakenActivity(db, outsider, activity)).toMatchObject({ settings: edited });
+    await sendTurn(db, models, outsider, activity, { clientKey: randomUUID(), message: "Hi" }).then(settle);
+    expect(JSON.stringify(models.reply.doStreamCalls[3].prompt[0])).toContain("Sam Lee");
+    const [copy] = await db.query<{ settings: unknown }>("select settings from attempts where user_id = $1", [outsider.userId]);
+    expect(copy.settings).toEqual(edited);
+    expect(await countStartedAttempts(db, activity)).toBe(2);
+  });
+
+  it("reads the activity's current settings for an attempt from before settings were copied", async () => {
+    await send("One");
+    await db.query("update attempts set settings = null");
+    const edited = draft({ completion: { maxTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: false } });
+    await setSettings(edited);
+    expect(await send("Two")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "turns" } });
   });
 
   it("is only for active students of the course, and only once published", async () => {

@@ -6,6 +6,7 @@
 
 import type { LanguageModel } from "ai";
 import { activityForKey, createActivity, getTaughtActivity, publishActivity, updateActivity } from "@/activities/store";
+import { getTaughtGuide } from "@/content/guide";
 import { getContent } from "@/content/store";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -18,7 +19,13 @@ export const STUDY_CHAT = "study-chat";
 
 export type CreateRequest = {
   contentId: string;
+  /** The AI-only guide the teacher added, if any (src/content/guide.ts). */
+  guideId: string | null;
   mode: ModeSlug | "suggest";
+  /** The "Students bring their own work" switch: the draft keeps it as set here (on for a mode that needs it). */
+  studentWork: boolean;
+  /** The "Show students their progress" switch; off when missing. */
+  showProgress?: boolean;
   /** Client-generated: a retry returns the first activity and drafts nothing new. */
   creationKey: string;
 };
@@ -37,21 +44,25 @@ export async function createStudyChat(
 
   const content = await getContent(db, actor, courseId, request.contentId);
   if (!content) return { ok: false, reason: "We couldn't find that material. Add it again." };
+  const guide = request.guideId === null ? null : await getTaughtGuide(db, actor, courseId, request.guideId);
+  if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
 
   const draft = await draftSettings(
     db,
     model,
     { userId: actor.userId, courseId },
-    { content: content.body, contentName: content.name, mode: request.mode },
+    { content: content.body, contentName: content.name, mode: request.mode, guide, studentWork: request.studentWork },
   );
   if (!draft.ok) return draft;
+  const settings = { ...draft.settings, showProgress: request.showProgress ?? false };
 
   const saved = await createActivity(db, actor, courseId, request.creationKey, {
     tool: STUDY_CHAT,
-    title: draft.settings.scenarios[0].title,
-    settings: draft.settings,
-    points: rubricPoints(draft.settings),
+    title: settings.scenarios[0].title,
+    settings,
+    points: rubricPoints(settings),
     contentId: content.id,
+    guideId: guide?.id ?? null,
   });
   return saved.ok ? { ok: true, activityId: saved.id } : saved;
 }

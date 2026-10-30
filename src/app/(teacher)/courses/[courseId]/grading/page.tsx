@@ -4,6 +4,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { isLtiCourse } from "@/lti/roster";
 import { listCourseGrades, type StudentGrade } from "@/results/grading";
+import { screensFor } from "@/tools/screens";
 import { resolveDisputeAction, sendGradesAction, setScoreAction } from "./actions";
 import { REFUSAL, readSummary, summaryLines } from "./push-text";
 
@@ -29,6 +30,18 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
   const fromCanvas = await isLtiCourse(db(), course.id);
   const pushError = typeof q.pusherror === "string" ? (REFUSAL[q.pusherror as keyof typeof REFUSAL] ?? REFUSAL.unavailable) : null;
 
+  // What each tool adds; Canvas's Student View user isn't counted in a class view.
+  const notes = await Promise.all(
+    assignments.map(
+      (a) =>
+        screensFor(a.tool)?.gradingNotes?.(
+          db(),
+          a.activityId,
+          a.students.flatMap((s) => (s.attemptId && !s.studentView ? [s.attemptId] : [])),
+        ) ?? null,
+    ),
+  );
+
   const disputed = assignments.reduce((n, a) => n + a.students.filter((s) => s.disputeId !== null).length, 0);
 
   if (assignments.length === 0) {
@@ -50,7 +63,7 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
           their reason.
         </p>
       )}
-      {assignments.map((a) => (
+      {assignments.map((a, i) => (
         <section key={a.activityId} className="flex flex-col gap-3" aria-labelledby={`grades-${a.activityId}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 id={`grades-${a.activityId}`} className="scroll-mt-4 font-display text-xl font-semibold break-words">
@@ -65,6 +78,22 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
               </form>
             )}
           </div>
+          {notes[i] && notes[i].summary.length > 0 && (
+            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm">
+              {notes[i].summary.map((section) => (
+                <div key={section.heading} className="flex flex-col gap-1">
+                  <h3 className="font-medium">{section.heading}</h3>
+                  <ul className="flex flex-col gap-0.5 text-muted">
+                    {section.lines.map((line) => (
+                      <li key={line} className="break-words">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
           {q.pushed === a.activityId && (
             <div
               role={pushError ? "alert" : "status"}
@@ -94,6 +123,12 @@ export default async function CourseGradingPage({ params, searchParams }: PagePr
                       {s.studentView && <span translate="yes"> · Student View</span>}
                       {s.flagged && <span translate="yes"> · Not on the latest class list</span>}
                     </span>
+                    {s.attemptId &&
+                      notes[i]?.byAttempt[s.attemptId]?.map((line) => (
+                        <span key={line} className="text-sm text-muted break-words">
+                          {line}
+                        </span>
+                      ))}
                   </div>
                   {s.disputeId && s.attemptId ? (
                     <DisputeForm courseId={course.id} student={s} error={q.attempt === s.attemptId ? error : undefined} />

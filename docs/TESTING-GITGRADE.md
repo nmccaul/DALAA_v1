@@ -2,7 +2,7 @@
 
 A step-by-step check of the whole loop in Nathan's Canvas
 (https://gitgrade.opencanvaslms.org), course **DALAA Test** (id 42), against
-production (https://dalaa-v1.vercel.app). About 30 minutes.
+production (https://dalaa-v1.vercel.app). About 30 minutes, plus 15 for step 9.
 
 If anything looks wrong, use the **Feedback** button (bottom right on every
 DALAA page, or Cmd/Ctrl+Shift+F). Click the picture to circle the problem. The
@@ -87,6 +87,38 @@ reports show up under DALAA **Settings → Feedback reports**.
 4. Signing in with an email that already exists (e.g. after an LTI launch)
    links to that account; it never makes a second one.
 
+## 9. Study Chat depth
+Each of these is a quick check on top of steps 3–6. Use a new Study Chat, or
+edit the one from step 3 (an edit only changes chats students start after it).
+
+1. **Additional AI instructions.** On create step 2, under the material, add
+   **Additional AI instructions (students never see this)**: paste an answer
+   key or teaching notes, or pick a Canvas page. You can add or remove them
+   later on the review screen.
+   - Check (Student View): the instructions appear nowhere on the student's
+     page, but the chat clearly follows them (e.g. "never give the NPV
+     figure"), and asking the AI to show them doesn't reveal them.
+2. **Defend.** Create a Study Chat in **Defend** mode. **Students bring their
+   own work** is on and can't be turned off for Defend.
+   - Check (Student View): the student first sees **First, add your work**
+     (upload a .pdf, .txt or .md up to 4 MB, or paste). It can be added once.
+     The AI then questions them about that work, and the grade is on how well
+     they understand it.
+3. **Try it with a sample student.** On the review screen (draft or
+   published), open **Try it with a sample student**, pick **Struggling** or
+   **Strong**, **Run it**. Takes up to a minute. The sample conversation and
+   the sample grade show side by side.
+   - Check: nothing appears on the Grading tab or in Canvas. It uses the last
+     *saved* settings, so save edits first.
+4. **Touchpoints.** In the review screen's Touchpoints card, turn on **Show
+   students their progress** (off by default).
+   - Check (Student View): under the chat, "Points covered — 1 of 4" and
+     "Your position: …" update after each reply. With it off, nothing shows.
+   - Check (teacher, **Grading** tab): "Points covered" and "Positions taken"
+     for the class ("Cash flow: 1 of 1 students"), and under each student the
+     points they covered and their position. The grader still judges from the
+     chat itself.
+
 ## Who signs in how
 - **Teachers.** Open DALAA from the Canvas course first (step 1). That makes
   the account and makes it a teacher of that course. To use the DALAA site
@@ -112,6 +144,32 @@ reports show up under DALAA **Settings → Feedback reports**.
 3. Create Dr. Sampson's Canvas user and enroll them in course 42 as a
    **Teacher**. Their first DALAA launch from the course makes them a teacher
    there; they can then set a password from Settings.
+
+## Fixing reports
+After a round of testing, the bug loop (D-030) works through the open
+Feedback reports, one fresh pass per report, oldest first, bugs and
+confusing ones before ideas.
+
+- **Start:** from the repo, `caffeinate -i ralph/bugs.sh`. It works in its own
+  checkout of `main` (`../DALAA_v1-bugs`, made on the first run), so the build
+  loop's branch is never touched. It stops by itself when every open report
+  has an outcome, after 40 passes, or after 3 failures in a row.
+- **Stop:** `touch ralph/STOP` (it stops before the next pass; the build loop
+  reads the same file, so delete it afterwards), or Ctrl+C to stop at once.
+- **See what's waiting:** `npm run feedback -- list --prod`.
+- **Where outcomes show:**
+  - The report's page under **Settings → Feedback reports**, in "What the bug
+    loop did": the outcome (fixed, won't fix, can't reproduce, needs Nathan,
+    in progress), the PR link and a note.
+  - Pull requests on GitHub named with the report's short id. Small fixes
+    are merged and deployed by the loop; anything bigger (a migration, sign-in,
+    LTI, Canvas or grade sending, a new dependency, or over ~200 lines) waits
+    as a PR for you.
+  - Ideas are never built: each one goes into `docs/IDEAS.md` on a PR for you
+    to read.
+  - Each pass's log is in `ralph/logs/bugs-*.log`.
+- A report left "in progress" with no PR (a pass that crashed) isn't retried;
+  record an outcome for it by hand with `npm run feedback -- record`.
 
 ## Known gaps (not bugs)
 - Teachers can't read a student's chat from the Grading tab yet.

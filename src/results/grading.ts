@@ -31,6 +31,8 @@ export type StudentGrade = {
 
 export type AssignmentGrades = {
   activityId: string;
+  /** Which tool it is, so the page can show what that tool adds (src/tools/screens.ts). */
+  tool: string;
   title: string;
   points: number;
   students: StudentGrade[];
@@ -47,7 +49,7 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
   if (!UUID.test(courseId)) return [];
   const where = and({ text: "a.course_id = $1 and a.status = 'published'", values: [courseId] }, coursesTaughtBy(actor, "c"));
   const rows = await db.query<Omit<AssignmentGrades, "students"> & StudentGrade>(
-    `select a.id as "activityId", a.title, a.points::float8 as points,
+    `select a.id as "activityId", a.tool, a.title, a.points::float8 as points,
             u.id as "userId", u.display_name as name, u.external_id as "loginId", m.status = 'flagged' as flagged,
             m.student_view is true as "studentView",
             case when r.status = 'graded' then 'graded'
@@ -71,9 +73,9 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
     where.values,
   );
   const byActivity = new Map<string, AssignmentGrades>();
-  for (const { activityId, title, points, ...student } of rows) {
+  for (const { activityId, tool, title, points, ...student } of rows) {
     let assignment = byActivity.get(activityId);
-    if (!assignment) byActivity.set(activityId, (assignment = { activityId, title, points, students: [] }));
+    if (!assignment) byActivity.set(activityId, (assignment = { activityId, tool, title, points, students: [] }));
     assignment.students.push(student);
   }
   return [...byActivity.values()];

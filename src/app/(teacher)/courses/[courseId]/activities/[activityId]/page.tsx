@@ -9,6 +9,9 @@ import { screensFor } from "@/tools/screens";
 
 export const metadata: Metadata = { title: "Assignment" };
 
+/** A review screen's actions can run long: Study Chat's sample student has a whole chat, then grades it. */
+export const maxDuration = 300;
+
 /** One assignment for its teacher: the tool's own review screen (src/tools/screens.ts). */
 export default async function ActivityPage({ params, searchParams }: PageProps<"/courses/[courseId]/activities/[activityId]">) {
   const { courseId, activityId } = await params;

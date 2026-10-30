@@ -11,6 +11,7 @@ export function PickForm({
   pick,
   next,
   here,
+  guide,
   children,
 }: {
   courseId: string;
@@ -19,6 +20,8 @@ export function PickForm({
   next: string;
   /** This picker's own address, to come back to after reconnecting. */
   here: string;
+  /** Saving it as an AI-only guide, attached to `activityId` when there is one. */
+  guide: { activityId: string } | null;
   children: React.ReactNode;
 }) {
   const [state, action, pending] = useActionState<PickState, FormData>(pickFromCanvasAction, {});
@@ -28,6 +31,8 @@ export function PickForm({
       <input type="hidden" name="creationKey" value={creationKey} />
       <input type="hidden" name="pick" value={pick} />
       <input type="hidden" name="next" value={next} />
+      {guide && <input type="hidden" name="for" value="guide" />}
+      {guide?.activityId && <input type="hidden" name="activity" value={guide.activityId} />}
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-col">{children}</div>
         <Button variant="secondary" disabled={pending} className="shrink-0">

@@ -6,6 +6,11 @@
  * Settings come back to server code only: a page must pass a student no more
  * than the tool's own student view of them (CLAUDE.md: hidden material is
  * never sent to the student's browser).
+ *
+ * An attempt keeps the settings it started under (D-031): once a student has
+ * an attempt, they and its grader read that copy, never the teacher's later
+ * edits. An attempt from before copies were kept (`settings` NULL) reads the
+ * activity's current settings.
  */
 
 import { canvasBaseUrl } from "@/canvas/institution";
@@ -30,6 +35,7 @@ export type TakenActivity = {
   courseId: string;
   tool: string;
   title: string;
+  /** The student's attempt's copy once they've started (D-031); the activity's current settings before that. */
   settings: Record<string, unknown>;
   /** What the student studies; NULL when the activity has none. */
   content: { name: string; body: string } | null;
@@ -59,14 +65,15 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
       canvasCourseId: string | null;
     }
   >(
-    `select a.id, a.course_id as "courseId", a.tool, a.title, a.settings,
+    `select a.id, a.course_id as "courseId", a.tool, a.title, coalesce(t.settings, a.settings) as settings,
             cc.name as "contentName", cc.body as "contentBody",
             case when c.is_practice then null else c.canvas_course_id end as "canvasCourseId"
        from activities a
        join courses c on c.id = a.course_id
        left join course_content cc on cc.id = a.content_id
+       left join attempts t on t.activity_id = a.id and t.user_id = $${where.values.length + 1}
       where ${where.text}`,
-    where.values,
+    [...where.values, actor.userId],
   );
   if (!row) return null;
   const { contentName, contentBody, canvasCourseId, ...activity } = row;
@@ -77,13 +84,19 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
   };
 }
 
-/** The student's attempt at an activity they can take, started now if they haven't one. Starting twice returns the first. */
+/**
+ * The student's attempt at an activity they can take, started now if they
+ * haven't one, with a copy of the activity's settings as they are now.
+ * Starting twice returns the first, and keeps its copy.
+ */
 export async function startAttempt(db: Db, actor: Actor, activityId: string): Promise<Attempt | null> {
   if (!(await getTakenActivity(db, actor, activityId))) return null;
-  await db.query("insert into attempts (activity_id, user_id) values ($1, $2) on conflict (activity_id, user_id) do nothing", [
-    activityId,
-    actor.userId,
-  ]);
+  await db.query(
+    `insert into attempts (activity_id, user_id, settings)
+     select id, $2, settings from activities where id = $1
+     on conflict (activity_id, user_id) do nothing`,
+    [activityId, actor.userId],
+  );
   return getAttempt(db, actor, activityId);
 }
 
@@ -110,7 +123,7 @@ export async function completeAttempt(db: Db, attemptId: string, endedBy: EndedB
   return row;
 }
 
-/** A finished attempt with what its grader needs: whose it is and the activity's settings. Server-only callers. */
+/** A finished attempt with what its grader needs: whose it is and the settings it ran under. Server-only callers. */
 export type FinishedAttempt = {
   attempt: Attempt;
   userId: string;
@@ -122,7 +135,8 @@ export async function getFinishedAttempt(db: Db, attemptId: string): Promise<Fin
   if (!UUID.test(attemptId)) return null;
   const [row] = await db.query<Attempt & { userId: string; courseId: string; tool: string; settings: Record<string, unknown> }>(
     `select t.id, t.activity_id as "activityId", t.status, t.ended_by as "endedBy", t.started_at as "startedAt",
-            t.completed_at as "completedAt", t.user_id as "userId", a.course_id as "courseId", a.tool, a.settings
+            t.completed_at as "completedAt", t.user_id as "userId", a.course_id as "courseId", a.tool,
+            coalesce(t.settings, a.settings) as settings
        from attempts t join activities a on a.id = t.activity_id
       where t.id = $1 and t.status = 'completed'`,
     [attemptId],
@@ -130,4 +144,13 @@ export async function getFinishedAttempt(db: Db, attemptId: string): Promise<Fin
   if (!row) return null;
   const { userId, courseId, tool, settings, ...attempt } = row;
   return { attempt, userId, activity: { id: attempt.activityId, courseId, tool, settings } };
+}
+
+/** How many students have started an activity, finished or not: the teacher's edits don't reach their attempts. */
+export async function countStartedAttempts(db: Db, activityId: string): Promise<number> {
+  if (!UUID.test(activityId)) return 0;
+  const [{ count }] = await db.query<{ count: number }>("select count(*)::int as count from attempts where activity_id = $1", [
+    activityId,
+  ]);
+  return count;
 }

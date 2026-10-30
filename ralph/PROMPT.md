@@ -65,6 +65,12 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
    (`vercel -Q ~/.vercel-dalaa rollback`), record why, and mark the checkpoint
    `BLOCKED`.
 
+## Time limits (2026-10-29: a pass waited 20+ minutes on a command that failed every 2 minutes)
+- Nothing in a pass runs open-ended. Give every long command a limit, and never wait on a background process, server or loop for more than 10 minutes.
+- Before polling for a condition, run the check once and look at the real output, so you know the condition can match.
+- The same step failing twice the same way means stop: record what failed (the exact error) in PROGRESS, mark the task partial, and end the pass. Don't retry a third time.
+- The whole pass is killed after 40 minutes; split work so a pass finishes well inside that.
+
 ## Hard rules
 - **Secrets:** never print, echo, log or commit the values in `.env.local` or
   Vercel env. Check a secret by its presence or length only. Don't edit

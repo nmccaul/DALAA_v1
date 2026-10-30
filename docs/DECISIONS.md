@@ -219,3 +219,16 @@ only an env change.
 | — | BYU IT: personal tokens OK at multi-instructor scale? Records on Vercel? FERPA? Okta registration? | Nathan | In progress with a BYU Canvas engineer — see `conversations/2026-09-30-byu-canvas-engineer.md`. |
 | — | Production hosting: Vercel + Supabase, or a BYU server? (D-015) Who runs `services.byu.edu`, can it run Postgres, can Nathan deploy? | Nathan / Scott | Decide before real student data. |
 | — | Classic or New Quizzes at BYU? | Scott | Two different APIs for quiz import. |
+
+### D-031 · An attempt keeps the settings it started under
+*2026-10-29, overnight build (T39). Confirmed by Nathan 2026-10-29: no backfill.* Teachers can edit a
+published Study Chat. When a student starts, their attempt stores a copy of the
+activity's settings (`attempts.settings`): persona, completion, positions,
+touchpoints, rubric and strictness. The chat, the completion checks, the
+student's page and the grader read that copy, never the live settings, so an
+edit applies to new attempts only. The review screen says so once anyone has
+started ("N students have started; changes apply to new attempts only.").
+Results already keep each criterion's label and max with its score.
+Attempts from before the column existed are **left NULL, not backfilled**, and
+read the activity's current settings: that keeps the migration additive (it can
+reach production before the code) and those were test attempts anyway.

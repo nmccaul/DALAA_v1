@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import { MODE_SLUGS } from "./modes";
+import { MODE_SLUGS, MODES } from "./modes";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -38,9 +38,21 @@ const LabeledItem = z.strictObject({
 
 export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 
-export const StudyChatSettings = z
+/**
+ * Every setting, without the rules that tie one setting to another. The draft
+ * is generated against this (draft.ts) because "Students bring their own work"
+ * is the teacher's switch, set after the model answers.
+ */
+export const StudyChatFields = z
   .strictObject({
     mode: z.enum(MODE_SLUGS).meta({ title: "Mode", description: "The kind of chat this is." }),
+    // The teacher's switch on the create flow, not the AI's: drafting keeps it
+    // as the teacher set it (create.ts). Missing in settings saved before it
+    // existed, which asked for no work.
+    studentWork: z.boolean().default(false).meta({
+      title: "Students bring their own work",
+      description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
+    }),
     goal: text(1000).meta({
       title: "Goal",
       description: "What students should be able to do after the chat, in one or two sentences.",
@@ -61,6 +73,12 @@ export const StudyChatSettings = z
         title: "Touchpoints",
         description: "Points the teacher wants to see whether each student brings up (for example, cost or culture).",
       }),
+    // The teacher's switch, like `studentWork`: drafting leaves it off and
+    // create.ts sets it. Missing in settings saved before it existed: off.
+    showProgress: z.boolean().default(false).meta({
+      title: "Show students their progress",
+      description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
+    }),
     persona: z
       .strictObject({
         name: text(80).meta({ title: "Name" }),
@@ -117,6 +135,11 @@ export const StudyChatSettings = z
       .meta({ title: "Grading", description: "What the AI grader scores the chat on." }),
   })
   .meta({ title: "Study Chat settings" });
+
+export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
+  message: "A Defend chat is about each student's own work, so “Students bring their own work” stays on.",
+  path: ["studentWork"],
+});
 
 export type StudyChatSettings = z.infer<typeof StudyChatSettings>;
 

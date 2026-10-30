@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { MODE_SLUGS, MODES } from "./modes";
-import { FIELDS } from "./fields";
+import { cardOf, FIELDS } from "./fields";
 import { rubricPoints, settingProblems, settingTitle, StudyChatSettings } from "./schema";
 
 const valid = (): StudyChatSettings => ({
   mode: "case-chat",
+  studentWork: false,
+  showProgress: false,
   goal: "Recommend whether Harbor Bikes should open a second store, using evidence from the case.",
   scenarios: [
     {
@@ -72,6 +74,16 @@ describe("Study Chat settings", () => {
     expect(errorsOf({ ...s, scenarios: [s.scenarios[0], s.scenarios[0]] })).toEqual(["scenarios"]);
   });
 
+  it("keeps students bringing their own work in a Defend chat", () => {
+    expect(errorsOf({ ...valid(), mode: "defend", studentWork: true })).toEqual([]);
+    expect(errorsOf({ ...valid(), mode: "defend", studentWork: false })).toEqual(["studentWork"]);
+    const error = StudyChatSettings.safeParse({ ...valid(), mode: "defend" }).error!;
+    expect(settingProblems(error)).toEqual(["A Defend chat is about each student's own work, so “Students bring their own work” stays on."]);
+    for (const slug of MODE_SLUGS.filter((m) => !MODES[m].needsStudentWork)) {
+      expect(errorsOf({ ...valid(), mode: slug, studentWork: false })).toEqual([]);
+    }
+  });
+
   it("refuses a mode that doesn't exist", () => {
     expect(errorsOf({ ...valid(), mode: "lecture" })).toEqual(["mode"]);
   });
@@ -109,8 +121,8 @@ describe("Study Chat settings", () => {
 });
 
 describe("Study Chat modes", () => {
-  it("has the ten modes, each keyed by its own slug and fully described", () => {
-    expect(MODE_SLUGS).toHaveLength(10);
+  it("has the eleven modes, each keyed by its own slug and fully described", () => {
+    expect(MODE_SLUGS).toHaveLength(11);
     for (const slug of MODE_SLUGS) {
       const mode = MODES[slug];
       expect(mode.slug).toBe(slug);
@@ -134,8 +146,14 @@ describe("setting labels", () => {
   it("exist for every setting the review screen can search", () => {
     for (const field of FIELDS) {
       expect(settingTitle(field.path)).not.toBe("");
-      expect(settingTitle([field.path[0]])).not.toBe("");
+      expect(settingTitle([cardOf(field)])).not.toBe("");
     }
+  });
+
+  it("read settings saved before the own-work switch as not asking for it", () => {
+    const old: Partial<StudyChatSettings> = valid();
+    delete old.studentWork;
+    expect(StudyChatSettings.parse(old).studentWork).toBe(false);
   });
 
   it("name what needs fixing in plain sentences", () => {

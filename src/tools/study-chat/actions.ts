@@ -1,19 +1,29 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { graderModel } from "@/ai/models";
+import { setActivityGuide } from "@/activities/store";
+import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
+import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
+import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
 
 const newPath = (courseId: string) => `/courses/${courseId}/activities/new/study-chat`;
+const reviewPath = (courseId: string, activityId: string) => `/courses/${courseId}/activities/${activityId}`;
 
-/** Step 1: the material, pasted or uploaded. Back to the same page with ?content=. */
+/**
+ * Step 1: the material, pasted or uploaded. Back to the same page with
+ * ?content=. With `guideFor` (the saved material's id) it's the optional
+ * AI-only guide instead, and the page comes back with ?content=&guide=. With
+ * `guideOf` (an activity's id, from its review screen) the guide is attached
+ * to that activity and the review opens again.
+ */
 export async function saveMaterialAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
@@ -24,9 +34,23 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
       ? { kind: "file" as const, name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }
       : { kind: "paste" as const, name, text: String(form.get("text") ?? "") };
 
-  const saved = await saveContent(db(), actor, courseId, String(form.get("creationKey") ?? ""), input);
+  const creationKey = String(form.get("creationKey") ?? "");
+  const guideFor = form.get("guideFor");
+  const guideOf = form.get("guideOf");
+  const saved =
+    guideFor || guideOf
+      ? await saveGuide(db(), actor, courseId, creationKey, input)
+      : await saveContent(db(), actor, courseId, creationKey, input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(keepPicker(`${newPath(courseId)}?content=${saved.content.id}`, pickerRequest(form.get(PICKER_PARAM))));
+  if (guideOf) {
+    const attached = await setActivityGuide(db(), actor, String(guideOf), saved.content.id);
+    if (!attached.ok) return { error: attached.reason };
+    redirect(keepPicker(reviewPath(courseId, String(guideOf)), pickerRequest(form.get(PICKER_PARAM))));
+  }
+  const query = guideFor
+    ? `content=${encodeURIComponent(String(guideFor))}&guide=${saved.content.id}`
+    : `content=${saved.content.id}`;
+  redirect(keepPicker(`${newPath(courseId)}?${query}`, pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
@@ -41,7 +65,10 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
 
   const created = await createStudyChat(db(), graderModel(), actor, courseId, {
     contentId: String(form.get("contentId") ?? ""),
+    guideId: form.get("guideId") ? String(form.get("guideId")) : null,
     mode,
+    studentWork: form.get("studentWork") === "on",
+    showProgress: form.get("showProgress") === "on",
     creationKey: String(form.get("creationKey") ?? ""),
   });
   if (!created.ok) return { error: created.reason };
@@ -69,4 +96,32 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   const published = await publishStudyChat(db(), actor, activityId);
   if (!published.ok) return { error: published.reason };
   redirect(afterPublishPath(courseId, pickerRequest(form.get(PICKER_PARAM))));
+}
+
+/** The review screen's "Remove" next to the guide: the chat and grader stop reading it. */
+export async function removeGuideAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const activityId = String(form.get("activityId") ?? "");
+  const removed = await setActivityGuide(db(), actor, activityId, null);
+  if (!removed.ok) return { error: removed.reason };
+  redirect(keepPicker(reviewPath(courseId, activityId), pickerRequest(form.get(PICKER_PARAM))));
+}
+
+export type TrialState = { error?: string; trial?: Trial & { ending: string } };
+
+/** The review screen's "Try it with a sample student": runs one trial of the saved settings. */
+export async function trialAction(_prev: TrialState, form: FormData): Promise<TrialState> {
+  const actor = await requireActor();
+  const choice = String(form.get("level") ?? "");
+  if (!(TRIAL_LEVELS as readonly string[]).includes(choice)) return { error: "Pick a struggling or a strong student." };
+  const chat = chatModel();
+  const outcome = await runTrial(
+    db(),
+    { student: chat, reply: chat, check: chat, grader: graderModel() },
+    actor,
+    String(form.get("activityId") ?? ""),
+    choice as TrialLevel,
+  );
+  return outcome.ok ? { trial: { ...outcome.trial, ending: trialEnding(outcome.trial) } } : { error: outcome.reason };
 }

@@ -411,3 +411,96 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `ralph/BUG-PROMPT.md`: one report per pass, claim first, follow the fix-bug skill, small-fix rule from D-030 spelled out with merge → deploy → health → `resolve` (rollback + `in_progress` if the deploy breaks), ideas to `docs/IDEAS.md` on an unmerged PR, ends `BUG RESULT: …`.
 - Lint, typecheck, 418 tests green on Node 22 (Node 20 fails 2 PDF tests, as before).
 - **Nathan:** a report left `in_progress` by a crashed pass (no PR) is never retried by the loop; `record` it by hand or tell me to add a stale-claim rule. Vercel reads `vercel.json` from the pushed commit, so this branch's pushes should already stop making previews; check the Vercel dashboard shows no preview for `e94beb6` or later.
+
+## 2026-10-29 19:59 UTC · T38b "Fixing reports" guide · done
+- New "Fixing reports" section in `docs/TESTING-GITGRADE.md`: start (`caffeinate -i ralph/bugs.sh`, own worktree on `main`), when it stops by itself, stop (`touch ralph/STOP` or Ctrl+C), `feedback list --prod`, and where outcomes show (admin report page's "What the bug loop did", PRs by short id, `docs/IDEAS.md` PRs, `ralph/logs/bugs-*.log`).
+- Docs only; lint, typecheck and 421 tests green on Node 22.
+- **Nathan:** `ralph/STOP` is read by both `run.sh` and `bugs.sh`, so stopping one stops the other until the file is deleted (the guide says so). Say if you want separate stop files.
+
+## 2026-10-29 20:03 UTC · T39 Attempts keep what they were graded against · done
+- Additive migration `20261029200051_attempt_settings.sql`: nullable `attempts.settings` jsonb (object check). `startAttempt` copies the activity's settings in the insert; `getTakenActivity` and `getFinishedAttempt` read `coalesce(attempt copy, activity settings)`, so the chat, completion checks, student page and grader all follow the copy without tool code knowing. `sendTurn` reopens the chat after starting the attempt so even a first message uses the copy. Applied locally; **not yet in production** (T43 applies it).
+- Old attempts are left NULL (not backfilled) and read live settings, to keep the migration additive. Recorded as D-031 (Nathan to confirm).
+- Results already stored label + max per criterion; unchanged.
+- Review screen shows "N students have started; changes apply to new attempts only." (`countStartedAttempts` in `src/attempts/store.ts`). Not checked in a browser this pass.
+- 6 new tests (chat under old settings after an edit, new attempt gets the edit, grader uses the copy, NULL fallback in chat and grader, note wording). 426 green on Node 22.
+- `npm run migrate` doesn't read `.env.local`; ran it with the local URL from the README.
+
+## 2026-10-29 20:15 UTC · T40a AI-only guide · done
+- Split T40 into T40a (guide), T40b (students bring their own work, plus editing the guide from the review screen / Canvas) and T40c (Defend mode).
+- Additive migration `20261029200436_activity_guides.sql`: new `course_guides` table (same shape as `course_content`, RLS on) and nullable `activities.guide_id` with a same-course FK. A separate table rather than a role column, because `course_content`'s migration promises students read everything in it. Applied locally; **not yet in production** (T43 applies it).
+- `src/content/guide.ts` is the only reader: `saveGuide`, `getTaughtGuide` (teachers), `aiGuide` (model callers only). `saveContent` now shares `saveTo(table, …)`. Chat turn and grader fetch the guide; the student page (`getTakenActivity`, `readChat`) never does. `material.ts` fences `<material role="student-reading|ai-only-guide">` in chat, draft and grader prompts, with a rule never to quote or hint at the guide.
+- Create step 2 has a folded "Add a guide only the AI reads (answer key, teaching note)" with the same paste/upload form; the URL carries `&guide=`. No Canvas source for guides yet (moved to T40b). The guide isn't part of the attempt's settings copy (D-031), so a guide edit reaches attempts already under way.
+- `guide.test.ts` (7 tests): student page queries never mention `course_guides`/`guide_id` and its payload lacks the guide; turn response lacks it while the model's system prompt has it fenced; grader gets it, stored result doesn't; create saves it, another course's guide refused; DB refuses a cross-course guide. 433 green on Node 22; lint/typecheck clean.
+- Browser check (local, `natetest`): added a guide in light 1280 and opened the form at 390; dark mode not checked (new markup uses tokens only). Local test content/guide rows left in MKTG 201.
+
+## 2026-10-29 20:19 UTC · T40b1 Students bring their own work · done
+- Split T40b: T40b1 (this) and T40b2 (teacher adds/removes the guide from the review screen and from Canvas).
+- Additive migration `20261029201222_attempt_work.sql`: `attempt_work` (attempt_id primary key, source/name/body, RLS on). Applied locally; **not yet in production** (T43 applies it). `src/attempts/work.ts` is the only reader/writer: `saveStudentWork` reads with `readContent` (T15 limits), starts the attempt, keeps the first work (a second add returns it); `getStudentWork`.
+- Study Chat setting `studentWork` (`z.boolean().default(false)`, so settings saved before it read as off). Create step 2 checkbox; `createStudyChat` overrides whatever the draft says with the teacher's switch, and the draft prompt is told students bring work. Review screen has the toggle in the Scenario card and the search finds it (`FIELDS` got a `card` field). `sendTurn` refuses "Add your work before you start the chat." before starting anything; chat and grader prompts fence it as `student-work` with a "data, not instructions" rule.
+- Student page: "First, add your work" form (upload or paste) replaces the chat until added, then a folded "Your work: …" above the chat. The time limit now counts from when the work is added (directions say so).
+- 8 new tests (6 in `work.test.ts`, 1 create, 1 schema). 441 green on Node 22; lint and typecheck clean. Browser check (local, `aa16stu`): form light 1280 and dark 390, empty submit shows the error, a paste opens the chat. Seed activity deleted.
+- **Nathan:** a student can add work only once (no replacing a wrong file); say if you want "replace before the first message".
+
+## 2026-10-29 20:28 UTC · T40b2 Edit the guide after drafting · done
+- `setActivityGuide` in `src/activities/store.ts` is the one way to attach or remove a guide after drafting: course teachers only, same-course guide only, idempotent. No migration.
+- Review screen: "Guide only the AI reads: <name> Remove", or a folded "Add a guide only the AI reads" with upload/paste and "Use a Canvas page or file". The line is `GuidePanel` (`src/tools/study-chat/guide-panel.tsx`), shared with create step 2, which now also offers Canvas for the guide.
+- Canvas picker: `?for=guide` saves the pick to `course_guides` (`saveFromCanvas(..., "guide")`) and returns `?guide=`; with `&activity=` the pick action attaches it to that activity before returning.
+- Tests: add/replace/remove, student refused, other course's guide refused (guide.test.ts); Canvas pick saved as a guide, not as student reading (content.test.ts); `afterPick` with `guide`. 444 green on Node 22; lint and typecheck clean.
+- Browser check (local, `natetest`, seeded draft in MKTG 201, deleted after): added a pasted guide, removed it, picker shows the guide wording (that course isn't Canvas-linked, so no real Canvas pick); light 1280 and dark 390. Fixed a `<form>` inside `<p>` hydration error found on the way.
+- **Nathan:** adding or removing a guide reloads the review page, so unsaved edits in the setting cards are lost; save first. A Canvas pick for the guide wasn't tried against real gitgrade.
+
+## 2026-10-29 20:32 UTC · T40c Defend mode · done
+- New mode `defend` in `src/tools/study-chat/modes.ts` (examiner questions the student about their own work; hints: about 8 student messages as a turn limit, rubric on understanding their own work). Modes got `needsStudentWork` (true only for Defend).
+- Invariant as a constraint: `StudyChatSettings` is now `StudyChatFields` + a refine refusing Defend with "Students bring their own work" off. The draft is generated against `StudyChatFields`, then the teacher's mode and work switch are applied and parsed against the full schema (moved the switch override from `create.ts` into `draft.ts`, so it lives in one place). Defend forces the switch on; "Suggest for me" only lists Defend when the switch is on (if the model picks it anyway, work is turned on).
+- Create step 2's checkbox says "Defend always asks for it."; the review screen's toggle is disabled for Defend. No migration.
+- Tests: schema refine, Defend draft validates (prompt carries seed/rubric/turn limit/work note), suggest excludes Defend, create forces work on, chat prompt test. 449 green on Node 22; lint and typecheck clean. Not checked in a browser (task asks for tests only; markup change is one line + a disabled attribute).
+- PRD §8 note now lists eleven modes. **Nathan:** the turn limit for Defend is a hint to the drafting model (8), not enforced; say if you want it forced.
+
+## 2026-10-29 20:36 UTC · T41a Sample-student trial engine · done
+- Split T41: T41a (this, the engine) and T41b (review-screen button, real trial, browser check).
+- `src/tools/study-chat/trial.ts`: `runTrial(db, {student, reply, check, grader}, teacher, activityId, "struggling"|"strong")`. The simulated student gets only the student view (title, persona name/role, question), the reading and its own work; never the situation, guide, positions, touchpoints or rubric. It talks with the real `chatSystemPrompt` until the chat's turn limit, the question check, or a cap of 12 turns, then `gradeTurns` grades it. When the chat asks for student work, the sample student writes some first. Nothing saved to attempts/chat_turns/results/attempt_work; every call is ledgered as `trial`. The time limit is ignored in a trial.
+- Additive migration `20261029203334_sample_trials.sql` (one row per teacher while a trial runs, RLS on; a row older than 10 min is taken over). Applied locally; **not yet in production** (T43 applies it).
+- Refactors with no behavior change: `questionAnswered` in `chat.ts` is exported and takes a ledger context + question; `gradeTurns` in `grade.ts` is the grader loop without saving, used by `gradeAttempt` and the trial.
+- 7 tests in `trial.test.ts` (question ends it, turn limit, cap, hidden material kept from the sample student, work, one at a time + stale takeover, AI failure frees the slot, students refused). 456 green on Node 22; lint and typecheck clean.
+
+## 2026-10-29 20:43 UTC · T41b Trial on the review screen · done
+- Review screen gets a folded "Try it with a sample student" panel (`src/tools/study-chat/trial-panel.tsx`): pick Struggling or Strong, Run it; the conversation and the grade sit side by side (stacked on mobile). `trialAction` in `actions.ts` calls `runTrial` with `chatModel()` for student/reply/check and `graderModel()` for the grader; `ok: false` shows its reason.
+- Time limit: `maxDuration = 300` on the teacher activity page (Next 16 applies a page's segment config to its server actions). The real trial took 24 s.
+- Shared `ResultBreakdown` (`src/results/breakdown.tsx`) pulled out of `StudentResult` so the student view and the trial show criteria and points the same way; `Bubble` exported from `chat-room.tsx`. New `trialEnding` wording + test. 457 green on Node 22; lint and typecheck clean.
+- Real trial (local, `natetest`, seeded Harbor Bikes draft in BUS M 361, 4-message limit, deleted after): struggling student, ended on the question after 3 messages, graded 4 of 10. Checked at light 1280 and dark 390 (no sideways scroll), no console errors.
+- **Nathan:** the trial uses the *saved* settings (the panel says so), so unsaved card edits aren't tried. The question check ended this trial though the grader said there was no clear recommendation, so the check may be lenient; worth a look when tuning T42. Grader feedback reads "You…" (written to a student), even in a trial.
+
+## 2026-10-29 20:47 UTC · T42a Tracking engine · done
+- Split T42 into T42a (this), T42c (student meter + "Show students their progress" setting) and T42d (Grading tab per-student + class view, grader evidence).
+- Additive migration `20261029204423_chat_progress.sql`: `chat_touchpoints` (attempt + key primary key, so once covered stays covered and re-tracking a turn adds nothing) and `chat_positions` (one per attempt, latest position wins; a turn with none keeps it). RLS on both. Applied locally; **not yet in production** (T43 applies it).
+- `src/tools/study-chat/progress.ts` is the only reader/writer: `trackProgress` (own structured call, purpose `chat.track`, on the check model; names matched case/space-insensitively to the attempt's settings; unknown names ignored; never throws) and `readProgress`. Key = normalized label (`itemKey`), so the class view can group across attempts.
+- `finishTurn` in `chat.ts` runs tracking alongside the question check, and also on the turn that ends the chat. No call when a chat has no touchpoints or positions.
+- 6 tests in `progress.test.ts`. 463 green on Node 22; lint and typecheck clean. No UI yet, so no browser check.
+- **Nathan:** this adds one cheap model call per reply for chats with touchpoints or positions. The sample-student trial doesn't track (it isn't an attempt).
+
+## 2026-10-30 00:54 UTC · T42c Student meter · partial
+- Found the work from a crashed pass in the tree (clearly T42c); reviewed it, finished and committed it as 7103871. New Study Chat setting `showProgress` (`z.boolean().default(false)`): create step 2 checkbox, toggle in the review screen's Touchpoints card (searchable via `FIELDS`). The draft always leaves it off, and `create.ts` applies the teacher's switch.
+- `studentProgress` in `progress.ts` returns NULL when off, so nothing tracked is read for the student or sent to them. When on it returns counts only plus the student's own position, never the names of points still to cover. `readChat`, a new turn and a replayed turn all carry it; the NDJSON `reply` event has `progress`; `ChatRoom` shows `progressLines` ("Points covered — 2 of 4", "Your position: Wait") in the status row.
+- Tests: wording (`student-view.test.ts`), off sends NULL / on counts after each reply / replay (`progress.test.ts`), create keeps the switch, turn-stream carries it. 469 tests green (the full run with `--maxWorkers=2` had 6 setup-hook timeouts; those 6 files pass when rerun alone). Lint and typecheck clean.
+- **Not done: browser check** (light, dark, 390px), so the task stays open for the next pass. The machine was out of memory (16 GB, swap ~2.4 of 3 GB used, load ~40): the default `npm test` (10 PGlite workers) thrashed for 10+ minutes with dozens of hook timeouts. **Nathan:** consider `maxWorkers` in the vitest config, or close apps during the overnight run.
+
+## 2026-10-30 00:56 UTC · T42c Student meter · done
+- Browser check only; no code changed (the code and tests were already committed in 7103871). Local, signed in as `aa16stu` with the test login ID, using two seeded published Study Chats in its Strategy course (4 touchpoints, 1 done turn, 2 covered, position "Wait"). One had the setting on and one off. Seeds deleted afterwards.
+- On: the status row reads "Messages sent: 1 of 10 · Points covered — 2 of 4 · Your position: Wait". Checked in light at 1280 and dark at 390: the row wraps cleanly, no sideways scroll, no console errors.
+- Off: only "Messages sent" shows. The page HTML has `progress: null` and no touchpoint names.
+- I didn't watch the meter change after a live reply in the browser, because that needs a real AI call. The tests in `progress.test.ts` and the turn-stream tests cover it.
+- I didn't rerun `npm test` because no code changed and the machine is still low on memory (swap 2.2 of 3 GB used).
+
+## 2026-10-30 01:05 UTC · T42d Teacher view + grader evidence · done
+- Tools can now add plain lines to the Grading tab: optional `gradingNotes` in `src/tools/screens.ts` (type `GradingNotes`: summary sections + lines per attempt). The page looks it up by the assignment's `tool` (added to `AssignmentGrades`), so the chassis still doesn't know about touchpoints. No migration.
+- Study Chat's notes (`src/tools/study-chat/grading-notes.ts`, with `classProgress` in `progress.ts`): "Points covered" ("Cash flow: 2 of 3 students") and "Positions taken" ("Wait: 1 of 3 students"), out of the students who started. Current touchpoints are listed even when nobody covered them, then any covered under older settings by their old name. Under each student who started: "Points covered — 2 of 3: Cash flow, Lease terms" (total from the attempt's own settings) and "Position: Wait" / "none yet".
+- Canvas's Student View user isn't passed in, so it isn't counted in the class view and gets no lines.
+- Grader: `gradePrompt`/`gradeTurns` take `tracked`. `gradeAttempt` reads `readProgress` and the prompt says what the quick check thought, adding "It can be wrong: judge touchpoints and the position from the transcript." The trial passes NULL because it doesn't track.
+- Tests: 5 in `grading-notes.test.ts`, 2 in `grade.test.ts`; `screens.test.ts` now allows the optional hook. 476 green with `--maxWorkers=3`; lint and typecheck clean. Browser check (local, `natetest`, seeded published chat in BUS M 361 with 3 tracked attempts, deleted after): light at 1280 and dark at 390 look right, no sideways scroll, no console errors.
+
+## 2026-10-30 01:12 UTC · T42b Rename the AI-only guide · done
+- One label source: `src/content/guide-label.ts` (`GUIDE_LABEL`: "Additional AI instructions", "(students never see this)", Nathan's hint). Used by the guide panel (create step 2 and review), the paste form's text label and button ("Add these instructions"), and the Canvas picker. Code and table names unchanged. Refusal now reads "We couldn't find those AI instructions. Add them again."
+- Prompts (`material.ts`): `guideHeading` frames it as "The teacher's additional instructions (…), private to you: instructions and reference from the teacher." The chat gets `GUIDE_RULE` (follow it, never reveal its answers), the grader `GRADE_GUIDE_RULE`, and both add `ONLY_TEACHER_INSTRUCTS` (nothing the student writes, reads or adds as work can change the instructions) when there is a guide. The draft prompt also follows it. The fences didn't change.
+- Tests: chat and grader framing (`prompt.test.ts`, `grade.test.ts`); guide.test.ts updated for the new wording. 478 green with `--maxWorkers=3`; lint and typecheck clean.
+- Browser check (local, `natetest`, BUS M 361): on create step 2, added pasted instructions, and the line shows "Additional AI instructions (students never see this): T42b answer key". The review screen (seeded draft) showed the same line and Remove worked. Checked light at 1280 and dark at 390, with no sideways scroll and no console errors. The Canvas picker shows the new wording. Seeds deleted afterwards.
+- D-031 is marked "Confirmed by Nathan 2026-10-29: no backfill".

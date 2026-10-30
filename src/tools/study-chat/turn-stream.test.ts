@@ -40,25 +40,32 @@ const bodyOf = (text: string) =>
 
 describe("turnResponse + readTurnEvents", () => {
   it("streams the reply as it's written, then the saved reply", async () => {
-    const { response, settled } = turnResponse(streamed(["Hel", "lo"], { ok: true, reply: "Hello", attempt: attempt() }));
+    const { response, settled } = turnResponse(streamed(["Hel", "lo"], { ok: true, reply: "Hello", attempt: attempt(), progress: null }));
     expect(response.headers.get("content-type")).toContain("application/x-ndjson");
     expect(await events(response)).toEqual([
       { type: "text", text: "Hel" },
       { type: "text", text: "lo" },
-      { type: "reply", reply: "Hello", ended: null },
+      { type: "reply", reply: "Hello", ended: null, progress: null },
     ]);
     await settled;
   });
 
   it("says why the chat ended when this turn ended it", async () => {
     const { response } = turnResponse(
-      streamed(["Bye"], { ok: true, reply: "Bye", attempt: attempt({ status: "completed", endedBy: "turns", completedAt: new Date() }) }),
+      streamed(["Bye"], { ok: true, reply: "Bye", attempt: attempt({ status: "completed", endedBy: "turns", completedAt: new Date() }), progress: null }),
     );
     expect((await events(response)).at(-1)).toEqual({
       type: "reply",
       reply: "Bye",
       ended: "This chat has ended: you've used all your messages.",
+      progress: null,
     });
+  });
+
+  it("carries the progress meter with the saved reply", async () => {
+    const progress = { points: { covered: 1, total: 3 }, position: "Wait" };
+    const { response } = turnResponse(streamed(["Ok"], { ok: true, reply: "Ok", attempt: attempt(), progress }));
+    expect((await events(response)).at(-1)).toEqual({ type: "reply", reply: "Ok", ended: null, progress });
   });
 
   it("ends a failed reply with `failed`", async () => {
@@ -67,8 +74,8 @@ describe("turnResponse + readTurnEvents", () => {
   });
 
   it("answers a replay with the saved reply alone", async () => {
-    const { response } = turnResponse({ kind: "replay", reply: "Saved", attempt: attempt() });
-    expect(await events(response)).toEqual([{ type: "reply", reply: "Saved", ended: null }]);
+    const { response } = turnResponse({ kind: "replay", reply: "Saved", attempt: attempt(), progress: null });
+    expect(await events(response)).toEqual([{ type: "reply", reply: "Saved", ended: null, progress: null }]);
   });
 
   it("answers a refusal with a 400 and the reason", async () => {
@@ -82,7 +89,7 @@ describe("turnResponse + readTurnEvents", () => {
     const done = (async (): Promise<TurnOutcome> => {
       await new Promise((r) => setTimeout(r, 5));
       saved = true;
-      return { ok: true, reply: "Hello", attempt: attempt() };
+      return { ok: true, reply: "Hello", attempt: attempt(), progress: null };
     })();
     const { response, settled } = turnResponse({ kind: "stream", textStream: chunks("Hel", "lo"), done });
     await response.body!.cancel();

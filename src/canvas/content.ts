@@ -5,6 +5,7 @@
  */
 
 import { isReadableFile, MAX_UPLOAD_BYTES, type ContentInput } from "@/content/read";
+import { saveGuide } from "@/content/guide";
 import { saveContent, type SavedContent } from "@/content/store";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -107,8 +108,9 @@ export type SaveFromCanvasResult =
   | { ok: false; reason: string; reconnect: boolean };
 
 /**
- * Saves the picked Canvas page or file as course content. `creationKey` is
- * client-generated, so a double click saves one copy.
+ * Saves the picked Canvas page or file as course content, or `as: "guide"` as
+ * an AI-only guide (src/content/guide.ts). `creationKey` is client-generated,
+ * so a double click saves one copy.
  */
 export async function saveFromCanvas(
   db: Db,
@@ -117,6 +119,7 @@ export async function saveFromCanvas(
   courseId: string,
   creationKey: string,
   pick: CanvasPick,
+  as: "content" | "guide" = "content",
 ): Promise<SaveFromCanvasResult> {
   const linked = await linkedCanvasCourse(db, actor, canvas, courseId);
   if (!linked.ok) return { ok: false, reason: "This course can't use that Canvas course's pages.", reconnect: false };
@@ -125,6 +128,6 @@ export async function saveFromCanvas(
       ? await fetchCanvasPage(canvas.client, linked.canvasCourseId, pick.url)
       : await fetchCanvasFile(canvas.client, linked.canvasCourseId, pick.id);
   if (!fetched.ok) return fetched;
-  const saved = await saveContent(db, actor, courseId, creationKey, fetched.input);
+  const saved = await (as === "guide" ? saveGuide : saveContent)(db, actor, courseId, creationKey, fetched.input);
   return saved.ok ? saved : { ...saved, reconnect: false };
 }
