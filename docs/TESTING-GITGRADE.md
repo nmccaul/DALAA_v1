@@ -2,7 +2,7 @@
 
 A step-by-step check of the whole loop in Nathan's Canvas
 (https://gitgrade.opencanvaslms.org), course **DALAA Test** (id 42), against
-production (https://dalaa-v1.vercel.app). About 30 minutes.
+production (https://dalaa-v1.vercel.app). About 30 minutes, plus 15 for step 9.
 
 If anything looks wrong, use the **Feedback** button (bottom right on every
 DALAA page, or Cmd/Ctrl+Shift+F). Click the picture to circle the problem. The
@@ -86,6 +86,38 @@ reports show up under DALAA **Settings → Feedback reports**.
    course".
 4. Signing in with an email that already exists (e.g. after an LTI launch)
    links to that account; it never makes a second one.
+
+## 9. Study Chat depth
+Each of these is a quick check on top of steps 3–6. Use a new Study Chat, or
+edit the one from step 3 (an edit only changes chats students start after it).
+
+1. **Additional AI instructions.** On create step 2, under the material, add
+   **Additional AI instructions (students never see this)**: paste an answer
+   key or teaching notes, or pick a Canvas page. You can add or remove them
+   later on the review screen.
+   - Check (Student View): the instructions appear nowhere on the student's
+     page, but the chat clearly follows them (e.g. "never give the NPV
+     figure"), and asking the AI to show them doesn't reveal them.
+2. **Defend.** Create a Study Chat in **Defend** mode. **Students bring their
+   own work** is on and can't be turned off for Defend.
+   - Check (Student View): the student first sees **First, add your work**
+     (upload a .pdf, .txt or .md up to 4 MB, or paste). It can be added once.
+     The AI then questions them about that work, and the grade is on how well
+     they understand it.
+3. **Try it with a sample student.** On the review screen (draft or
+   published), open **Try it with a sample student**, pick **Struggling** or
+   **Strong**, **Run it**. Takes up to a minute. The sample conversation and
+   the sample grade show side by side.
+   - Check: nothing appears on the Grading tab or in Canvas. It uses the last
+     *saved* settings, so save edits first.
+4. **Touchpoints.** In the review screen's Touchpoints card, turn on **Show
+   students their progress** (off by default).
+   - Check (Student View): under the chat, "Points covered — 1 of 4" and
+     "Your position: …" update after each reply. With it off, nothing shows.
+   - Check (teacher, **Grading** tab): "Points covered" and "Positions taken"
+     for the class ("Cash flow: 1 of 1 students"), and under each student the
+     points they covered and their position. The grader still judges from the
+     chat itself.
 
 ## Who signs in how
 - **Teachers.** Open DALAA from the Canvas course first (step 1). That makes
