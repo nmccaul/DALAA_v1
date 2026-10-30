@@ -483,3 +483,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - `studentProgress` in `progress.ts` returns NULL when off, so nothing tracked is read for the student or sent to them. When on it returns counts only plus the student's own position, never the names of points still to cover. `readChat`, a new turn and a replayed turn all carry it; the NDJSON `reply` event has `progress`; `ChatRoom` shows `progressLines` ("Points covered — 2 of 4", "Your position: Wait") in the status row.
 - Tests: wording (`student-view.test.ts`), off sends NULL / on counts after each reply / replay (`progress.test.ts`), create keeps the switch, turn-stream carries it. 469 tests green (the full run with `--maxWorkers=2` had 6 setup-hook timeouts; those 6 files pass when rerun alone). Lint and typecheck clean.
 - **Not done: browser check** (light, dark, 390px), so the task stays open for the next pass. The machine was out of memory (16 GB, swap ~2.4 of 3 GB used, load ~40): the default `npm test` (10 PGlite workers) thrashed for 10+ minutes with dozens of hook timeouts. **Nathan:** consider `maxWorkers` in the vitest config, or close apps during the overnight run.
+
+## 2026-10-30 00:56 UTC · T42c Student meter · done
+- Browser check only; no code changed (the code and tests were already committed in 7103871). Local, signed in as `aa16stu` with the test login ID, using two seeded published Study Chats in its Strategy course (4 touchpoints, 1 done turn, 2 covered, position "Wait"). One had the setting on and one off. Seeds deleted afterwards.
+- On: the status row reads "Messages sent: 1 of 10 · Points covered — 2 of 4 · Your position: Wait". Checked in light at 1280 and dark at 390: the row wraps cleanly, no sideways scroll, no console errors.
+- Off: only "Messages sent" shows. The page HTML has `progress: null` and no touchpoint names.
+- I didn't watch the meter change after a live reply in the browser, because that needs a real AI call. The tests in `progress.test.ts` and the turn-stream tests cover it.
+- I didn't rerun `npm test` because no code changed and the machine is still low on memory (swap 2.2 of 3 GB used).
