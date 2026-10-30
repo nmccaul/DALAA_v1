@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button, inputStyles } from "@/components/ui";
+import { GUIDE_LABEL } from "@/content/guide-label";
 import { PICKER_PARAM } from "@/lti/picker";
 import { draftAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
@@ -60,18 +61,18 @@ export function MaterialForm({
         <label htmlFor={id("name")} className="font-medium">
           Title
         </label>
-        <input id={id("name")} name="name" placeholder={guide ? "Harbor Bikes teaching note" : "Case: Harbor Bikes"} autoComplete="off" className={inputStyles} />
+        <input id={id("name")} name="name" placeholder={guide ? "Harbor Bikes answer key" : "Case: Harbor Bikes"} autoComplete="off" className={inputStyles} />
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor={id("text")} className="font-medium">
-          {guide ? "Text only the AI reads" : "Text students will read"}
+          {guide ? `${GUIDE_LABEL.name} ${GUIDE_LABEL.private}` : "Text students will read"}
         </label>
         <textarea id={id("text")} name="text" rows={8} className={inputStyles} />
       </div>
       <Problem state={state} />
       <div>
         <Button variant={guide ? "secondary" : undefined} disabled={pending}>
-          {pending ? "Reading…" : guide ? "Add this guide" : "Use this material"}
+          {pending ? "Reading…" : guide ? "Add these instructions" : "Use this material"}
         </Button>
       </div>
     </form>

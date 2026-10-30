@@ -5,6 +5,7 @@ import { clientFor, connectReturnPath } from "@/canvas/connection";
 import { listCourseCanvasContent, type CourseContentProblem } from "@/canvas/content";
 import { VaultError } from "@/canvas/vault";
 import { EmptyState, buttonStyles } from "@/components/ui";
+import { GUIDE_LABEL } from "@/content/guide-label";
 import { getContent } from "@/content/store";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
@@ -126,7 +127,7 @@ export default async function CanvasContentPage({ params, searchParams }: PagePr
         <h2 className="font-display text-2xl font-semibold tracking-tight">Use a Canvas page or file</h2>
         <p className="text-muted">
           {guide
-            ? "Pick the guide only the AI reads: an answer key or teaching note. Students never see it."
+            ? `Pick the page or file for ${GUIDE_LABEL.name} ${GUIDE_LABEL.private}. ${GUIDE_LABEL.hint}`
             : "Pick what students should study."}{" "}
           DALAA keeps a copy of its text for this course.
         </p>

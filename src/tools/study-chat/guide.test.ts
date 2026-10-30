@@ -169,13 +169,13 @@ describe("the AI-only guide", () => {
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
     expect(await aiGuide(db, created.activityId)).toMatchObject({ body: GUIDE });
-    expect(JSON.stringify(model.doGenerateCalls[0].prompt)).toContain("never shown to students");
+    expect(JSON.stringify(model.doGenerateCalls[0].prompt)).toContain("private to you: instructions and reference from the teacher");
 
     const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
     if (!elsewhere.ok) throw new Error(elsewhere.reason);
     expect(
       await createStudyChat(db, model, prof, course, { ...request, guideId: elsewhere.content.id, creationKey: randomUUID() }),
-    ).toEqual({ ok: false, reason: "We couldn't find that guide. Add it again." });
+    ).toEqual({ ok: false, reason: "We couldn't find those AI instructions. Add them again." });
   });
 
   it("is added and removed after drafting, by the course's teachers only", async () => {
@@ -195,7 +195,7 @@ describe("the AI-only guide", () => {
     if (!elsewhere.ok) throw new Error(elsewhere.reason);
     expect(await setActivityGuide(db, prof, activity, elsewhere.content.id)).toEqual({
       ok: false,
-      reason: "We couldn't find that guide. Add it again.",
+      reason: "We couldn't find those AI instructions. Add them again.",
     });
     expect(await setActivityGuide(db, prof, activity, "not-a-guide")).toMatchObject({ ok: false });
     expect(await aiGuide(db, activity)).toBeNull();

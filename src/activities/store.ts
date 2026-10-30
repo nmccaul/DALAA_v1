@@ -140,7 +140,7 @@ export async function setActivityGuide(
   const activity = await getTaughtActivity(db, actor, activityId);
   if (!activity) return { ok: false, reason: "That assignment isn't one of yours." };
   if (guideId !== null && !(await getTaughtGuide(db, actor, activity.courseId, guideId))) {
-    return { ok: false, reason: "We couldn't find that guide. Add it again." };
+    return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
   }
   await db.query("update activities set guide_id = $2, updated_at = now() where id = $1", [activity.id, guideId]);
   return { ok: true };

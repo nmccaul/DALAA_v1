@@ -45,7 +45,7 @@ export async function createStudyChat(
   const content = await getContent(db, actor, courseId, request.contentId);
   if (!content) return { ok: false, reason: "We couldn't find that material. Add it again." };
   const guide = request.guideId === null ? null : await getTaughtGuide(db, actor, courseId, request.guideId);
-  if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find that guide. Add it again." };
+  if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
 
   const draft = await draftSettings(
     db,

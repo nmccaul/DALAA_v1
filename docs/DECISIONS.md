@@ -221,7 +221,7 @@ only an env change.
 | — | Classic or New Quizzes at BYU? | Scott | Two different APIs for quiz import. |
 
 ### D-031 · An attempt keeps the settings it started under
-*2026-10-29, overnight build (T39); Nathan to confirm.* Teachers can edit a
+*2026-10-29, overnight build (T39). Confirmed by Nathan 2026-10-29: no backfill.* Teachers can edit a
 published Study Chat. When a student starts, their attempt stores a copy of the
 activity's settings (`attempts.settings`): persona, completion, positions,
 touchpoints, rubric and strictness. The chat, the completion checks, the
