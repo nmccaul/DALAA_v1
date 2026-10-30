@@ -490,3 +490,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Off: only "Messages sent" shows. The page HTML has `progress: null` and no touchpoint names.
 - I didn't watch the meter change after a live reply in the browser, because that needs a real AI call. The tests in `progress.test.ts` and the turn-stream tests cover it.
 - I didn't rerun `npm test` because no code changed and the machine is still low on memory (swap 2.2 of 3 GB used).
+
+## 2026-10-30 01:05 UTC · T42d Teacher view + grader evidence · done
+- Tools can now add plain lines to the Grading tab: optional `gradingNotes` in `src/tools/screens.ts` (type `GradingNotes`: summary sections + lines per attempt). The page looks it up by the assignment's `tool` (added to `AssignmentGrades`), so the chassis still doesn't know about touchpoints. No migration.
+- Study Chat's notes (`src/tools/study-chat/grading-notes.ts`, with `classProgress` in `progress.ts`): "Points covered" ("Cash flow: 2 of 3 students") and "Positions taken" ("Wait: 1 of 3 students"), out of the students who started. Current touchpoints are listed even when nobody covered them, then any covered under older settings by their old name. Under each student who started: "Points covered — 2 of 3: Cash flow, Lease terms" (total from the attempt's own settings) and "Position: Wait" / "none yet".
+- Canvas's Student View user isn't passed in, so it isn't counted in the class view and gets no lines.
+- Grader: `gradePrompt`/`gradeTurns` take `tracked`. `gradeAttempt` reads `readProgress` and the prompt says what the quick check thought, adding "It can be wrong: judge touchpoints and the position from the transcript." The trial passes NULL because it doesn't track.
+- Tests: 5 in `grading-notes.test.ts`, 2 in `grade.test.ts`; `screens.test.ts` now allows the optional hook. 476 green with `--maxWorkers=3`; lint and typecheck clean. Browser check (local, `natetest`, seeded published chat in BUS M 361 with 3 tracked attempts, deleted after): light at 1280 and dark at 390 look right, no sideways scroll, no console errors.
