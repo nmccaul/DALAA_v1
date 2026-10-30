@@ -504,3 +504,10 @@ One entry per pass, newest last. Setup (2026-10-29, interactive session): LTI ke
 - Tests: chat and grader framing (`prompt.test.ts`, `grade.test.ts`); guide.test.ts updated for the new wording. 478 green with `--maxWorkers=3`; lint and typecheck clean.
 - Browser check (local, `natetest`, BUS M 361): on create step 2, added pasted instructions, and the line shows "Additional AI instructions (students never see this): T42b answer key". The review screen (seeded draft) showed the same line and Remove worked. Checked light at 1280 and dark at 390, with no sideways scroll and no console errors. The Canvas picker shows the new wording. Seeds deleted afterwards.
 - D-031 is marked "Confirmed by Nathan 2026-10-29: no backfill".
+
+## 2026-10-30 01:15 UTC · T43 CHECKPOINT G (deploy) · done
+- Five new migrations since checkpoint F, all additive (new tables with RLS, nullable `attempts.settings`, nullable `activities.guide_id` + FK): applied to production first, then PR #111 merged to `main` (1edbf39). Production deployment `dalaa-v1-78k3w11ye` built on its own; `/api/health` db up, `/api/lti/jwks` serves a key, `/` 200.
+- `docs/TESTING-GITGRADE.md` step 9: Additional AI instructions, Defend + student work, Try it with a sample student, touchpoint meter and Grading-tab view.
+- Lint, typecheck, 478 tests green (`--maxWorkers=3`).
+- Surprise: macOS has no `timeout` command, and the safety check refuses `rm -rf "$(dirname "$S")"`; made the temp dir first and removed it by literal path. Worth changing the checkpoint procedure in `ralph/PROMPT.md`.
+- Every task is now `[x]`; wrote `DONE` to `ralph/STATUS`. **Nathan:** run step 9 of the testing guide on gitgrade.
