@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { LoginIdLabel } from "@/auth/login-id";
-import { Button, inputStyles } from "@/components/ui";
+import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { setUpCourse, type Fields, type SetUpState } from "./actions";
 
 function Field({
@@ -76,7 +76,7 @@ export function CourseForm({ initial, loginId }: { initial: Fields; loginId: Log
         <label className="flex flex-wrap items-center gap-2 text-sm text-muted">
           Or add a CSV file:
           <input type="file" name="rosterFile" accept=".csv,.tsv,.txt,text/csv,text/plain"
-            className="text-sm file:mr-3 file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-text hover:file:bg-accent-soft" />
+            className={fileInputStyles} />
         </label>
       </Field>
 

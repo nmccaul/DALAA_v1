@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { inlinePieces } from "@/components/inline-format";
 import { Button, inputStyles } from "@/components/ui";
 import type { Exchange } from "./prompt";
 import { finishChatAction } from "./student-actions";
@@ -237,7 +238,26 @@ export function ChatRoom({
   );
 }
 
-/** One message; the student's own (`mine`) sits on the right, labeled `from` or "You". */
+/** The AI's emphasis as elements (inline-format.ts); never HTML. */
+function Formatted({ text }: { text: string }) {
+  return inlinePieces(text).map((p, i) =>
+    p.kind === "strong" ? (
+      <strong key={i} className="font-semibold">{p.text}</strong>
+    ) : p.kind === "em" ? (
+      <em key={i}>{p.text}</em>
+    ) : p.kind === "code" ? (
+      <code key={i} className="rounded bg-bg px-1 font-mono text-[0.9em]">{p.text}</code>
+    ) : (
+      p.text
+    ),
+  );
+}
+
+/**
+ * One message; the student's own (`mine`) sits on the right, labeled `from` or
+ * "You". The AI's messages show its bold and italics; the student's show
+ * exactly what they typed.
+ */
 export function Bubble({ text, from, mine = false }: { text: string; from?: string; mine?: boolean }) {
   return (
     <div className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
@@ -247,7 +267,7 @@ export function Bubble({ text, from, mine = false }: { text: string; from?: stri
           mine ? "bg-accent text-white" : "border border-border bg-surface"
         }`}
       >
-        {text}
+        {mine ? text : <Formatted text={text} />}
       </p>
     </div>
   );

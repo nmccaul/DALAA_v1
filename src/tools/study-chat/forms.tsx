@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, inputStyles } from "@/components/ui";
+import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { GUIDE_LABEL } from "@/content/guide-label";
 import { PICKER_PARAM } from "@/lti/picker";
 import { draftAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
@@ -54,7 +54,7 @@ export function MaterialForm({
           Upload a file
         </label>
         <p className="-mt-1 text-sm text-muted">A .pdf, .txt or .md file, up to 4 MB.</p>
-        <input id={id("file")} name="file" type="file" accept=".pdf,.txt,.md" className="text-sm" />
+        <input id={id("file")} name="file" type="file" accept=".pdf,.txt,.md" className={fileInputStyles} />
       </div>
       <p className="text-sm text-muted">Or paste it:</p>
       <div className="flex flex-col gap-2">

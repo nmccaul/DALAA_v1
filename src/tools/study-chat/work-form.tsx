@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, inputStyles } from "@/components/ui";
+import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { addWorkAction } from "./student-actions";
 
 /** The student's own work, uploaded or pasted before the chat opens. A chosen file wins over pasted text. */
@@ -20,7 +20,7 @@ export function WorkForm({ activityId }: { activityId: string }) {
             Upload a file
           </label>
           <p className="-mt-1 text-sm text-muted">A .pdf, .txt or .md file, up to 4 MB.</p>
-          <input id="work-file" name="file" type="file" accept=".pdf,.txt,.md" className="text-sm" />
+          <input id="work-file" name="file" type="file" accept=".pdf,.txt,.md" className={fileInputStyles} />
         </div>
         <p className="text-sm text-muted">Or paste it:</p>
         <div className="flex flex-col gap-2">
