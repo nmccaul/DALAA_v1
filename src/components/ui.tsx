@@ -72,5 +72,9 @@ export function EmptyState({
   );
 }
 
+/** A file picker whose button looks like a button, not plain text (feedback 2ddd8e96). */
+export const fileInputStyles =
+  "text-sm text-muted file:mr-3 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-text hover:file:bg-accent-soft";
+
 export const inputStyles =
   "w-full rounded-control border border-border-strong bg-surface px-3 py-2 text-text placeholder:text-muted";
