@@ -5,7 +5,7 @@ import type { Db } from "@/db/types";
 import { draftPrompt, draftSettings } from "./draft";
 import { MODE_SLUGS, MODES } from "./modes";
 import { StudyChatSettings } from "./schema";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, drafted } from "./test-fixtures";
 
 /** Everything the model was sent on its first call, as one string. */
 const sent = (model: MockLanguageModelV4) => JSON.stringify(model.doGenerateCalls[0].prompt);
@@ -24,7 +24,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("drafts validated settings from the material and the chosen mode, in one call", async () => {
-    const model = answering(draft());
+    const model = answering(drafted());
     const result = await draftSettings(db, model, {}, { ...harbor, mode: "case-chat" });
     expect(result).toEqual({ ok: true, settings: draft() });
     expect(model.doGenerateCalls).toHaveLength(1);
@@ -35,13 +35,34 @@ describe("Study Chat drafting", () => {
     expect(await drafts()).toEqual([{ ok: true }]);
   });
 
+  it("sends a schema OpenAI accepts: every field of every object required (it refused the draft schema with defaults)", async () => {
+    const model = answering(drafted());
+    await draftSettings(db, model, {}, { ...harbor, mode: "case-chat" });
+    const format = model.doGenerateCalls[0].responseFormat;
+    const notRequired: string[] = [];
+    const walk = (node: unknown, path: string) => {
+      if (node === null || typeof node !== "object") return;
+      const s = node as { properties?: Record<string, unknown>; required?: string[] };
+      if (s.properties) {
+        for (const key of Object.keys(s.properties)) {
+          if (!s.required?.includes(key)) notRequired.push(`${path}.${key}`);
+          walk(s.properties[key], `${path}.${key}`);
+        }
+      }
+      for (const [key, value] of Object.entries(node)) if (key !== "properties") walk(value, path);
+    };
+    walk(format?.type === "json" ? format.schema : undefined, "$");
+    expect(format).toMatchObject({ type: "json", schema: { type: "object" } });
+    expect(notRequired).toEqual([]);
+  });
+
   it("keeps the teacher's mode when the model picks another", async () => {
-    const result = await draftSettings(db, answering(draft({ mode: "debate" })), {}, { ...harbor, mode: "case-chat" });
+    const result = await draftSettings(db, answering(drafted({ mode: "debate" })), {}, { ...harbor, mode: "case-chat" });
     expect(result).toMatchObject({ ok: true, settings: { mode: "case-chat" } });
   });
 
   it("offers every mode when asked to suggest, and keeps the model's choice", async () => {
-    const model = answering(draft({ mode: "debate" }));
+    const model = answering(drafted({ mode: "debate" }));
     const result = await draftSettings(db, model, {}, { ...harbor, studentWork: true, mode: "suggest" });
     expect(result).toMatchObject({ ok: true, settings: { mode: "debate", studentWork: true } });
     for (const slug of MODE_SLUGS) expect(sent(model)).toContain(`- ${slug}: ${MODES[slug].label}.`);
@@ -49,7 +70,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("doesn't suggest Defend unless students bring their own work, and turns it on if the model picks it anyway", async () => {
-    const model = answering(draft({ mode: "defend", studentWork: false }));
+    const model = answering(drafted({ mode: "defend", studentWork: false }));
     const result = await draftSettings(db, model, {}, { ...harbor, mode: "suggest" });
     expect(result).toMatchObject({ ok: true, settings: { mode: "defend", studentWork: true } });
     expect(sent(model)).not.toContain("- defend:");
@@ -57,7 +78,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("drafts a Defend chat that validates, about each student's own work", async () => {
-    const model = answering(draft({ mode: "debate", studentWork: false, completion: { maxTurns: 8, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
+    const model = answering(drafted({ mode: "debate", studentWork: false, completion: { maxTurns: 8, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
     const result = await draftSettings(db, model, {}, { ...harbor, mode: "defend" });
     if (!result.ok) throw new Error(result.reason);
     expect(result.settings).toMatchObject({ mode: "defend", studentWork: true, completion: { maxTurns: 8 } });
@@ -68,8 +89,8 @@ describe("Study Chat drafting", () => {
   });
 
   it("asks once more when the draft doesn't fit the schema", async () => {
-    const noWayToEnd = draft({ completion: { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } });
-    const model = answering(noWayToEnd, draft());
+    const noWayToEnd = drafted({ completion: { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } });
+    const model = answering(noWayToEnd, drafted());
     expect(await draftSettings(db, model, {}, { ...harbor, mode: "case-chat" })).toEqual({ ok: true, settings: draft() });
     expect(model.doGenerateCalls).toHaveLength(2);
     expect(await drafts()).toHaveLength(2);
@@ -94,7 +115,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("doesn't call the model without material", async () => {
-    const model = answering(draft());
+    const model = answering(drafted());
     expect(await draftSettings(db, model, {}, { content: "  \n ", contentName: "Empty", mode: "explain", guide: null, studentWork: false })).toEqual({
       ok: false,
       reason: "Add the material students will study first.",

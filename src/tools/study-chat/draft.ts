@@ -17,7 +17,7 @@ import type { Guide } from "@/content/guide";
 import type { Db } from "@/db/types";
 import { fence, guideHeading } from "./material";
 import { MODE_SLUGS, MODES, type ModeSlug } from "./modes";
-import { StudyChatFields, StudyChatSettings } from "./schema";
+import { StudyChatDraftFields, StudyChatSettings } from "./schema";
 
 export type DraftRequest = {
   /** What students will study, as text (from `course_content.body`). */
@@ -101,7 +101,7 @@ export async function draftSettings(
   const prompt = draftPrompt(request);
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
-      const draft = await generateStructured(db, model, { ...ctx, purpose: "draft" }, StudyChatFields, prompt);
+      const draft = await generateStructured(db, model, { ...ctx, purpose: "draft" }, StudyChatDraftFields, prompt);
       // The teacher's choices of mode and of student work win over the model's;
       // showing progress is the teacher's too, set by create.ts.
       const mode = request.mode === "suggest" ? draft.mode : request.mode;

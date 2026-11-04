@@ -136,6 +136,13 @@ export const StudyChatFields = z
   })
   .meta({ title: "Study Chat settings" });
 
+/**
+ * What the model drafts (draft.ts): every setting but the teacher's own
+ * switches, which draft.ts sets after it answers. OpenAI's structured output
+ * refuses a schema with any field not required, and those two have defaults.
+ */
+export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true });
+
 export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
   message: "A Defend chat is about each student's own work, so “Students bring their own work” stays on.",
   path: ["studentWork"],

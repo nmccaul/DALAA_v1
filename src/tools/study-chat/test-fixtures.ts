@@ -43,6 +43,13 @@ export const draft = (over: Partial<StudyChatSettings> = {}): StudyChatSettings 
   ...over,
 });
 
+/** What the model answers when drafting: `draft` without the teacher's own switches, which it isn't asked for. */
+export function drafted(over: Partial<StudyChatSettings> = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { studentWork, showProgress, ...answer } = draft(over);
+  return answer;
+}
+
 /** A model that gives each answer in turn (as JSON text), then repeats the last. */
 export function answering(...answers: unknown[]) {
   let call = 0;

@@ -7,7 +7,7 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { findTool, isLive } from "@/tools/catalog";
 import { createStudyChat, publishStudyChat, saveStudyChat, STUDY_CHAT } from "./create";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, drafted } from "./test-fixtures";
 
 describe("creating a Study Chat", () => {
   let db: Db;
@@ -49,7 +49,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("saves the AI's draft as a draft, titled and pointed from it", async () => {
-    const model = answering(draft());
+    const model = answering(drafted());
     const result = await createStudyChat(db, model, prof, course, { contentId: content, guideId: null, studentWork: false, mode: "case-chat", creationKey: randomUUID() });
     if (!result.ok) throw new Error(result.reason);
 
@@ -68,7 +68,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("returns the first activity on a retry and doesn't draft again", async () => {
-    const model = answering(draft());
+    const model = answering(drafted());
     const request = { contentId: content, guideId: null, studentWork: false, mode: "case-chat" as const, creationKey: randomUUID() };
     const first = await createStudyChat(db, model, prof, course, request);
     const again = await createStudyChat(db, model, prof, course, request);
@@ -87,7 +87,7 @@ describe("creating a Study Chat", () => {
     });
     expect(failed).toEqual({ ok: false, reason: "The AI couldn't draft this chat. Try again in a minute." });
 
-    const model = answering(draft());
+    const model = answering(drafted());
     const notTheirs = await createStudyChat(db, model, other, course, { contentId: content, guideId: null, studentWork: false, mode: "case-chat", creationKey: randomUUID() });
     expect(notTheirs.ok).toBe(false);
     expect(model.doGenerateCalls).toHaveLength(0);
@@ -95,7 +95,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("keeps the teacher's 'Students bring their own work' switch, whatever the draft says", async () => {
-    const model = answering(draft({ studentWork: false }));
+    const model = answering(drafted({ studentWork: false }));
     const request = { contentId: content, guideId: null, mode: "case-chat" as const, studentWork: true, creationKey: randomUUID() };
     const result = await createStudyChat(db, model, prof, course, request);
     if (!result.ok) throw new Error(result.reason);
@@ -106,7 +106,7 @@ describe("creating a Study Chat", () => {
   it("keeps the teacher's 'Show students their progress' switch, off unless they turned it on", async () => {
     const saved = async (showProgress: boolean | undefined) => {
       const request = { contentId: content, guideId: null, mode: "case-chat" as const, studentWork: false, showProgress, creationKey: randomUUID() };
-      const result = await createStudyChat(db, answering(draft({ showProgress: !showProgress })), prof, course, request);
+      const result = await createStudyChat(db, answering(drafted({ showProgress: !showProgress })), prof, course, request);
       if (!result.ok) throw new Error(result.reason);
       return (await getTaughtActivity(db, prof, result.activityId))?.settings;
     };
@@ -116,7 +116,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("turns on 'Students bring their own work' for a Defend chat even when the switch was left off", async () => {
-    const model = answering(draft({ studentWork: false }));
+    const model = answering(drafted({ studentWork: false }));
     const request = { contentId: content, guideId: null, mode: "defend" as const, studentWork: false, creationKey: randomUUID() };
     const result = await createStudyChat(db, model, prof, course, request);
     if (!result.ok) throw new Error(result.reason);
@@ -124,7 +124,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("publishes for the course's teacher only, and only settings that fit the schema", async () => {
-    const result = await createStudyChat(db, answering(draft()), prof, course, {
+    const result = await createStudyChat(db, answering(drafted()), prof, course, {
       contentId: content,
       guideId: null,
       studentWork: false,
@@ -147,7 +147,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("saves a teacher's edits, with the title and points following the settings", async () => {
-    const result = await createStudyChat(db, answering(draft()), prof, course, {
+    const result = await createStudyChat(db, answering(drafted()), prof, course, {
       contentId: content,
       guideId: null,
       studentWork: false,
@@ -173,7 +173,7 @@ describe("creating a Study Chat", () => {
   });
 
   it("refuses edits that don't fit the schema and keeps what was saved", async () => {
-    const result = await createStudyChat(db, answering(draft()), prof, course, {
+    const result = await createStudyChat(db, answering(drafted()), prof, course, {
       contentId: content,
       guideId: null,
       studentWork: false,
