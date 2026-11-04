@@ -1,0 +1,9 @@
+# Ideas from feedback (D-030: written down, never built by the bug loop)
+
+- **2026-10-29 · `a6cfe3c8`**: Make the teacher's activity page more of an onboarding flow, with clear stopping points and an obvious "tweak" button. *Opinion:* fits product rule 1. Worth folding into the getting-started checklist (#95) rather than reworking the activity page.
+- **2026-10-29 · `782628a4`**: Make the "Read first" material render better for students. *Opinion:* yes. Uploaded .md and PDF text shows as raw text. The inline formatter from PR #114 could cover headings, bold and paragraphs here cheaply.
+- **2026-10-29 · `53f16801`**: When a student finishes, show a clear "you're done" message, or send them back to Canvas automatically. *Opinion:* a clear done state plus a "Back to Canvas" button is safer than closing the tool automatically, since students still need to see their grade.
+- **2026-10-29 · `7215a7e3`**: Let students pick a category when disputing a grade (ambiguous question, typo, too strict, other). *Opinion:* cheap and gives teachers a sortable reason. It needs a column on disputes (migration), so it belongs with v2 "Review workflow and disputes" (#58).
+- **2026-10-30 · `12c091c2`**: "Draft it" reads as "let the AI draft it". Swap the order of "Suggest for me" and "Draft it", keeping "Draft it" as the primary button. *Opinion:* agree. It's a two-line change once Nathan approves the wording.
+- **2026-10-30 · `c6b6086c`** (part of a bug report): When material has little text (a music score, an image), ask the teacher what students should do with it instead of failing. *Opinion:* good fallback. The failure she hit was the schema bug (PR #113), but low-text files will still draft poorly.
+- **2026-10-29 · `cdc2b58a`** (part of a confusing report): Collapsible sections for each rubric category in the student's grade. *Opinion:* the scroll fix (PR #115) covers the main complaint. Try collapsing only if grades get long.
