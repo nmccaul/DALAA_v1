@@ -43,6 +43,37 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
   );
 }
 
+/** An activity in the teacher's Library: made, but not added to a Canvas course yet. */
+export type LibraryActivity = {
+  id: string;
+  tool: string;
+  title: string;
+  status: "draft" | "published";
+  points: number | null;
+  courseId: string;
+  courseCode: string;
+  courseTerm: string;
+  updatedAt: Date;
+};
+
+/**
+ * The Library: every activity in a course the actor teaches that isn't
+ * assigned yet, meaning it has no Canvas link (lti_resource_link_id). Drafts
+ * and finished ones alike. Last changed first.
+ */
+export async function listLibraryActivities(db: Db, actor: Actor): Promise<LibraryActivity[]> {
+  const where = and({ text: "a.lti_resource_link_id is null", values: [] }, coursesTaughtBy(actor, "c"));
+  return db.query<LibraryActivity>(
+    `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
+            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt"
+       from activities a
+       join courses c on c.id = a.course_id
+      where ${where.text}
+      order by a.updated_at desc, a.created_at desc`,
+    where.values,
+  );
+}
+
 /**
  * Where a student stands on an assignment. "submitted" is finished but not
  * graded yet (being graded, or the grader failed and will try again).
