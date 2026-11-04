@@ -11,7 +11,7 @@ import { points, ResultBreakdown } from "./breakdown";
 import { openDisputeAction } from "./dispute-actions";
 import { MAX_REASON, type Dispute } from "./disputes";
 import { countedScore, type Result } from "./store";
-import { RefreshWhileGrading } from "./refresh-while-grading";
+import { RefreshWhileGrading, ShowGradeOnArrival } from "./refresh-while-grading";
 
 /**
  * `result`: NULL before grading has started, which the student sees as
@@ -50,8 +50,10 @@ export function StudentResult({
     <section
       id="your-grade"
       aria-label="Your grade"
-      className="flex scroll-mt-4 flex-col gap-4 rounded-panel border border-border bg-surface px-4 py-4"
+      tabIndex={-1}
+      className="flex scroll-mt-4 flex-col gap-4 rounded-panel border border-border bg-surface px-4 py-4 focus:outline-none"
     >
+      <ShowGradeOnArrival targetId="your-grade" />
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-xl font-semibold">
           Your grade: {countedScore(result).toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
