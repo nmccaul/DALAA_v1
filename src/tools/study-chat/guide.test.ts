@@ -15,7 +15,7 @@ import { createStudyChat, STUDY_CHAT } from "./create";
 import { draftPrompt } from "./draft";
 import { gradeAttempt } from "./grade";
 import { studentView } from "./student-view";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, drafted } from "./test-fixtures";
 import { turnResponse } from "./turn-stream";
 
 const GUIDE = "ANSWER KEY: the winter cash squeeze sinks a second store.";
@@ -164,7 +164,7 @@ describe("the AI-only guide", () => {
   it("is saved with a new chat and shapes its draft; another course's guide is refused", async () => {
     const content = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Case", text: "Harbor Bikes sells bikes." });
     if (!content.ok) throw new Error(content.reason);
-    const model = answering(draft());
+    const model = answering(drafted());
     const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
