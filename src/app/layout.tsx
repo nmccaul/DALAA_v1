@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Outfit } from "next/font/google";
+import { Lato } from "next/font/google";
 import "./globals.css";
 
-// Geist for reading and UI; Outfit for headings, echoing the rounded wordmark.
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
+// Lato, Canvas's typeface (D-032).
+const lato = Lato({ variable: "--font-lato", subsets: ["latin"], weight: ["400", "700", "900"] });
 
 export const metadata: Metadata = {
   title: { default: "DALAA", template: "%s | DALAA" },
@@ -12,15 +11,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0d1e" },
-  ],
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geist.variable} ${outfit.variable} h-full antialiased`}>
+    <html lang="en" className={`${lato.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

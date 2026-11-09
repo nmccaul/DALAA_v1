@@ -3,7 +3,6 @@
 import { BookOpenText, Books, GearSix } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Tabs } from "./tabs";
 
 // The three top-level areas, and only three (CLAUDE.md product rule 2).
 const AREAS = [
@@ -12,23 +11,28 @@ const AREAS = [
   { href: "/settings", label: "Settings", icon: GearSix },
 ] as const;
 
-/** The main areas down the side of the teacher shell, on wide screens. */
-export function SideNav() {
+function useCurrent() {
   const path = usePathname();
+  return (href: string) => path === href || path.startsWith(`${href}/`);
+}
+
+/** The main areas down Canvas-style navy rail, icon over label, on wide screens. */
+export function SideNav() {
+  const isCurrent = useCurrent();
   return (
-    <nav aria-label="Main" className="flex flex-col gap-1">
+    <nav aria-label="Main" className="flex flex-col">
       {AREAS.map(({ href, label, icon: Icon }) => {
-        const current = path === href || path.startsWith(`${href}/`);
+        const current = isCurrent(href);
         return (
           <Link
             key={href}
             href={href}
             aria-current={current ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-colors ${
-              current ? "bg-accent-soft text-accent-text" : "text-muted hover:bg-bg hover:text-text"
+            className={`flex flex-col items-center gap-1 px-1 py-2.5 text-xs transition-colors ${
+              current ? "bg-white text-accent" : "text-white hover:bg-white/10"
             }`}
           >
-            <Icon size={20} weight={current ? "duotone" : "regular"} aria-hidden />
+            <Icon size={26} weight={current ? "fill" : "regular"} aria-hidden />
             {label}
           </Link>
         );
@@ -37,7 +41,26 @@ export function SideNav() {
   );
 }
 
-/** The same areas as tabs across the top, on phones and narrow windows. */
+/** The same areas across the navy bar, on phones and narrow windows. */
 export function TopNav() {
-  return <Tabs tabs={AREAS.map(({ href, label }) => ({ href, label }))} label="Main" />;
+  const isCurrent = useCurrent();
+  return (
+    <nav aria-label="Main" className="flex items-center gap-1 overflow-x-auto">
+      {AREAS.map(({ href, label }) => {
+        const current = isCurrent(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={current ? "page" : undefined}
+            className={`shrink-0 rounded-control px-3 py-1.5 text-sm ${
+              current ? "bg-white font-bold text-accent" : "text-white hover:bg-white/10"
+            }`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }

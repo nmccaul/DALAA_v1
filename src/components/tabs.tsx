@@ -16,7 +16,7 @@ export type Tab = {
 export function Tabs({ tabs, label }: { tabs: readonly Tab[]; label: string }) {
   const path = usePathname();
   return (
-    <nav aria-label={label} className="flex items-center gap-1 overflow-x-auto">
+    <nav aria-label={label} className="-mb-px flex items-end gap-1 overflow-x-auto">
       {tabs.map(({ href, label: text, exact, also = [] }) => {
         const under = (p: string) => path === p || path.startsWith(`${p}/`);
         const current = (exact ? path === href : under(href)) || also.some(under);
@@ -25,8 +25,10 @@ export function Tabs({ tabs, label }: { tabs: readonly Tab[]; label: string }) {
             key={href}
             href={href}
             aria-current={current ? "page" : undefined}
-            className={`shrink-0 rounded-control px-3 py-2 text-sm font-medium transition-colors ${
-              current ? "bg-accent-soft text-accent-text" : "text-muted hover:text-text"
+            className={`shrink-0 border-b-[3px] px-4 py-2.5 text-base transition-colors ${
+              current
+                ? "border-accent font-bold text-text"
+                : "border-transparent text-accent-text hover:border-border-strong hover:text-accent"
             }`}
           >
             {text}

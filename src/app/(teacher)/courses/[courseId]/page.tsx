@@ -13,14 +13,14 @@ const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }
 export default async function CourseAssignmentsPage({ params }: PageProps<"/courses/[courseId]">) {
   const { actor, course } = await loadTaughtCourse((await params).courseId);
   const assignments = await listCourseActivities(db(), actor, course.id);
-  const create = <ButtonLink href={`/courses/${course.id}/activities/new`}>Create assignment</ButtonLink>;
+  const create = <ButtonLink href={`/courses/${course.id}/activities/new`}>+ Activity</ButtonLink>;
 
   if (assignments.length === 0) {
     const host = (await headers()).get("host") ?? "";
     return (
-      <EmptyState title="No assignments yet" action={create}>
+      <EmptyState title="No activities yet" action={create}>
         <p>
-          Choose a type, give it your material, and DALAA drafts the assignment for you to edit. Students on your class
+          Choose a type, give it your material, and DALAA drafts the activity for you to edit. Students on your class
           list can already sign in at{" "}
           <span className="font-medium text-text" translate="no">
             {host}/sign-in
@@ -34,46 +34,63 @@ export default async function CourseAssignmentsPage({ params }: PageProps<"/cour
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">{create}</div>
-      <ul className="flex flex-col divide-y divide-border rounded-panel border border-border bg-surface">
-        {assignments.map((a) => {
-          const tool = findTool(a.tool);
-          const Icon = tool?.icon;
-          return (
-            <li key={a.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+      <section className="border border-border">
+        <h2 className="flex items-center gap-2 border-b border-border bg-subtle px-4 py-2.5 text-base font-bold">
+          All activities
+          <span className="rounded-full border border-border-strong bg-surface px-2.5 py-0.5 text-[13px] font-normal text-muted">
+            {assignments.length}
+          </span>
+        </h2>
+        <ul className="flex flex-col divide-y divide-border">
+          {assignments.map((a) => {
+            const tool = findTool(a.tool);
+            const Icon = tool?.icon;
+            const href = `/courses/${course.id}/activities/${a.id}`;
+            return (
+              <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 pr-4 pl-4 hover:bg-subtle">
                 {Icon && (
-                  <span style={{ color: tool.accent }}>
-                    <Icon size={24} weight="duotone" aria-hidden />
+                  <span className="shrink-0">
+                    <Icon size={24} aria-hidden />
                   </span>
                 )}
-                <div className="flex min-w-0 flex-col">
-                  <Link href={`/courses/${course.id}/activities/${a.id}`} className="font-medium break-words hover:underline">
+                <div className="flex min-w-0 flex-[1_1_260px] flex-col">
+                  <Link href={href} className="font-bold break-words text-text hover:text-accent hover:underline">
                     {a.title}
                   </Link>
-                  <span className="text-sm text-muted">
+                  <span className="mt-0.5 text-[13px] text-muted">
                     {tool?.name ?? a.tool}
-                    {a.points !== null && ` · ${pointsFormat.format(a.points)} ${a.points === 1 ? "point" : "points"}`}
+                    {a.points !== null && ` · ${pointsFormat.format(a.points)} ${a.points === 1 ? "pt" : "pts"}`}
+                    {" · "}
+                    {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
                   </span>
                 </div>
-              </div>
-              <span className="text-sm text-muted sm:w-48">
-                {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
-              </span>
-              <span className="text-sm sm:w-44">
-                {a.status === "published" ? (
-                  <>
-                    {a.submitted} submitted · {a.graded} graded
-                  </>
-                ) : (
-                  <span className="rounded-control bg-bg px-2 py-0.5 text-xs font-medium text-muted">
-                    Draft, students can&apos;t see it
+                <div className="flex flex-wrap items-center justify-end gap-3.5">
+                  {a.status === "published" ? (
+                    <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-accent-text">
+                      Published
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-dashed border-muted bg-surface px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-muted">
+                      Draft
+                    </span>
+                  )}
+                  <span className="min-w-[150px] text-right text-sm text-muted">
+                    {a.status === "published" ? `${a.submitted} submitted · ${a.graded} graded` : "Students can\u2019t see it"}
                   </span>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+                  {a.status === "published" && (
+                    <Link href={`/courses/${course.id}/grading`} className="text-sm text-accent-text hover:underline">
+                      Results
+                    </Link>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <p className="text-sm text-muted">
+        Each published activity also appears in Canvas Assignments, where students open it and where its grade goes.
+      </p>
     </div>
   );
 }
