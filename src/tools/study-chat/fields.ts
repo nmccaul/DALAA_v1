@@ -1,5 +1,14 @@
 /** The review screen's settings, in screen order (editor.tsx); labels come from the schema (`settingTitle`). */
 
+/** The editor's cards, in screen order. */
+export const CARD_KEYS = ["goal", "scenarios", "positions", "touchpoints", "persona", "completion", "rubric"] as const;
+export type CardKey = (typeof CARD_KEYS)[number];
+
+/** The cards to render: all of them, or only `only` (a wizard step's), still in screen order. */
+export function shownCards(only?: readonly CardKey[]): CardKey[] {
+  return only ? CARD_KEYS.filter((k) => only.includes(k)) : [...CARD_KEYS];
+}
+
 /**
  * Every setting the search box can jump to. `more` ones sit under "More
  * options" in their card. A top-level setting with no card of its own names

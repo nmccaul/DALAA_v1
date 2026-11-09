@@ -14,6 +14,7 @@ import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 import { parsePicks, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
+import { isSetupStep, nextSetupStep, setupPath } from "./wizard/steps";
 import { typeRequestFrom } from "./wizard/type-request";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
@@ -88,7 +89,7 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
 
 /**
  * Wizard step 3: the chosen type. The AI drafts the activity from the picks
- * and the goal; until steps 4–6 exist (T17) the review screen opens. A failed
+ * and the goal, and step 4 opens on the draft. A failed
  * draft comes back with the choice kept (`mode`).
  */
 export type TypeState = FormState & { mode?: string };
@@ -111,7 +112,7 @@ export async function wizardTypeAction(_prev: TypeState, form: FormData): Promis
     creationKey: request.creationKey,
   });
   if (!created.ok) return { error: created.reason, mode };
-  redirect(keepPicker(reviewPath(courseId, created.activityId), pickerRequest(form.get(PICKER_PARAM))));
+  redirect(keepPicker(setupPath(courseId, created.activityId, "scenario"), pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
@@ -152,6 +153,10 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   }
   const saved = await saveStudyChat(db(), actor, activityId, settings);
   if (!saved.ok) return { error: saved.reason, problems: saved.problems };
+  const step = form.get("wizardStep");
+  if (form.get("intent") === "next" && isSetupStep(step)) {
+    redirect(keepPicker(setupPath(courseId, activityId, nextSetupStep(step) ?? step), pickerRequest(form.get(PICKER_PARAM))));
+  }
   if (form.get("intent") !== "publish") return { savedAt: Date.now() };
 
   const published = await publishStudyChat(db(), actor, activityId);

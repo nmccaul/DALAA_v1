@@ -1,7 +1,8 @@
 /**
  * The screens each live tool brings (CLAUDE.md: tools register behavior; the
  * chassis doesn't ask who they are). The chassis routes
- * `/courses/[id]/activities/new/[tool]`, `/courses/[id]/activities/[activityId]`
+ * `/courses/[id]/activities/new/[tool]`, `/courses/[id]/activities/[activityId]`,
+ * its `setup/[step]` wizard pages
  * and the student's `/activities/[activityId]` look a tool's screens up here. Server-only: catalog.ts stays light enough
  * for the landing page.
  */
@@ -17,6 +18,7 @@ import { StudyChatCreate } from "./study-chat/create-screen";
 import { studyChatGradingNotes } from "./study-chat/grading-notes";
 import { StudyChatReview } from "./study-chat/review-screen";
 import { StudyChatTake } from "./study-chat/take-screen";
+import { StudyChatSetup } from "./study-chat/wizard/setup-step";
 
 export type CreateScreenProps = {
   actor: Actor;
@@ -26,6 +28,9 @@ export type CreateScreenProps = {
 
 /** `addToCanvas`: the open "Add to Canvas" picker's request, so Publish returns to it (src/lti/picker.ts). */
 export type ReviewScreenProps = { actor: Actor; activity: TaughtActivity; addToCanvas: string | null };
+
+/** A step of the tool's setup wizard on a drafted activity; `step` is the URL's, unchecked. */
+export type SetupScreenProps = ReviewScreenProps & { step: string };
 
 /** A student doing the activity. The screen passes the browser only what the tool's student view allows. */
 export type TakeScreenProps = { actor: Actor; activity: TakenActivity };
@@ -43,6 +48,8 @@ export type GradingNotes = {
 type ToolScreens = {
   create: (props: CreateScreenProps) => ReactNode | Promise<ReactNode>;
   review: (props: ReviewScreenProps) => ReactNode | Promise<ReactNode>;
+  /** Calls `notFound()` for a step it doesn't have. */
+  setup?: (props: SetupScreenProps) => ReactNode | Promise<ReactNode>;
   take: (props: TakeScreenProps) => ReactNode | Promise<ReactNode>;
   /** `attemptIds`: this assignment's attempts the Grading tab already scoped to the teacher. */
   gradingNotes?: (db: Db, activityId: string, attemptIds: readonly string[]) => Promise<GradingNotes | null>;
@@ -52,6 +59,7 @@ const SCREENS: Readonly<Record<string, ToolScreens>> = {
   [STUDY_CHAT]: {
     create: StudyChatCreate,
     review: StudyChatReview,
+    setup: StudyChatSetup,
     take: StudyChatTake,
     gradingNotes: studyChatGradingNotes,
   },
