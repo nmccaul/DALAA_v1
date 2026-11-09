@@ -10,6 +10,19 @@ export const SETUP_CARDS: Record<Exclude<SetupStep, "review">, readonly CardKey[
   grading: ["rubric"],
 };
 
+/**
+ * The step that holds the two student switches ("students bring work", "show
+ * progress"). On the review screen they sit in the scenario and touchpoints
+ * cards; in the wizard they move here, so each shows on one step only.
+ */
+export const STUDENT_SWITCHES_STEP = "options" satisfies SetupStep;
+
+/** Options from the mockup that don't exist yet, shown disabled on their step (ralph/PLAN.md). */
+export const SETUP_COMING_SOON: Partial<Record<SetupStep, readonly string[]>> = {
+  options: ["Hints", "Reading beside the chat", "Minimum exchanges", "Feedback on each criterion"],
+  grading: ["Redraft with AI", "Use a saved rubric", "Allowed attempts", "Score to keep"],
+};
+
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The wizard panel's note for a step, from what's stored (never from what the AI might have meant). */
@@ -23,7 +36,7 @@ export function setupNote(step: SetupStep, s: StudyChatSettings): string {
       return `I drafted this chat as ${MODES[s.mode].label}, with ${drafted.join(" and ")}, and ${s.persona.name} to lead it. Change anything that doesn't fit your class.`;
     }
     case "options":
-      return "These decide when a chat ends. Leave a limit empty for none.";
+      return "These decide when a chat ends and what students see while they chat. Leave a limit empty for none.";
     case "grading":
       return `I drafted ${count(s.rubric.criteria.length, "criterion", "criteria")} worth ${rubricPoints(s)} points. The activity is worth the total.`;
     case "review":

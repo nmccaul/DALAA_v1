@@ -9,6 +9,8 @@ import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
+import { OptionTable } from "./wizard/option-table";
+import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
 
 type S = StudyChatSettings;
 type Item = { label: string; description: string };
@@ -194,6 +196,43 @@ export function StudyChatEditor({
       </details>
     );
 
+  // The two student switches: in their cards on the review screen, on their own step in the wizard.
+  const switches = {
+    studentWork: {
+      id: fieldId(["studentWork"]),
+      label: settingTitle(["studentWork"]),
+      input: (
+        <input
+          id={fieldId(["studentWork"])}
+          type="checkbox"
+          checked={s.studentWork}
+          disabled={MODES[s.mode].needsStudentWork}
+          onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
+        />
+      ),
+    },
+    showProgress: {
+      id: fieldId(["showProgress"]),
+      label: settingTitle(["showProgress"]),
+      input: (
+        <input
+          id={fieldId(["showProgress"])}
+          type="checkbox"
+          checked={s.showProgress}
+          onChange={(e) => change((d) => void (d.showProgress = e.target.checked))}
+        />
+      ),
+    },
+  };
+  const inCard = (sw: (typeof switches)[keyof typeof switches]) =>
+    !wizard && (
+      <label className="flex items-center gap-2 text-sm font-medium">
+        {sw.input}
+        {sw.label}
+      </label>
+    );
+  const comingSoon = wizard ? (SETUP_COMING_SOON[wizard.step as keyof typeof SETUP_COMING_SOON] ?? []) : [];
+
   const scenario = s.scenarios[0];
   return (
     <form
@@ -261,16 +300,7 @@ export function StudyChatEditor({
             <Field path={["scenarios", "situation"]}>
               {text(scenario.situation, (v) => change((d) => void (d.scenarios[0].situation = v)), 6)}
             </Field>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                id={fieldId(["studentWork"])}
-                type="checkbox"
-                checked={s.studentWork}
-                disabled={MODES[s.mode].needsStudentWork}
-                onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
-              />
-              {settingTitle(["studentWork"])}
-            </label>
+            {inCard(switches.studentWork)}
           </>,
           <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>,
         )}
@@ -287,15 +317,7 @@ export function StudyChatEditor({
           </>,
           <>
             <ItemsEditor path={["touchpoints"]} items={s.touchpoints} max={12} onChange={(v) => change((d) => void (d.touchpoints = v))} />
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                id={fieldId(["showProgress"])}
-                type="checkbox"
-                checked={s.showProgress}
-                onChange={(e) => change((d) => void (d.showProgress = e.target.checked))}
-              />
-              {settingTitle(["showProgress"])}
-            </label>
+            {inCard(switches.showProgress)}
           </>,
         )}
         {card(
@@ -425,6 +447,25 @@ export function StudyChatEditor({
               </select>
             )}
           </Field>,
+        )}
+        {wizard?.step === STUDENT_SWITCHES_STEP && (
+          <OptionTable
+            title="What students see and do"
+            rows={[switches.studentWork, switches.showProgress].map((sw) => ({
+              label: <label htmlFor={sw.id}>{sw.label}</label>,
+              control: sw.input,
+            }))}
+            comingSoon={comingSoon}
+          />
+        )}
+        {wizard?.step === "grading" && (
+          <>
+            <p className="text-sm">
+              <span className="font-medium">Total: {rubricPoints(s)} points.</span>{" "}
+              <span className="text-muted">The activity is worth the total, and Canvas gets the same.</span>
+            </p>
+            <OptionTable title="More grading options" comingSoon={comingSoon} />
+          </>
         )}
       </div>
 
