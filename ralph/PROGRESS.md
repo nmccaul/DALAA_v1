@@ -11,3 +11,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - `docs/IDEAS.md`: new section listing the wizard chat panel and each Coming-soon option. `.env.example`: `ASSIGN_TO_CANVAS=`.
 - There is no D-033 in DECISIONS; numbered D-034 as the task said. Nathan: renumber if D-033 was meant to exist.
 - Local tests: 12 failures, all `Array.fromAsync` on Node 20 — not only the two PDF tests but also helpers in `study-chat/progress.test.ts` (9) and `work.test.ts` (1). Pre-existing; CI (Node 22) is the gate. Treat these as acceptable local failures too.
+
+## 2026-11-09 07:19 UTC · T02 activity_materials table · done
+- Migration `20261109071641_activity_materials.sql` (additive): adds `unique (id, course_id)` on activities, the `activity_materials` table (exactly one of content_id/guide_id, same-course FKs, partial unique indexes per kind, RLS) and backfills reading at position 0, guide at 1. Applied locally.
+- `src/activities/materials.ts`: `activityMaterials`, `activityReadings` (readings only — what student paths should use in T03), `setActivityMaterials` (replaces the set, dedupes, refuses non-teacher and other-course materials before touching rows).
+- Guide reads stay in `src/content/guide.ts` (new `activityGuides`, `guidesInCourse`), keeping it the only reader of `course_guides`.
+- `src/test/db.ts`: `testDb({ before })` + `migrateRest()` so a migration's backfill can be tested.
+- Local `npm run migrate` needs `.env.local` loaded into the shell (`set -a; . ./.env.local`). Same 12 Node-20 `Array.fromAsync` failures, nothing new.
