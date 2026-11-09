@@ -19,7 +19,7 @@ export type ActivityRow = {
   submitted: number;
   /** Finished attempts with a grade saved. */
   graded: number;
-  /** Added to the Canvas course (it has a Canvas link). */
+  /** In the Canvas course: added from Canvas (a Canvas link) or assigned from DALAA (a Canvas assignment). */
   assigned: boolean;
 };
 
@@ -37,7 +37,7 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
             (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
               where t.activity_id = a.id and r.status = 'graded') as graded,
-            a.lti_resource_link_id is not null as assigned
+            (a.lti_resource_link_id is not null or a.canvas_assignment_id is not null) as assigned
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}

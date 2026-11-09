@@ -70,6 +70,8 @@ describe("listCourseActivities", () => {
 
     await db.query("update activities set lti_resource_link_id = 'link-1' where id = $1", [later]);
     expect((await listCourseActivities(db, prof, course)).map((r) => r.assigned)).toEqual([false, true, false]);
+    await db.query("update activities set canvas_assignment_id = '30001' where id = $1", [rows[2].id]);
+    expect((await listCourseActivities(db, prof, course)).map((r) => r.assigned)).toEqual([false, true, true]);
 
     expect(await listCourseActivities(db, other, course)).toEqual([]);
     expect(await listCourseActivities(db, prof, "not-a-uuid")).toEqual([]);
