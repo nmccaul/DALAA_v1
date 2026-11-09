@@ -63,9 +63,9 @@ export default async function NewActivityPage({ params, searchParams }: PageProp
       </ul>
 
       <p className="text-sm text-muted">
-        Already made an assignment in another course? Reuse it from your{" "}
-        <Link href="/library" className="underline hover:text-text">
-          Library
+        Already made an assignment in another course?{" "}
+        <Link href={`/courses/${course.id}?show=other`} className="underline hover:text-text">
+          Copy it into this course
         </Link>
         .
       </p>

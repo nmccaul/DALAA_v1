@@ -33,3 +33,28 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Materials tab "used in" reads `activity_materials` instead of the old columns.
 - Checked locally on the running dev server (:3000): an activity with one reading and two notes lists all three with pills. A local-only user `ralph.t04` (staff allowlist) and course "T04 check" were added to the local DB for that.
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:45 UTC · T05 CHECKPOINT B · done
+- Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). One new migration since main, `20261109071641_activity_materials.sql`: additive (new table, unique (id, course_id) over the PK, backfill inserts). Applied to production with `scripts/migrate-prod.sh` → `migrations up to date`.
+- PR #124 (feat/creation-wizard → main), CI passed in 6m12s, merged; main is `c2ae5b9`.
+- Production deploy of `c2ae5b9` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
+- Nathan: an activity created in production between the migration and the deploy (a few minutes, overnight) would have no `activity_materials` row; unlikely, but if one exists, re-attach its material on the review screen.
+
+## 2026-11-09 07:49 UTC · T06 copyActivity · done
+- `src/activities/copy.ts` `copyActivity`: one transaction — `createActivity` (target-course check, idempotent by `creationKey`; a retry short-circuits via `activityForKey`), then materials re-attached with `setActivityMaterials`. Copies title, tool, settings, points; status draft; no due date, no LTI link/line item, no attempts/results/grades.
+- Cross-course materials go through new `copyTo` in `src/content/store.ts` (`copyContent`; `copyGuides` in `guide.ts`, so guide.ts stays the only reader of `course_guides`). Readings stay readings and notes stay notes.
+- Choice not in the task: a material the target course already has word for word (same source, name, text) is reused rather than copied again, so copying several activities that share a case from last term doesn't fill the Materials tab with duplicates. Nathan: say if you'd rather always copy.
+- Due date is deliberately not copied (a copy is usually for another term). `src/activities/copy.test.ts`: 6 tests. Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:54 UTC · T07 Activities tab sections · done
+- `listCourseActivities` rows now carry `assigned` (has `lti_resource_link_id`; add `canvas_assignment_id` in T09-era work). New `listOtherCourseActivities(db, actor, courseId)`: every activity in the teacher's other courses, drafts included, newest course first. `listLibraryActivities` is left for the Library page; T08 can delete it with the page.
+- `courses/[courseId]/page.tsx`: *Assigned* section on top (same Canvas-style rows); filter pills `?show=unassigned` / `?show=other`; other courses grouped under "CODE · Term". Defaults to *From my other courses* when this course has nothing unassigned but other courses have activities. The empty state shows only when there's nothing anywhere.
+- New `courses/[courseId]/actions.ts` `copyActivityAction` (Copy / Copy to this course, `creationKey` from `randomUUID()` at render), landing on the copy. A refusal shows a fixed sentence (`?copyerror=1`), never text from the URL.
+- Checked locally with playwright-cli at desktop and 390px: three lists render; Copy and Copy to this course each opened the new draft. Local-only data added: course "T07 other" for `ralph.t04` and an activity with a fake LTI link `local-t07-link`. Dark mode not screenshotted (only design tokens used).
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:56 UTC · T08 Library removed · done
+- `main-nav.tsx`: Library dropped from `AREAS` (rail is Courses · Settings). `library/page.tsx` is now just `redirect("/courses")` (signed-out visitors still hit the sign-in guard first; checked with curl: 307 → /sign-in).
+- The "Reuse it from your Library" line on the activity-type picker now links to `/courses/<id>?show=other` ("Copy it into this course").
+- `listLibraryActivities` and its test deleted (no callers left); `LibraryActivity` type renamed `OtherCourseActivity`.
+- No `/library` link remains in `src`. Lint, typecheck green; tests: the same 12 Node-20 `Array.fromAsync` failures only.
