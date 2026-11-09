@@ -31,9 +31,15 @@ export async function StudyChatReview({ actor, activity, addToCanvas }: ReviewSc
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-2xl font-semibold tracking-tight break-words">{activity.title}</h2>
-        <p className="text-muted">
-          {MODES[parsed.data.mode].label} · {published ? "Published" : "Draft, students can't see it yet"}
+        <h2 className="text-[1.75rem] font-normal break-words">{activity.title}</h2>
+        <p className="flex flex-wrap items-center gap-2 text-muted">
+          <span>{MODES[parsed.data.mode].label}</span>
+          {published ? (
+            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent-text">Published</span>
+          ) : (
+            <span className="rounded-full border border-dashed border-muted px-2.5 py-0.5 text-xs font-bold">Draft</span>
+          )}
+          {!published && <span className="text-sm">Students can&apos;t see it yet</span>}
         </p>
         {note && <p className="text-sm text-muted">{note}</p>}
       </div>

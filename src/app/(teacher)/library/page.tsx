@@ -45,49 +45,66 @@ export default async function LibraryPage() {
       <p className="-mt-4 text-sm text-muted">
         {activities.length} {activities.length === 1 ? "assignment" : "assignments"} not in Canvas yet
       </p>
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {activities.map((a) => {
-          const tool = findTool(a.tool);
-          const Icon = tool?.icon;
-          return (
-            <li key={a.id}>
-              <Link
-                href={`/courses/${a.courseId}/activities/${a.id}`}
-                className="group flex h-full flex-col overflow-hidden rounded-panel border border-border bg-surface transition-shadow hover:shadow-md"
-              >
-                <div
-                  className="flex h-20 items-end px-5 pb-3 text-white"
-                  style={{ background: tool?.accent ?? "var(--accent)" }}
-                >
-                  {Icon && <Icon size={32} weight="duotone" aria-hidden />}
-                </div>
-                <div className="flex flex-1 flex-col gap-1 px-5 py-4">
-                  <span className="font-medium break-words group-hover:underline">{a.title}</span>
-                  <span className="text-sm text-muted">
-                    {tool?.name ?? a.tool}
-                    {a.points !== null && ` · ${pointsFormat.format(a.points)} ${a.points === 1 ? "point" : "points"}`}
-                  </span>
-                  <span className="text-sm text-muted">
-                    {a.courseCode} · {a.courseTerm}
-                  </span>
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 text-xs">
-                    <span
-                      className={`rounded-control px-2 py-0.5 font-medium ${
-                        a.status === "published" ? "bg-accent-soft text-accent-text" : "bg-bg text-muted"
-                      }`}
-                    >
-                      {a.status === "published" ? "Ready to add to Canvas" : "Draft"}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[15px]">
+          <thead>
+            <tr className="border-b-2 border-border-strong text-left">
+              <th className="px-3 py-2.5 font-bold">Title</th>
+              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Course</th>
+              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Status</th>
+              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Last edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activities.map((a) => {
+              const tool = findTool(a.tool);
+              const Icon = tool?.icon;
+              return (
+                <tr key={a.id} className="border-b border-border align-top hover:bg-subtle">
+                  <td className="px-3 py-3">
+                    <span className="flex items-start gap-3">
+                      {Icon && (
+                        <span className="mt-0.5 shrink-0">
+                          <Icon size={22} aria-hidden />
+                        </span>
+                      )}
+                      <span className="flex min-w-0 flex-col">
+                        <Link
+                          href={`/courses/${a.courseId}/activities/${a.id}`}
+                          className="font-bold break-words text-text hover:text-accent hover:underline"
+                        >
+                          {a.title}
+                        </Link>
+                        <span className="text-[13px] text-muted">
+                          {tool?.name ?? a.tool}
+                          {a.points !== null && ` · ${pointsFormat.format(a.points)} ${a.points === 1 ? "pt" : "pts"}`}
+                        </span>
+                      </span>
                     </span>
-                    <span className="text-muted">
-                      Edited <LocalTime value={a.updatedAt} style="day" />
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {a.courseCode} <span className="text-muted">· {a.courseTerm}</span>
+                  </td>
+                  <td className="px-3 py-3">
+                    {a.status === "published" ? (
+                      <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-accent-text">
+                        Ready to add to Canvas
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-dashed border-muted px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-muted">
+                        Draft
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-muted">
+                    <LocalTime value={a.updatedAt} style="day" />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
