@@ -8,7 +8,7 @@ import { PRACTICE_ASSIGNMENT_GROUPS } from "@/canvas/practice/data";
 import { createCourse } from "@/courses/create";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { activityLaunchUrl, assignActivity } from "./assign";
+import { activityLaunchUrl, assignActivity, assignRequestFrom, assignSetup } from "./assign";
 
 const APP = "https://dalaa.test";
 const asPractice = (): TeacherCanvas => ({ client: practiceClient(), mode: "practice" });
@@ -118,6 +118,25 @@ describe("assignActivity", () => {
     expect((await row(activityId)).due_at).toBeNull();
   });
 
+  it("the due-date edit changes only the due date", async () => {
+    const first = await assignActivity(db, prof, asPractice(), activityId, { dueAt: due, lockAt: closes, publish: true }, APP);
+    if (!first.ok) throw new Error(first.reason);
+    const earlier = new Date("2027-01-25T06:59:00Z");
+    const r = await assignActivity(db, prof, asPractice(), activityId, { dueAt: earlier }, APP);
+    expect(r).toMatchObject({ ok: true, created: false });
+    expect(await inCanvas(first.canvasAssignmentId)).toMatchObject({
+      due_at: earlier.toISOString(),
+      lock_at: closes.toISOString(),
+      published: true,
+    });
+  });
+
+  it("a new assignment left without a close date or publish choice is open and unpublished", async () => {
+    const r = await assignActivity(db, prof, asPractice(), activityId, { dueAt: null }, APP);
+    if (!r.ok) throw new Error(r.reason);
+    expect(await inCanvas(r.canvasAssignmentId)).toMatchObject({ due_at: null, lock_at: null, published: false });
+  });
+
   it("two assigns at once make one Canvas assignment", async () => {
     const both = await Promise.all([
       assignActivity(db, prof, asPractice(), activityId, { dueAt: due, lockAt: null, publish: true }, APP),
@@ -200,5 +219,40 @@ describe("assignActivity", () => {
 
   it("builds the launch URL from DALAA's address", () => {
     expect(activityLaunchUrl("https://dalaa.test/", "abc")).toBe("https://dalaa.test/api/lti/launch?activity_id=abc");
+  });
+
+  it("sets up the Assign page: the course's groups in order, and what's already in Canvas", async () => {
+    const setup = await assignSetup(db, prof, asPractice(), activityId);
+    const groups = [...PRACTICE_ASSIGNMENT_GROUPS.get(1101)!].sort((a, b) => a.position - b.position);
+    expect(setup).toEqual({ canvasAssignmentId: null, linkedByHand: false, dueAt: null, groups: groups.map((g) => expect.objectContaining({ id: g.id, name: g.name })) });
+
+    const made = await assignActivity(db, prof, asPractice(), activityId, { dueAt: due }, APP);
+    if (!made.ok) throw new Error(made.reason);
+    expect(await assignSetup(db, prof, asPractice(), activityId)).toMatchObject({ canvasAssignmentId: made.canvasAssignmentId, dueAt: due });
+
+    expect(await assignSetup(db, prof, null, activityId)).toMatchObject({ groups: null });
+    expect(await assignSetup(db, prof, { client: practiceClient(), mode: "canvas" }, activityId)).toMatchObject({ groups: null });
+    expect(await assignSetup(db, prof, failing(503).canvas, activityId)).toMatchObject({ groups: null });
+    expect(await assignSetup(db, other, asPractice(), activityId)).toBeNull();
+    expect(await assignSetup(db, prof, asPractice(), await newActivity(courseId, "link-2"))).toMatchObject({ linkedByHand: true });
+  });
+
+  it("reads the Assign form: blank dates are none, a field not on the form is left out", () => {
+    const form = (fields: Record<string, string>) => {
+      const f = new FormData();
+      for (const [k, v] of Object.entries(fields)) f.set(k, v);
+      return f;
+    };
+    expect(
+      assignRequestFrom(form({ dueAt: due.toISOString(), lockAt: "", groupId: "42", publishChoice: "1", publish: "on" })),
+    ).toEqual({ dueAt: due, lockAt: null, groupId: 42, publish: true });
+    expect(assignRequestFrom(form({ dueAt: "", lockAt: "", groupId: "", publishChoice: "1" }))).toEqual({
+      dueAt: null,
+      lockAt: null,
+      publish: false,
+    });
+    expect(assignRequestFrom(form({ dueAt: due.toISOString() }))).toEqual({ dueAt: due });
+    expect(assignRequestFrom(form({ dueAt: "not a date" }))).toEqual({ error: "We couldn't read that date. Pick it again." });
+    expect(assignRequestFrom(form({ dueAt: "", groupId: "1 or 1" }))).toEqual({ error: "Pick an assignment group from the list." });
   });
 });

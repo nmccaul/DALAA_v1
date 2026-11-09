@@ -28,6 +28,15 @@ export function appUrl(request: Request): string {
   return process.env.APP_URL?.trim() || new URL(request.url).origin;
 }
 
+/** The public origin inside a server action or page, which has headers but no Request: APP_URL when set. */
+export function appUrlFromHeaders(headers: Headers): string {
+  const configured = process.env.APP_URL?.trim();
+  if (configured) return configured;
+  const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
+  const local = /^(localhost|127\.0\.0\.1)(:|$)/.test(host);
+  return `${headers.get("x-forwarded-proto") ?? (local ? "http" : "https")}://${host}`;
+}
+
 /** What Canvas shows for DALAA in a course's menu (and as the tool's name). */
 export const COURSE_MENU_LABEL = "AI Activities";
 

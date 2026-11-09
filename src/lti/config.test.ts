@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { canvasConfig, COURSE_MENU_LABEL, LTI_SCOPES } from "./config";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { appUrlFromHeaders, canvasConfig, COURSE_MENU_LABEL, LTI_SCOPES } from "./config";
 
 describe("canvasConfig", () => {
   const config = canvasConfig("https://dalaa-v1.vercel.app/");
@@ -35,5 +35,18 @@ describe("canvasConfig", () => {
     expect(config.title).toBe(COURSE_MENU_LABEL);
     const nav = config.extensions[0].settings.placements.find((p) => p.placement === "course_navigation");
     expect(nav?.text).toBe(COURSE_MENU_LABEL);
+  });
+});
+
+describe("appUrlFromHeaders", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("prefers APP_URL, else the forwarded or local host", () => {
+    vi.stubEnv("APP_URL", "");
+    expect(appUrlFromHeaders(new Headers({ host: "localhost:3000" }))).toBe("http://localhost:3000");
+    expect(appUrlFromHeaders(new Headers({ host: "x.vercel.app", "x-forwarded-proto": "https" }))).toBe("https://x.vercel.app");
+    expect(appUrlFromHeaders(new Headers({ host: "dalaa.example" }))).toBe("https://dalaa.example");
+    vi.stubEnv("APP_URL", "https://dalaa-v1.vercel.app");
+    expect(appUrlFromHeaders(new Headers({ host: "localhost:3000" }))).toBe("https://dalaa-v1.vercel.app");
   });
 });

@@ -64,6 +64,7 @@ describe("listCourseActivities", () => {
       submitted: 2,
       graded: 1,
       assigned: false,
+      canvasAssignmentId: null,
     });
     expect(rows[1]).toMatchObject({ submitted: 0 });
     expect(rows[2]).toMatchObject({ status: "draft", points: null, dueAt: null });

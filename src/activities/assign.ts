@@ -9,7 +9,7 @@
  * the same number; nothing is rescaled.
  */
 
-import { CanvasError } from "@/canvas/client";
+import { CanvasError, type CanvasAssignmentGroup } from "@/canvas/client";
 import type { TeacherCanvas } from "@/canvas/connection";
 import { canvasIdOf, taughtCourse } from "@/canvas/sync";
 import type { Actor } from "@/db/scope";
@@ -19,13 +19,18 @@ import { getTaughtActivity, publishActivity } from "./store";
 
 export type AssignRequest = {
   dueAt: Date | null;
-  /** When students can no longer open it; null for never. */
-  lockAt: Date | null;
+  /** When students can no longer open it; null for never. Left out: never on create, unchanged on update. */
+  lockAt?: Date | null;
   /** A Canvas assignment group; left out, Canvas uses the course's first (or, on update, leaves it). */
   groupId?: number;
-  /** Whether students see the assignment in Canvas yet. */
-  publish: boolean;
+  /** Whether students see the assignment in Canvas yet. Left out: not yet on create, unchanged on update. */
+  publish?: boolean;
 };
+
+/** Assign from DALAA is behind a flag until it's checked on gitgrade (D-034). */
+export function assignToCanvasOn(): boolean {
+  return process.env.ASSIGN_TO_CANVAS === "1";
+}
 
 export type AssignResult =
   | { ok: true; canvasAssignmentId: string; created: boolean }
@@ -102,16 +107,22 @@ export async function assignActivity(
       name: activity.title,
       pointsPossible: activity.points!,
       dueAt: request.dueAt,
-      lockAt: request.lockAt,
       ...(request.groupId !== undefined && { groupId: request.groupId }),
-      published: request.publish,
       launchUrl: activityLaunchUrl(appUrl, activity.id),
     };
     let made;
     try {
       made = existing
-        ? await canvas.client.updateAssignment(canvasCourseId, Number(existing), fields)
-        : await canvas.client.createAssignment(canvasCourseId, fields);
+        ? await canvas.client.updateAssignment(canvasCourseId, Number(existing), {
+            ...fields,
+            ...(request.lockAt !== undefined && { lockAt: request.lockAt }),
+            ...(request.publish !== undefined && { published: request.publish }),
+          })
+        : await canvas.client.createAssignment(canvasCourseId, {
+            ...fields,
+            lockAt: request.lockAt ?? null,
+            published: request.publish ?? false,
+          });
     } catch (e) {
       if (!(e instanceof CanvasError)) throw e;
       return canvasRefusal(e, Boolean(existing));
@@ -145,4 +156,71 @@ function canvasRefusal(e: CanvasError, updating: boolean): AssignResult {
     default:
       return refuse("refused", "Canvas didn't answer. Try again in a minute.");
   }
+}
+
+/** What the Assign page needs: whether it's in Canvas already, and the course's assignment groups. */
+export type AssignSetup = {
+  canvasAssignmentId: string | null;
+  /** Added from Canvas the old way; its dates are changed in Canvas. */
+  linkedByHand: boolean;
+  dueAt: Date | null;
+  /** Null when Canvas couldn't be asked (not connected, not linked, or no answer): Canvas then uses its default group. */
+  groups: CanvasAssignmentGroup[] | null;
+};
+
+export async function assignSetup(
+  db: Db,
+  actor: Actor,
+  canvas: TeacherCanvas | null,
+  activityId: string,
+): Promise<AssignSetup | null> {
+  const activity = await getTaughtActivity(db, actor, activityId);
+  if (!activity) return null;
+  const [row] = await db.query<{ canvas_assignment_id: string | null; lti_resource_link_id: string | null; due_at: Date | null }>(
+    "select canvas_assignment_id, lti_resource_link_id, due_at from activities where id = $1",
+    [activity.id],
+  );
+  const course = await taughtCourse(db, actor, activity.courseId);
+  let groups: CanvasAssignmentGroup[] | null = null;
+  if (canvas && course?.canvas_course_id && course.is_practice === (canvas.mode === "practice")) {
+    try {
+      groups = (await canvas.client.assignmentGroups(canvasIdOf(course.canvas_course_id))).sort(
+        (a, b) => a.position - b.position,
+      );
+    } catch (e) {
+      if (!(e instanceof CanvasError)) throw e;
+    }
+  }
+  return {
+    canvasAssignmentId: row.canvas_assignment_id,
+    linkedByHand: !row.canvas_assignment_id && Boolean(row.lti_resource_link_id),
+    dueAt: row.due_at,
+    groups,
+  };
+}
+
+/**
+ * The Assign form's fields as an AssignRequest. Dates arrive as ISO strings
+ * (the browser converts the teacher's local time); blank means none. A field
+ * not on the form at all (the due-date edit has only the due date) is left out.
+ */
+export function assignRequestFrom(form: FormData): AssignRequest | { error: string } {
+  const date = (name: string): Date | null | undefined | "bad" => {
+    if (!form.has(name)) return undefined;
+    const raw = String(form.get(name) ?? "").trim();
+    if (!raw) return null;
+    const at = new Date(raw);
+    return Number.isNaN(at.getTime()) ? "bad" : at;
+  };
+  const dueAt = date("dueAt");
+  const lockAt = date("lockAt");
+  if (dueAt === "bad" || lockAt === "bad") return { error: "We couldn't read that date. Pick it again." };
+  const group = String(form.get("groupId") ?? "").trim();
+  if (group && !/^\d+$/.test(group)) return { error: "Pick an assignment group from the list." };
+  return {
+    dueAt: dueAt ?? null,
+    ...(lockAt !== undefined && { lockAt }),
+    ...(group && { groupId: Number(group) }),
+    ...(form.has("publishChoice") && { publish: form.get("publish") === "on" }),
+  };
 }

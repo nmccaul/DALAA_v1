@@ -20,3 +20,9 @@ export type TimeStyle = keyof typeof FORMATS;
 export function formatTime(when: Date | number, style: TimeStyle, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", { ...FORMATS[style], timeZone }).format(when);
 }
+
+/** `when` as a `<input type="datetime-local">` value ("2027-02-01T23:59") in this machine's zone (the browser's, on a page). */
+export function localInputValue(when: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${when.getFullYear()}-${p(when.getMonth() + 1)}-${p(when.getDate())}T${p(when.getHours())}:${p(when.getMinutes())}`;
+}
