@@ -8,7 +8,10 @@
 import { createHash } from "node:crypto";
 import { canvasPickValue, parseCanvasPick, saveFromCanvas, type CanvasPick } from "@/canvas/content";
 import type { TeacherCanvas } from "@/canvas/connection";
+import { materialsTooLong } from "@/activities/materials";
+import { getTaughtGuide, type Guide } from "@/content/guide";
 import type { MaterialRow } from "@/content/materials";
+import { getContent, type SavedContent } from "@/content/store";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -93,4 +96,26 @@ export async function savePicks(
     if (!contentIds.includes(saved.content.id)) contentIds.push(saved.content.id);
   }
   return { ok: true, contentIds, guideIds: picks.guideIds };
+}
+
+export type PickedMaterials =
+  | { ok: true; readings: SavedContent[]; guides: (Guide & { id: string })[] }
+  | { ok: false; reason: string };
+
+/**
+ * The materials a wizard URL names, in the order ticked, for the course's
+ * teacher (steps 2 and 3 read them to suggest). Refuses when one is gone or
+ * isn't this course's, when there's nothing students read, or when together
+ * they're too long to draft from.
+ */
+export async function pickedMaterials(db: Db, actor: Actor, courseId: string, ids: MaterialIds): Promise<PickedMaterials> {
+  if (ids.contentIds.length === 0) return { ok: false, reason: "Pick at least one material students read (Students + AI)." };
+  const readings = await Promise.all(ids.contentIds.map((id) => getContent(db, actor, courseId, id)));
+  const guides = await Promise.all(ids.guideIds.map((id) => getTaughtGuide(db, actor, courseId, id)));
+  if (readings.some((r) => !r) || guides.some((g) => !g)) {
+    return { ok: false, reason: "One of those materials isn't in this course anymore. Go back and pick again." };
+  }
+  const tooLong = materialsTooLong([...readings, ...guides].map((m) => m!.body.length));
+  if (tooLong) return { ok: false, reason: tooLong };
+  return { ok: true, readings: readings as SavedContent[], guides: guides as (Guide & { id: string })[] };
 }

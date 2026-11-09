@@ -11,7 +11,7 @@ import { createCourse } from "@/courses/create";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { parsePicks, pickCreationKey, pickValue, savePicks } from "./picks";
+import { parsePicks, pickCreationKey, pickedMaterials, pickValue, savePicks } from "./picks";
 import { materialsFromQuery, materialsQuery } from "./query";
 
 const A = "11111111-1111-4111-8111-111111111111";
@@ -159,6 +159,43 @@ describe("savePicks", () => {
       ok: false,
       reason: "That page isn't in Canvas anymore. Pick another.",
       reconnect: false,
+    });
+  });
+
+  it("loads the picked materials in the order ticked, for the course's teacher only", async () => {
+    const first = await saveContent(db, prof, courseId, randomUUID(), paste("First"));
+    const second = await saveContent(db, prof, courseId, randomUUID(), paste("Second"));
+    const note = await saveGuide(db, prof, courseId, randomUUID(), paste("Key"));
+    if (!first.ok || !second.ok || !note.ok) throw new Error("save failed");
+    const ids = { contentIds: [second.content.id, first.content.id], guideIds: [note.content.id] };
+
+    const loaded = await pickedMaterials(db, prof, courseId, ids);
+    if (!loaded.ok) throw new Error(loaded.reason);
+    expect(loaded.readings.map((r) => r.name)).toEqual(["Second", "First"]);
+    expect(loaded.guides.map((g) => [g.name, g.body])).toEqual([["Key", "Key body text."]]);
+
+    expect(await pickedMaterials(db, other, courseId, ids)).toMatchObject({ ok: false });
+    expect(await pickedMaterials(db, prof, courseId, { contentIds: [], guideIds: [note.content.id] })).toEqual({
+      ok: false,
+      reason: "Pick at least one material students read (Students + AI).",
+    });
+    const elsewhere = await createCourse(db, prof, { creationKey: randomUUID(), code: "X", title: "X", term: "W", students: [] });
+    const foreign = await saveContent(db, prof, elsewhere.courseId, randomUUID(), paste("Elsewhere"));
+    if (!foreign.ok) throw new Error("save failed");
+    expect(await pickedMaterials(db, prof, courseId, { contentIds: [foreign.content.id], guideIds: [] })).toEqual({
+      ok: false,
+      reason: "One of those materials isn't in this course anymore. Go back and pick again.",
+    });
+  });
+
+  it("refuses materials too long to draft from together", async () => {
+    const big = (name: string) => ({ kind: "paste" as const, name, text: "x".repeat(80_000) });
+    const a = await saveContent(db, prof, courseId, randomUUID(), big("A"));
+    const b = await saveGuide(db, prof, courseId, randomUUID(), big("B"));
+    if (!a.ok || !b.ok) throw new Error("save failed");
+    expect(await pickedMaterials(db, prof, courseId, { contentIds: [a.content.id], guideIds: [b.content.id] })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("the limit is 150,000"),
     });
   });
 });

@@ -61,3 +61,38 @@ export function addMaterialPath(courseId: string, kind: AddKind, ids: MaterialId
   const next = materialsStepPath(courseId, ids, picker);
   return `/courses/${courseId}/materials/new?kind=${kind}&next=${encodeURIComponent(next)}`;
 }
+
+/** "About how long?" on step 2, passed to drafting as a hint. */
+export const MINUTES = [
+  { value: "10-15", label: "10–15 minutes" },
+  { value: "20-30", label: "20–30 minutes" },
+  { value: "45+", label: "45 minutes or more" },
+] as const;
+
+export type Minutes = (typeof MINUTES)[number]["value"];
+
+/** The longest goal the URL carries: one or two sentences, with room to spare. */
+const MAX_GOAL_URL_CHARS = 1000;
+
+/**
+ * Step 2's answers as a later step's URL carries them: the teacher's goal
+ * (null until they've been through step 2) and the length hint.
+ */
+export function goalFromQuery(searchParams: Record<string, string | string[] | undefined>): { goal: string | null; minutes: Minutes | null } {
+  const goal = typeof searchParams.goal === "string" ? searchParams.goal.trim().slice(0, MAX_GOAL_URL_CHARS) : "";
+  const minutes = MINUTES.find((m) => m.value === searchParams.minutes)?.value ?? null;
+  return { goal: goal === "" ? null : goal, minutes };
+}
+
+/** Step 2 with these materials ticked, and the teacher's goal and length kept when they come back to it. */
+export function goalStepPath(
+  courseId: string,
+  ids: MaterialIds,
+  answers: { goal: string | null; minutes: Minutes | null },
+  picker: string | null,
+): string {
+  const query = new URLSearchParams(materialsQuery(ids));
+  if (answers.goal) query.set("goal", answers.goal);
+  if (answers.minutes) query.set("minutes", answers.minutes);
+  return keepPicker(`/courses/${courseId}/activities/new/study-chat?step=goal&${query}`, picker);
+}

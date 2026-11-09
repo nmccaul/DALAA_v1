@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { afterAddPath } from "@/content/return-path";
-import { addMaterialPath, materialsFromQuery, materialsStepPath, savedIds } from "./query";
+import { addMaterialPath, goalFromQuery, goalStepPath, materialsFromQuery, materialsStepPath, savedIds } from "./query";
 
 const C = "33333333-3333-4333-8333-333333333333";
 const A = "11111111-1111-4111-8111-111111111111";
@@ -42,3 +42,23 @@ describe("step 1's add-a-material links", () => {
     expect(materialsStepPath(C, { contentIds: [], guideIds: [] }, null)).toBe(`/courses/${C}/activities/new/study-chat?step=materials`);
   });
 });
+
+describe("step 2's answers in the URL", () => {
+  it("keeps the teacher's goal and a known length, and drops anything else", () => {
+    expect(goalFromQuery({ goal: "  Defend a recommendation.  ", minutes: "45+" })).toEqual({ goal: "Defend a recommendation.", minutes: "45+" });
+    expect(goalFromQuery({ goal: "   ", minutes: "90" })).toEqual({ goal: null, minutes: null });
+    expect(goalFromQuery({ goal: ["a", "b"] })).toEqual({ goal: null, minutes: null });
+    expect(goalFromQuery({ goal: "x".repeat(5000) }).goal).toHaveLength(1000);
+  });
+
+  it("goes back to step 2 with the materials, goal and length kept", () => {
+    const path = goalStepPath(C, { contentIds: [A], guideIds: [N] }, { goal: "Weigh the options & pick one.", minutes: "10-15" }, PICKER);
+    expect(path.startsWith(`/courses/${C}/activities/new/study-chat?`)).toBe(true);
+    const back = query(path);
+    expect(back).toMatchObject({ step: "goal", content: A, guide: N, minutes: "10-15" });
+    expect(goalFromQuery(back)).toEqual({ goal: "Weigh the options & pick one.", minutes: "10-15" });
+    expect(materialsFromQuery(back)).toEqual({ contentIds: [A], guideIds: [N] });
+    expect(back.addToCanvas).toBe(PICKER);
+  });
+});
+
