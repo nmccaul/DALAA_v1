@@ -76,3 +76,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - A custom field that is present but not a UUID does not fall back to the URI (the task says fallback only when the field is missing).
 - Tests in `src/lti/deep-link.test.ts`: link-URI launch opens and records link + line item; activity in another DALAA course and a non-UUID value open the course and record nothing; unit test of the precedence rules.
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 08:16 UTC · T12a assignActivity · done
+- T12 split: T12a (service, this pass) and T12b (Assign dialog + due-date edit behind `ASSIGN_TO_CANVAS`).
+- `src/activities/assign.ts` `assignActivity(db, actor, canvas, activityId, { dueAt, lockAt, groupId, publish }, appUrl)`: publishes in DALAA (`publishActivity`), then creates the external-tool assignment (launch URL `<APP_URL>/api/lti/launch?activity_id=…`) or updates the one in `canvas_assignment_id`; stores the id and `due_at`. The activity row is locked (`for update`) while Canvas is asked, so a double click makes one assignment.
+- Departures from the task text: **points aren't an input** — Canvas gets the activity's own points (they follow the rubric; one place per concept, no rescaling). `appUrl` is a 6th argument (callers pass `appUrl(request)` / `APP_URL`). An activity already linked from Canvas the old way (`lti_resource_link_id`, no `canvas_assignment_id`) is refused rather than given a second assignment that would split its grades.
+- Publishing uses the chassis `publishActivity` (points check only), not `publishStudyChat`'s schema check, since the chassis can't branch on the tool. T12b's action should run the tool's publish first, or the catalog should register a publish check.
+- `listCourseActivities` counts `canvas_assignment_id` as assigned. 11 tests in `assign.test.ts`. Same 12 local failures as before (Node 20; note: `progress.test.ts`/`work.test.ts` are in that 12 too, not only `read.test.ts`).
