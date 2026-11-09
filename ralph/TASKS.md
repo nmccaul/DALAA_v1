@@ -10,7 +10,7 @@ Statuses: `[ ]` todo · `[x]` done · `[!]` blocked
 
 ## A. Setup
 
-- [ ] **T01 Decisions + ideas.** Add D-034 to `docs/DECISIONS.md` (2026-11-09, Nathan): the wizard order (materials first; AI suggests goal then type), several materials per activity, Coming-soon options shown not hidden, the Library page removed (rail is Courses · Settings), and Assign creating the Canvas assignment behind `ASSIGN_TO_CANVAS`. Update the UI-areas rule in `CLAUDE.md` ("Three top-level areas at most (Courses · Library · Settings)") and `docs/PRD.md` to match. Add `docs/IDEAS.md` entries: wizard chat panel and one-click edits, and each Coming-soon option from `ralph/PLAN.md`. Add `ASSIGN_TO_CANVAS=` (empty) to `.env.example`. **Done when:** docs committed.
+- [x] **T01 Decisions + ideas.** Add D-034 to `docs/DECISIONS.md` (2026-11-09, Nathan): the wizard order (materials first; AI suggests goal then type), several materials per activity, Coming-soon options shown not hidden, the Library page removed (rail is Courses · Settings), and Assign creating the Canvas assignment behind `ASSIGN_TO_CANVAS`. Update the UI-areas rule in `CLAUDE.md` ("Three top-level areas at most (Courses · Library · Settings)") and `docs/PRD.md` to match. Add `docs/IDEAS.md` entries: wizard chat panel and one-click edits, and each Coming-soon option from `ralph/PLAN.md`. Add `ASSIGN_TO_CANVAS=` (empty) to `.env.example`. **Done when:** docs committed.
 
 ## B. Several materials per activity
 
