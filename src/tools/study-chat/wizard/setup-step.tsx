@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
 import { activityMaterials } from "@/activities/materials";
+import { countStartedAttempts } from "@/attempts/store";
 import { ButtonLink } from "@/components/ui";
 import { db } from "@/db/client";
 import { keepPicker } from "@/lti/picker";
 import type { SetupScreenProps } from "@/tools/screens";
 import { StudyChatEditor } from "../editor";
 import { PublishForm } from "../forms";
+import { startedNote } from "../review-screen";
 import { StudyChatSettings } from "../schema";
 import { TrialPanel } from "../trial-panel";
 import { reviewSummary, SETUP_CARDS, setupNote } from "./setup-cards";
@@ -87,8 +89,15 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
     );
   }
 
+  // Edit can open an activity students have started: say changes reach new attempts only (D-031).
+  const started = startedNote(await countStartedAttempts(db(), activity.id));
   return (
     <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} comingSoon={["Ask the wizard for changes"]}>
+      {started && (
+        <p role="status" className="mb-4 rounded-control border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
+          {started}
+        </p>
+      )}
       <StudyChatEditor
         // A new step is a new form: its cards open and its unsaved state starts fresh.
         key={step}

@@ -9,7 +9,7 @@ import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
-import { findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
+import { editActivityPath, findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction } from "./actions";
 import { activitiesView } from "./view";
 
@@ -104,12 +104,14 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                 activity={a}
                 courseId={course.id}
                 actions={
-                  assignOn &&
-                  a.canvasAssignmentId && (
-                    <Link href={`${base}/activities/${a.id}/assign`} className="text-sm text-accent-text hover:underline">
-                      Change due date
-                    </Link>
-                  )
+                  <>
+                    {assignOn && a.canvasAssignmentId && (
+                      <Link href={`${base}/activities/${a.id}/assign`} className="text-sm text-accent-text hover:underline">
+                        Change due date
+                      </Link>
+                    )}
+                    <EditButton href={editActivityPath(course.id, a)} />
+                  </>
                 }
               />
             ))}
@@ -135,6 +137,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                       Assign
                     </ButtonLink>
                   )}
+                  <EditButton href={editActivityPath(course.id, a)} />
                   <CopyButton activityId={a.id} courseId={course.id} label="Copy" />
                 </>
               }
@@ -258,6 +261,15 @@ function StatusPill({ status }: { status: "draft" | "published" }) {
     <span className="rounded-full border border-dashed border-muted bg-surface px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-muted">
       Draft
     </span>
+  );
+}
+
+/** Opens the activity in the creation wizard (its setup steps) to change it. */
+function EditButton({ href }: { href: string }) {
+  return (
+    <ButtonLink href={href} variant="secondary" className="text-sm">
+      Edit
+    </ButtonLink>
   );
 }
 
