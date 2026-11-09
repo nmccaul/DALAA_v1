@@ -97,3 +97,11 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - PR #126 (feat/creation-wizard → main): Canvas assignment client, link-URI launch fallback, `assignActivity`, Assign UI behind `ASSIGN_TO_CANVAS`. CI passed in 5m17s, merged; main is `feb13a4`.
 - Production deploy of `feb13a4` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200. `ASSIGN_TO_CANVAS` stays unset in production.
 - VERIFY (Nathan): set ASSIGN_TO_CANVAS=1 locally or in a preview, assign in gitgrade course 42, open it as Student View from Canvas Assignments, chat, grade, send grade; then turn the flag on in production.
+
+## 2026-11-09 12:42 UTC · T14a Wizard shell + step 1 Materials · done
+- T14 split: T14a (shell + step 1 pick, this pass), T14b (step 1's "+ Materials" link with `next` support, Case Writer chip, `+ Activity` going straight to the wizard). A crashed pass had left `parseCanvasPick`/`canvasPickValue` and `MaterialRow.savedId`/`canvas` uncommitted; finished and committed with this task.
+- `src/tools/study-chat/wizard/`: `steps.ts` (7 steps), `shell.tsx` (`WizardShell`), `picks.ts` (`pickValue`, `parsePicks`, `pickCreationKey`, `savePicks`, `materialsQuery`/`materialsFromQuery`), `materials-step.tsx` + `materials-form.tsx`; `wizardMaterialsAction` in `study-chat/actions.ts`. `StudyChatCreate` routes `?step=materials` to the wizard; other step slugs show a Preview note ("isn't built yet"); no `?step=` keeps the old flow.
+- A Canvas pick's creation key is derived (sha256 → UUID shape) from the form's random key + the pick, so resending the same form saves each page once. Ticked ids are checked as this course's before going on.
+- `loadMaterialRows` and `CANVAS_PROBLEM` moved into `src/content/materials.ts` (the Materials tab uses them too).
+- Surprise: React 19 resets the form after a server action, which unticked boxes after an error; the action now returns `ticked` and the boxes use it as their default.
+- Checked locally (playwright-cli, ralph.t04, course "T04 check"): notes-only refused with a sentence and ticks kept; reading + note → step 2 with both ids; Back keeps both ticked; 390px fine. Canvas-item picking not exercised in the browser (practice Canvas lists ralph.t04 as not a teacher of BUS M 499); covered by tests. Same 12 Node-20 local test failures, nothing new.
