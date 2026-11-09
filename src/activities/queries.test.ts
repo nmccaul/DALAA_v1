@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
-import { listCourseActivities, listLibraryActivities, listOtherCourseActivities, listStudentAssignments } from "./queries";
+import { listCourseActivities, listOtherCourseActivities, listStudentAssignments } from "./queries";
 
 describe("listCourseActivities", () => {
   it("lists a course's activities for its teacher, soonest due first, and nothing for anyone else", async () => {
@@ -73,60 +73,6 @@ describe("listCourseActivities", () => {
 
     expect(await listCourseActivities(db, other, course)).toEqual([]);
     expect(await listCourseActivities(db, prof, "not-a-uuid")).toEqual([]);
-  });
-});
-
-describe("listLibraryActivities", () => {
-  it("lists the teacher's activities not added to Canvas yet, last changed first, and nothing of anyone else's", async () => {
-    const db = await testDb();
-    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
-    const actorFor = async (netId: string): Promise<Actor> => {
-      const [{ id }] = await db.query<{ id: string }>(
-        "insert into users (institution_id, external_id, display_name) values ($1, $2, $2) returning id",
-        [inst, netId],
-      );
-      return { userId: id, institutionId: inst, netId, displayName: netId, isStaff: true, isAdmin: false };
-    };
-    const prof = await actorFor("prof");
-    const other = await actorFor("other");
-    const course = async (code: string, teacher: Actor) => {
-      const [{ id }] = await db.query<{ id: string }>(
-        "insert into courses (institution_id, code, title, term, created_by) values ($1, $2, 'T', 'Winter 2027', $3) returning id",
-        [inst, code, teacher.userId],
-      );
-      await db.query("insert into course_members (course_id, user_id, role) values ($1, $2, 'instructor')", [id, teacher.userId]);
-      return id;
-    };
-    const mine = await course("BUS M 361", prof);
-    const theirs = await course("ACC 200", other);
-    const activity = async (courseId: string, title: string, status: string, link: string | null, updatedAt: string) =>
-      (
-        await db.query<{ id: string }>(
-          `insert into activities (course_id, tool, title, settings, status, points, lti_resource_link_id, created_by, updated_at)
-           values ($1, 'study-chat', $2, '{}', $3, $4, $5, $6, $7) returning id`,
-          [courseId, title, status, status === "published" ? 10 : null, link, prof.userId, updatedAt],
-        )
-      )[0].id;
-    const olderDraft = await activity(mine, "Draft", "draft", null, "2026-10-01T00:00:00Z");
-    const ready = await activity(mine, "Ready", "published", null, "2026-10-02T00:00:00Z");
-    await activity(mine, "In Canvas", "published", "link-1", "2026-10-03T00:00:00Z");
-    await activity(theirs, "Not mine", "draft", null, "2026-10-04T00:00:00Z");
-
-    const rows = await listLibraryActivities(db, prof);
-    expect(rows.map((r) => r.id)).toEqual([ready, olderDraft]);
-    expect(rows[0]).toEqual({
-      id: ready,
-      tool: "study-chat",
-      title: "Ready",
-      status: "published",
-      points: 10,
-      courseId: mine,
-      courseCode: "BUS M 361",
-      courseTerm: "Winter 2027",
-      updatedAt: new Date("2026-10-02T00:00:00Z"),
-    });
-    expect((await listLibraryActivities(db, other)).map((r) => r.title)).toEqual(["Not mine"]);
-    expect(await listLibraryActivities(db, { ...prof, isStaff: false })).toEqual([]);
   });
 });
 

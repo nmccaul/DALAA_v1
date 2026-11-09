@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type LibraryActivity } from "@/activities/queries";
+import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
@@ -160,7 +160,7 @@ function CourseRow({ activity: a, courseId, copy }: { activity: ActivityRow; cou
 }
 
 /** The teacher's other courses' activities, one list per course, each with "Copy to this course". */
-function OtherCourses({ activities, courseId }: { activities: LibraryActivity[]; courseId: string }) {
+function OtherCourses({ activities, courseId }: { activities: OtherCourseActivity[]; courseId: string }) {
   if (activities.length === 0) {
     return (
       <p className="border border-dashed border-border-strong px-6 py-10 text-muted">
@@ -168,7 +168,7 @@ function OtherCourses({ activities, courseId }: { activities: LibraryActivity[];
       </p>
     );
   }
-  const groups = new Map<string, LibraryActivity[]>();
+  const groups = new Map<string, OtherCourseActivity[]>();
   for (const a of activities) groups.set(a.courseId, [...(groups.get(a.courseId) ?? []), a]);
   return (
     <div className="flex flex-col gap-4">

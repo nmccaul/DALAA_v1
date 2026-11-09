@@ -46,8 +46,8 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
   );
 }
 
-/** An activity in the teacher's Library: made, but not added to a Canvas course yet. */
-export type LibraryActivity = {
+/** An activity in another course the teacher teaches, offered for copying. */
+export type OtherCourseActivity = {
   id: string;
   tool: string;
   title: string;
@@ -60,32 +60,14 @@ export type LibraryActivity = {
 };
 
 /**
- * The Library: every activity in a course the actor teaches that isn't
- * assigned yet, meaning it has no Canvas link (lti_resource_link_id). Drafts
- * and finished ones alike. Last changed first.
- */
-export async function listLibraryActivities(db: Db, actor: Actor): Promise<LibraryActivity[]> {
-  const where = and({ text: "a.lti_resource_link_id is null", values: [] }, coursesTaughtBy(actor, "c"));
-  return db.query<LibraryActivity>(
-    `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
-            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt"
-       from activities a
-       join courses c on c.id = a.course_id
-      where ${where.text}
-      order by a.updated_at desc, a.created_at desc`,
-    where.values,
-  );
-}
-
-/**
  * "From my other courses" on a course's Activities tab: every activity in the
  * other courses the actor teaches, drafts included, for copying into this
  * one. Newest course first, then last changed first within a course.
  */
-export async function listOtherCourseActivities(db: Db, actor: Actor, courseId: string): Promise<LibraryActivity[]> {
+export async function listOtherCourseActivities(db: Db, actor: Actor, courseId: string): Promise<OtherCourseActivity[]> {
   if (!UUID.test(courseId)) return [];
   const where = and({ text: "c.id <> $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
-  return db.query<LibraryActivity>(
+  return db.query<OtherCourseActivity>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
             c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt"
        from activities a

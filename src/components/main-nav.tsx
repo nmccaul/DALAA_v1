@@ -1,13 +1,12 @@
 "use client";
 
-import { BookOpenText, Books, GearSix } from "@phosphor-icons/react/dist/ssr";
+import { BookOpenText, GearSix } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The three top-level areas, and only three (CLAUDE.md product rule 2).
+// The two top-level areas, and only two (CLAUDE.md product rule 2; D-034).
 const AREAS = [
   { href: "/courses", label: "Courses", icon: BookOpenText },
-  { href: "/library", label: "Library", icon: Books },
   { href: "/settings", label: "Settings", icon: GearSix },
 ] as const;
 
