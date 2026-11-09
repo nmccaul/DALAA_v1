@@ -54,3 +54,6 @@ skills-lock.json
 # overnight loop logs
 /ralph/logs/
 /ralph/STOP
+
+# Personal Claude Code settings
+.claude/settings.local.json
