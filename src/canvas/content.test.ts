@@ -61,7 +61,7 @@ describe("listCanvasContent", () => {
       ["Syllabus notes", true],
     ]);
     expect(pages[0]).not.toHaveProperty("body");
-    expect(files.map((f) => f.display_name)).toEqual(["Harbor Bikes data.md", "Reading guide.txt"]);
+    expect(files.map((f) => f.display_name)).toEqual(["Harbor Bikes data.md", "Reading guide.txt", "Old syllabus.docx"]);
   });
 });
 

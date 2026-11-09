@@ -7,6 +7,7 @@
  * to need several pages.
  */
 
+import { strToU8, zipSync } from "fflate";
 import type { CanvasCourse, CanvasEnrollment, CanvasFile, CanvasPageWithBody, CanvasSection, CanvasUser } from "../client";
 
 export const PRACTICE_TEACHER: CanvasUser = { id: 9001, name: "Practice Professor" };
@@ -135,13 +136,24 @@ export const PRACTICE_FILES = new Map<number, { file: Omit<CanvasFile, "url">; b
     [
       practiceFile(8001, "Harbor Bikes data.md", "text/x-markdown", "# Harbor Bikes data\n\nRentals by month: May 310, June 420."),
       practiceFile(8002, "Reading guide.txt", "text/plain", "Look for the trade-off between price and fleet size."),
-      practiceFile(8003, "Old syllabus.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "PK"),
+      practiceFile(8003, "Old syllabus.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", practiceDocx([
+        "BUS M 361 Syllabus (2025)",
+        "Weekly cases are discussed in class; come having read the case and its exhibits.",
+      ])),
+      practiceFile(8004, "Class photo.jpg", "image/jpeg", new Uint8Array([0xff, 0xd8, 0xff, 0xe0])),
     ],
   ],
 ]);
 
-function practiceFile(id: number, name: string, type: string, text: string) {
-  const bytes = new TextEncoder().encode(text);
+/** A real (tiny) Word document, so picking it reads like a teacher's would. */
+function practiceDocx(paragraphs: string[]): Uint8Array {
+  const body = paragraphs.map((p) => `<w:p><w:r><w:t>${p}</w:t></w:r></w:p>`).join("");
+  const xml = `<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`;
+  return zipSync({ "word/document.xml": strToU8(xml) });
+}
+
+function practiceFile(id: number, name: string, type: string, content: string | Uint8Array) {
+  const bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
   return {
     file: { id, display_name: name, filename: name, "content-type": type, size: bytes.byteLength, updated_at: "2026-10-01T16:00:00Z" },
     bytes,
