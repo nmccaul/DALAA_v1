@@ -11,6 +11,7 @@ import { MODE_SLUGS, MODES } from "./modes";
 import { PreviewNote } from "@/components/preview-note";
 import { GoalStep } from "./wizard/goal-step";
 import { MaterialsStep } from "./wizard/materials-step";
+import { TypeStep } from "./wizard/type-step";
 import { goalFromQuery, goalStepPath, materialsFromQuery, materialsStepPath } from "./wizard/query";
 import { WizardShell } from "./wizard/shell";
 import { isWizardStep, WIZARD_STEPS } from "./wizard/steps";
@@ -26,6 +27,7 @@ export async function StudyChatCreate({ actor, course, searchParams }: CreateScr
   // The new wizard (D-034), step by step as it's built; without ?step= the current flow stays.
   if (searchParams.step === "materials") return MaterialsStep({ actor, course, searchParams });
   if (searchParams.step === "goal") return GoalStep({ actor, course, searchParams });
+  if (searchParams.step === "type") return TypeStep({ actor, course, searchParams });
   if (isWizardStep(searchParams.step)) return WizardNotYet({ courseId: course.id, step: searchParams.step, searchParams });
 
   const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);

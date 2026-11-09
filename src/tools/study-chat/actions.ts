@@ -14,6 +14,7 @@ import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 import { parsePicks, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
+import { typeRequestFrom } from "./wizard/type-request";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
@@ -83,6 +84,34 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
     return { error: saved.reason, reconnect: saved.reconnect ? `/canvas/connect?next=${encodeURIComponent(back)}` : undefined, ticked };
   }
   redirect(keepPicker(`${newPath(courseId)}?step=goal&${materialsQuery(saved)}`, picker));
+}
+
+/**
+ * Wizard step 3: the chosen type. The AI drafts the activity from the picks
+ * and the goal; until steps 4–6 exist (T17) the review screen opens. A failed
+ * draft comes back with the choice kept (`mode`).
+ */
+export type TypeState = FormState & { mode?: string };
+
+export async function wizardTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const mode = String(form.get("mode") ?? "") || undefined;
+  const request = typeRequestFrom(form);
+  if (!request.ok) return { error: request.reason, mode };
+
+  const created = await createStudyChat(db(), graderModel(), actor, courseId, {
+    contentIds: request.ids.contentIds,
+    guideIds: request.ids.guideIds,
+    mode: request.mode,
+    studentWork: request.studentWork,
+    goal: request.goal,
+    minutes: request.minutes,
+    typeReason: request.typeReason,
+    creationKey: request.creationKey,
+  });
+  if (!created.ok) return { error: created.reason, mode };
+  redirect(keepPicker(reviewPath(courseId, created.activityId), pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
