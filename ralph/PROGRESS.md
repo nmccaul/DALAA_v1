@@ -45,3 +45,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Cross-course materials go through new `copyTo` in `src/content/store.ts` (`copyContent`; `copyGuides` in `guide.ts`, so guide.ts stays the only reader of `course_guides`). Readings stay readings and notes stay notes.
 - Choice not in the task: a material the target course already has word for word (same source, name, text) is reused rather than copied again, so copying several activities that share a case from last term doesn't fill the Materials tab with duplicates. Nathan: say if you'd rather always copy.
 - Due date is deliberately not copied (a copy is usually for another term). `src/activities/copy.test.ts`: 6 tests. Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:54 UTC · T07 Activities tab sections · done
+- `listCourseActivities` rows now carry `assigned` (has `lti_resource_link_id`; add `canvas_assignment_id` in T09-era work). New `listOtherCourseActivities(db, actor, courseId)`: every activity in the teacher's other courses, drafts included, newest course first. `listLibraryActivities` is left for the Library page; T08 can delete it with the page.
+- `courses/[courseId]/page.tsx`: *Assigned* section on top (same Canvas-style rows); filter pills `?show=unassigned` / `?show=other`; other courses grouped under "CODE · Term". Defaults to *From my other courses* when this course has nothing unassigned but other courses have activities. The empty state shows only when there's nothing anywhere.
+- New `courses/[courseId]/actions.ts` `copyActivityAction` (Copy / Copy to this course, `creationKey` from `randomUUID()` at render), landing on the copy. A refusal shows a fixed sentence (`?copyerror=1`), never text from the URL.
+- Checked locally with playwright-cli at desktop and 390px: three lists render; Copy and Copy to this course each opened the new draft. Local-only data added: course "T07 other" for `ralph.t04` and an activity with a fake LTI link `local-t07-link`. Dark mode not screenshotted (only design tokens used).
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
