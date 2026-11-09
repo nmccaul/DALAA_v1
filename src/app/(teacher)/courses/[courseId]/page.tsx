@@ -11,6 +11,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction } from "./actions";
+import { activitiesView } from "./view";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
@@ -50,26 +51,53 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const notAssigned = activities.filter((a) => !a.assigned);
   const base = `/courses/${course.id}`;
   const assignOn = assignToCanvasOn();
-  const showOther = q.show === "other" || (q.show !== "unassigned" && notAssigned.length === 0 && elsewhere.length > 0);
+  const view = activitiesView(q.show, { assigned: assigned.length, notAssigned: notAssigned.length, other: elsewhere.length });
+  const views = [
+    { key: "assigned", label: "Assigned", count: assigned.length },
+    { key: "unassigned", label: "Not assigned", count: notAssigned.length },
+    { key: "other", label: "Other courses", wide: "From my other courses", count: elsewhere.length },
+  ] as const;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">{create}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Show activities" className="inline-flex overflow-x-auto rounded-control border border-border-strong text-sm">
+          {views.map((v, i) => (
+            <Link
+              key={v.key}
+              href={`${base}?show=${v.key}`}
+              aria-current={v.key === view ? "page" : undefined}
+              className={`px-2.5 py-2 whitespace-nowrap sm:px-3.5 ${i > 0 ? "border-l border-border-strong" : ""} ${
+                v.key === view ? "bg-accent font-bold text-white" : "bg-surface text-accent-text hover:bg-subtle"
+              }`}
+            >
+              {"wide" in v ? (
+                <>
+                  <span className="sm:hidden">{v.label}</span>
+                  <span className="hidden sm:inline">{v.wide}</span>
+                </>
+              ) : (
+                v.label
+              )}{" "}
+              ({v.count})
+            </Link>
+          ))}
+        </nav>
+        {create}
+      </div>
       {q.copyerror && (
         <p role="alert" className="rounded-control border border-border-strong bg-subtle px-4 py-3">
           We couldn&apos;t copy that activity. You can copy only from courses you teach.
         </p>
       )}
 
-      {assigned.length > 0 && (
-        <section className="border border-border">
-          <h2 className="flex items-center gap-2 border-b border-border bg-subtle px-4 py-2.5 text-base font-bold">
-            Assigned
-            <span className="rounded-full border border-border-strong bg-surface px-2.5 py-0.5 text-[13px] font-normal text-muted">
-              {assigned.length}
-            </span>
-          </h2>
-          <ul className="flex flex-col divide-y divide-border">
+      {view === "assigned" ? (
+        assigned.length === 0 ? (
+          <p className="border border-dashed border-border-strong px-6 py-10 text-muted">
+            Nothing is assigned yet. Activities you add to Canvas show up here.
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border border border-border">
             {assigned.map((a) => (
               <CourseRow
                 key={a.id}
@@ -86,28 +114,8 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
               />
             ))}
           </ul>
-        </section>
-      )}
-
-      <nav aria-label="Show" className="flex flex-wrap gap-1 text-sm">
-        {[
-          { label: `Not assigned (${notAssigned.length})`, href: `${base}?show=unassigned`, current: !showOther },
-          { label: `From my other courses (${elsewhere.length})`, href: `${base}?show=other`, current: showOther },
-        ].map((f) => (
-          <Link
-            key={f.href}
-            href={f.href}
-            aria-current={f.current ? "page" : undefined}
-            className={`rounded-full border px-3 py-1 ${
-              f.current ? "border-accent bg-accent text-white" : "border-border-strong text-accent-text hover:bg-subtle"
-            }`}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </nav>
-
-      {showOther ? (
+        )
+      ) : view === "other" ? (
         <OtherCourses activities={elsewhere} courseId={course.id} />
       ) : notAssigned.length === 0 ? (
         <p className="border border-dashed border-border-strong px-6 py-10 text-muted">
@@ -168,9 +176,9 @@ function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; 
           {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
         </span>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-3.5">
+      <div className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2">
         <StatusPill status={a.status} />
-        <span className="min-w-[150px] text-right text-sm text-muted">
+        <span className="text-right text-sm text-muted">
           {a.status === "published" ? `${a.submitted} submitted · ${a.graded} graded` : "Students can’t see it"}
         </span>
         {a.status === "published" && (
