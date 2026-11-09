@@ -4,7 +4,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { saveGuide } from "./guide";
-import { listCourseMaterials } from "./materials";
+import { listCourseMaterials, mergeMaterials, type Material } from "./materials";
 import { saveContent } from "./store";
 
 describe("listCourseMaterials", () => {
@@ -61,5 +61,69 @@ describe("listCourseMaterials", () => {
   it("shows nothing for a course the actor doesn't teach", async () => {
     await saveContent(db, prof, course, randomUUID(), paste("Harbor Bikes case"));
     expect(await listCourseMaterials(db, other, course)).toEqual([]);
+  });
+});
+
+describe("mergeMaterials", () => {
+  const page = { page_id: 1, url: "harbor-bikes", title: "Harbor Bikes", updated_at: "2026-11-01T00:00:00Z", published: true };
+  const file = {
+    id: 9,
+    display_name: "Syllabus",
+    filename: "syllabus.pdf",
+    "content-type": "application/pdf",
+    size: 10,
+    url: "https://canvas/files/9",
+    updated_at: "2026-10-01T00:00:00Z",
+  };
+  const saved = (over: Partial<Material>): Material => ({
+    id: randomUUID(),
+    name: "Harbor Bikes",
+    source: "canvas-page",
+    seenBy: "students",
+    createdAt: new Date("2026-11-02T00:00:00Z"),
+    usedIn: [],
+    ...over,
+  });
+
+  it("lists every Canvas page and file without importing, as In Canvas", () => {
+    const rows = mergeMaterials([], { pages: [page], files: [file] });
+    expect(rows.map((r) => [r.name, r.source, r.seenBy])).toEqual([
+      ["Harbor Bikes", "canvas-page", "canvas"],
+      ["Syllabus", "canvas-file", "canvas"],
+    ]);
+  });
+
+  it("shows a Canvas item an activity uses once, with its activities, matching a file by either name", () => {
+    const rows = mergeMaterials(
+      [
+        saved({ usedIn: [{ id: "a1", title: "Second store" }] }),
+        saved({ name: "syllabus.pdf", source: "canvas-file", usedIn: [{ id: "a2", title: "Policies" }] }),
+      ],
+      { pages: [page], files: [file] },
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r) => r.name === "Harbor Bikes")).toMatchObject({ seenBy: "students", usedIn: [{ title: "Second store" }] });
+    expect(rows.find((r) => r.name === "Syllabus")).toMatchObject({ seenBy: "students", usedIn: [{ title: "Policies" }] });
+  });
+
+  it("keeps uploads, pastes, AI-only notes and copies of Canvas items no longer in Canvas as their own rows", () => {
+    const rows = mergeMaterials(
+      [
+        saved({ name: "Notes", source: "paste" }),
+        saved({ name: "Harbor Bikes", seenBy: "ai" }),
+        saved({ name: "Deleted page" }),
+      ],
+      { pages: [page], files: [] },
+    );
+    expect(rows.map((r) => [r.name, r.seenBy]).sort()).toEqual([
+      ["Deleted page", "students"],
+      ["Harbor Bikes", "ai"],
+      ["Harbor Bikes", "canvas"],
+      ["Notes", "students"],
+    ]);
+  });
+
+  it("works without Canvas", () => {
+    expect(mergeMaterials([saved({ source: "upload" })], null)).toHaveLength(1);
   });
 });
