@@ -152,3 +152,8 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - `setActivityMaterials` no longer writes `activities.content_id`/`guide_id` (columns stay; nothing reads them). create/guide tests updated to expect them empty.
 - `docs/TESTING-GITGRADE.md` section 3 now walks the seven wizard steps.
 - Checked locally (playwright-cli, ralph.t04, "T04 check", flag on): step 7 shows the summary, trial and Assign; Assign opened the assign page ("Connect this course to Canvas first", as that course isn't linked). 390px fine. The flag-off Publish path wasn't clicked in a browser (would need a dev-server restart); it reuses `publishStudyChat`. Same 12 Node-20 local test failures, nothing new.
+
+## 2026-11-09 17:20 UTC · T19 CHECKPOINT E (final) · done (by the supervising session)
+- The loop was paused on the usage limit; the supervising session ran the checkpoint. No migrations since checkpoint D. Lint and typecheck green.
+- PR #127 (wizard, T14–T18): CI passed, merged; main is `7452071`. Production deploy of `7452071` READY. Smoke: `/api/health` db up, `/api/lti/jwks` 200, `/` 200.
+- Nathan: try the wizard in gitgrade course 42 (testing guide section 3); Assign still needs the ASSIGN_TO_CANVAS check from checkpoint D.
