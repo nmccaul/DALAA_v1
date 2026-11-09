@@ -27,7 +27,7 @@ export type ToolInfo = {
   accent: string;
   /** Query that opens the tool's create screen at its first step, when it has one. */
   start?: string;
-  /** Where a draft opens, under the activity's own path, when the tool has setup steps (`setup/[step]`). */
+  /** Where a draft opens, and where Edit goes, under the activity's own path, when the tool has setup steps (`setup/[step]`). */
   draftOpens?: string;
 };
 
@@ -92,6 +92,12 @@ export function newActivityPath(courseId: string, tools: readonly ToolInfo[] = T
  * Where an activity's title links for its teacher: a draft reopens its tool's
  * setup steps when the tool has them, anything else the activity's page.
  */
+/** Where an activity's Edit button goes: its tool's setup steps, or its page when the tool has none. */
+export function editActivityPath(courseId: string, a: { id: string; tool: string }): string {
+  const opens = findTool(a.tool)?.draftOpens;
+  return `/courses/${courseId}/activities/${a.id}${opens ?? ""}`;
+}
+
 export function teacherActivityPath(courseId: string, a: { id: string; tool: string; status: "draft" | "published" }): string {
   const path = `/courses/${courseId}/activities/${a.id}`;
   const opens = a.status === "draft" ? findTool(a.tool)?.draftOpens : undefined;

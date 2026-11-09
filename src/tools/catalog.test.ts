@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findTool, isLive, newActivityPath, teacherActivityPath, TOOLS } from "./catalog";
+import { editActivityPath, findTool, isLive, newActivityPath, teacherActivityPath, TOOLS } from "./catalog";
 
 describe("tool registry", () => {
   it("has unique, URL-safe slugs", () => {
@@ -39,5 +39,11 @@ describe("tool registry", () => {
     expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "published" })).toBe("/courses/c1/activities/a1");
     expect(teacherActivityPath("c1", { id: "a1", tool: "quizzer", status: "draft" })).toBe("/courses/c1/activities/a1");
     expect(teacherActivityPath("c1", { id: "a1", tool: "gone", status: "draft" })).toBe("/courses/c1/activities/a1");
+  });
+
+  it("sends Edit to the tool's setup steps whatever the status, else the activity's page", () => {
+    expect(editActivityPath("c1", { id: "a1", tool: "study-chat" })).toBe("/courses/c1/activities/a1/setup/scenario");
+    expect(editActivityPath("c1", { id: "a1", tool: "quizzer" })).toBe("/courses/c1/activities/a1");
+    expect(editActivityPath("c1", { id: "a1", tool: "gone" })).toBe("/courses/c1/activities/a1");
   });
 });
