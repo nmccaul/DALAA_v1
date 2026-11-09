@@ -44,10 +44,11 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
               href: base,
               label: "Assigned Activities",
               exact: true,
-              also: [`${base}/activities`, `${base}/content`, `${base}/add-to-canvas`],
+              also: [`${base}/activities`, `${base}/add-to-canvas`],
             },
+            { href: `${base}/materials`, label: "Materials", also: [`${base}/content`] },
             { href: `${base}/grading`, label: "Grading" },
-            { href: `${base}/students`, label: "Students" },
+            { href: `${base}/dalaa`, label: "DALAA", also: [`${base}/students`, `${base}/canvas`] },
           ]}
         />
       </div>

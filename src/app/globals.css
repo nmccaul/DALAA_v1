@@ -26,6 +26,9 @@
   --accent-hover: #00244a;
   --accent-soft: #e6f0f7;
   --accent-text: #0f4379;
+  --success: #03893d;
+  --warn-soft: #fdf1e6;
+  --warn-text: #8a4a06;
   --danger: #b42318;
   --danger-soft: #fdecea;
 }
@@ -42,6 +45,9 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-text: var(--warn-text);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-lato);
