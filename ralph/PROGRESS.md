@@ -25,3 +25,11 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Cap: `MAX_MATERIALS_CHARS = 150_000` / `materialsTooLong` in `src/activities/materials.ts`, enforced in `setActivityMaterials` and `createStudyChat` (before any model call). `guidesInCourse` now returns id → length.
 - Bridge until T04: `createActivity` and `setActivityGuide` also write `activity_materials` from `content_id`/`guide_id`, so the new readers see activities made by the old writers. Test fixtures that insert activities by hand call `mirrorMaterials`.
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:35 UTC · T04 Writers use the list · done
+- `createStudyChat` attaches materials with `setActivityMaterials`; `createActivity` no longer takes or mirrors `contentId`/`guideId` (and `TaughtActivity` dropped them). `setActivityMaterials` now also sets `activities.content_id`/`guide_id` to the first reading/note, so the columns stay written until T18 retires them.
+- `setActivityGuide` replaced by `addActivityGuide` / `removeActivityGuide` (`src/activities/materials.ts`); the review screen and the Canvas picker add notes, and `RemoveGuideForm` removes one note by id. Adding a note from another course now says "We couldn't find one of those materials in this course."
+- Review screen: a "Materials" list with every reading and note and its pill; the "Additional AI instructions" fold below always offers adding another. The pill is now the shared `src/components/seen-by-pill.tsx` (Materials tab uses it too; the wizard will).
+- Materials tab "used in" reads `activity_materials` instead of the old columns.
+- Checked locally on the running dev server (:3000): an activity with one reading and two notes lists all three with pills. A local-only user `ralph.t04` (staff allowlist) and course "T04 check" were added to the local DB for that.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
