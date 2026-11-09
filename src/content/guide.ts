@@ -54,3 +54,30 @@ export async function aiGuide(db: Db, activityId: string): Promise<Guide | null>
   );
   return row ?? null;
 }
+
+/**
+ * Every AI-only note of an activity (db/migrations/*_activity_materials.sql),
+ * in the teacher's order, for the model about to run or grade it, or for the
+ * activity's teacher. Never for a student request.
+ */
+export async function activityGuides(db: Db, activityId: string): Promise<(Guide & { id: string })[]> {
+  if (!UUID.test(activityId)) return [];
+  return db.query<Guide & { id: string }>(
+    `select g.id, g.name, g.body
+       from activity_materials m join course_guides g on g.id = m.guide_id
+      where m.activity_id = $1
+      order by m.position`,
+    [activityId],
+  );
+}
+
+/** Which of these ids are guides of this course. */
+export async function guidesInCourse(db: Db, courseId: string, guideIds: readonly string[]): Promise<Set<string>> {
+  const ids = guideIds.filter((id) => UUID.test(id));
+  if (ids.length === 0) return new Set();
+  const rows = await db.query<{ id: string }>(
+    "select id from course_guides where course_id = $1 and id = any($2::uuid[])",
+    [courseId, ids],
+  );
+  return new Set(rows.map((r) => r.id));
+}
