@@ -58,7 +58,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pt-10 pb-24">
       <Logo height={32} />
-      <h1 className="font-display text-3xl font-semibold tracking-tight break-words">Hi, {actor.displayName}</h1>
+      <h1 className="text-[1.75rem] font-normal break-words">Hi, {actor.displayName}</h1>
       {courses.length === 0 ? (
         <EmptyState title="Open DALAA once from your Canvas course">
           <p>

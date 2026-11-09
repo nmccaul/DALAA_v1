@@ -50,7 +50,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-balance break-words">{view.title}</h1>
+        <h1 className="text-[1.75rem] font-normal text-balance break-words">{view.title}</h1>
         <Directions view={view} hasContent={activity.content !== null} hasWork={chat.work !== null} />
       </div>
       {activity.content && (

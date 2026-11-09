@@ -36,7 +36,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
       <Link href="/" aria-label="DALAA home" className="self-start">
         <Logo height={32} />
       </Link>
-      <h1 className="font-display text-3xl font-semibold tracking-tight">{creating ? "Create an account" : "Sign in"}</h1>
+      <h1 className="text-[1.75rem] font-normal">{creating ? "Create an account" : "Sign in"}</h1>
       {message && (
         <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {message}

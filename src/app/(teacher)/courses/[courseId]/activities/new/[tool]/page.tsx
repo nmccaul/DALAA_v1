@@ -30,7 +30,7 @@ export default async function NewToolActivityPage({ params, searchParams }: Page
         <span style={{ color: tool.accent }}>
           <Icon size={32} weight="duotone" aria-hidden />
         </span>
-        <h2 className="font-display text-2xl font-semibold tracking-tight">New {tool.name}</h2>
+        <h2 className="text-2xl font-normal">New {tool.name}</h2>
       </div>
       <Create actor={actor} course={course} searchParams={query} />
     </div>

@@ -124,7 +124,7 @@ export default async function CanvasContentPage({ params, searchParams }: PagePr
         ← Back
       </Link>
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Use a Canvas page or file</h2>
+        <h2 className="text-2xl font-normal">Use a Canvas page or file</h2>
         <p className="text-muted">
           {guide
             ? `Pick the page or file for ${GUIDE_LABEL.name} ${GUIDE_LABEL.private}. ${GUIDE_LABEL.hint}`

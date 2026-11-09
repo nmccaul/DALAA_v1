@@ -14,7 +14,7 @@ export default async function NewActivityPage({ params, searchParams }: PageProp
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">What kind of assignment?</h2>
+        <h2 className="text-2xl font-normal">What kind of activity?</h2>
         <p className="text-muted">Each type works differently for students, and they all take the same steps to set up.</p>
       </div>
 
