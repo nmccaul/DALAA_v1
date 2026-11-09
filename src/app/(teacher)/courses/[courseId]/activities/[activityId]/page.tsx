@@ -7,7 +7,7 @@ import { PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { db } from "@/db/client";
 import { screensFor } from "@/tools/screens";
 
-export const metadata: Metadata = { title: "Assignment" };
+export const metadata: Metadata = { title: "Activity" };
 
 /** A review screen's actions can run long: Study Chat's sample student has a whole chat, then grades it. */
 export const maxDuration = 300;
@@ -24,8 +24,8 @@ export default async function ActivityPage({ params, searchParams }: PageProps<"
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-muted hover:text-text">
-        ← All assignments
+      <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
+        ‹ Assigned Activities
       </Link>
       <Review actor={actor} activity={activity} addToCanvas={pickerRequest((await searchParams)[PICKER_PARAM])} />
     </div>
