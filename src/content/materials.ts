@@ -5,6 +5,7 @@
  * course's teachers see it; bodies are never fetched here.
  */
 
+import type { CanvasContentList } from "@/canvas/content";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -44,3 +45,47 @@ export const SOURCE_LABEL: Record<Material["source"], string> = {
   "canvas-page": "Canvas Page",
   "canvas-file": "Canvas File",
 };
+
+/** One row of the Materials tab: a saved material, or a Canvas Page or File ("canvas" until an activity uses it). */
+export type MaterialRow = {
+  key: string;
+  name: string;
+  source: Material["source"];
+  seenBy: Material["seenBy"] | "canvas";
+  usedIn: Material["usedIn"];
+  date: Date;
+};
+
+/**
+ * Saved materials plus every Page and readable File in the linked Canvas
+ * course, listed live: nothing in Canvas has to be imported first. A Canvas
+ * item an activity already uses shows once, with those activities.
+ */
+export function mergeMaterials(saved: Material[], canvas: CanvasContentList | null): MaterialRow[] {
+  const rows: MaterialRow[] = [];
+  const fromCanvas = new Map<string, MaterialRow>();
+  if (canvas) {
+    for (const p of canvas.pages) {
+      const row: MaterialRow = { key: `page-${p.page_id}`, name: p.title, source: "canvas-page", seenBy: "canvas", usedIn: [], date: new Date(p.updated_at) };
+      fromCanvas.set(`canvas-page:${p.title}`, row);
+      rows.push(row);
+    }
+    for (const f of canvas.files) {
+      const row: MaterialRow = { key: `file-${f.id}`, name: f.display_name, source: "canvas-file", seenBy: "canvas", usedIn: [], date: new Date(f.updated_at) };
+      fromCanvas.set(`canvas-file:${f.display_name}`, row);
+      fromCanvas.set(`canvas-file:${f.filename}`, row);
+      rows.push(row);
+    }
+  }
+  for (const m of saved) {
+    const match = m.seenBy === "students" ? fromCanvas.get(`${m.source}:${m.name}`) : undefined;
+    if (match) {
+      match.seenBy = "students";
+      match.usedIn = [...match.usedIn, ...m.usedIn.filter((a) => !match.usedIn.some((b) => b.id === a.id))];
+    } else {
+      rows.push({ key: `${m.seenBy}-${m.id}`, name: m.name, source: m.source, seenBy: m.seenBy, usedIn: m.usedIn, date: m.createdAt });
+    }
+  }
+  return rows.sort((a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name));
+}
+
