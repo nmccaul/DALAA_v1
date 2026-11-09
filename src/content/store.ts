@@ -72,3 +72,61 @@ export async function getContent(db: Db, actor: Actor, courseId: string, content
   );
   return row ?? null;
 }
+
+/**
+ * Copies materials of one course into another for the teacher of both, in the
+ * order given, and returns the new ids in that order. A material the target
+ * course already has word for word (same source, name and text) is reused
+ * instead of copied again. Null when the actor doesn't teach both courses or
+ * an id isn't a material of the source course.
+ */
+export async function copyTo(
+  db: Db,
+  table: "course_content" | "course_guides",
+  actor: Actor,
+  fromCourseId: string,
+  toCourseId: string,
+  ids: readonly string[],
+): Promise<string[] | null> {
+  if (!(await getTaughtCourse(db, actor, fromCourseId)) || !(await getTaughtCourse(db, actor, toCourseId))) return null;
+  if (ids.length === 0) return [];
+  if (fromCourseId === toCourseId) return [...ids];
+
+  const copied: string[] = [];
+  for (const id of ids) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+    const [found] = await db.query<{ id: string }>(
+      `select t.id
+         from ${table} s
+         left join ${table} t on t.course_id = $3 and t.source = s.source and t.name = s.name and t.body = s.body
+        where s.id = $1 and s.course_id = $2
+        order by t.created_at nulls last
+        limit 1`,
+      [id, fromCourseId, toCourseId],
+    );
+    if (!found) return null;
+    if (found.id) {
+      copied.push(found.id);
+      continue;
+    }
+    const [inserted] = await db.query<{ id: string }>(
+      `insert into ${table} (course_id, source, name, body, creation_key, created_by, source_url)
+       select $3, source, name, body, gen_random_uuid(), $4, source_url from ${table} where id = $1 and course_id = $2
+       returning id`,
+      [id, fromCourseId, toCourseId, actor.userId],
+    );
+    copied.push(inserted.id);
+  }
+  return copied;
+}
+
+/** Copies readings into another course the actor teaches (`copyTo`); null if any isn't theirs. */
+export async function copyContent(
+  db: Db,
+  actor: Actor,
+  fromCourseId: string,
+  toCourseId: string,
+  contentIds: readonly string[],
+): Promise<string[] | null> {
+  return copyTo(db, "course_content", actor, fromCourseId, toCourseId, contentIds);
+}

@@ -13,7 +13,7 @@ import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { ContentInput } from "./read";
-import { saveTo, type SaveResult } from "./store";
+import { copyTo, saveTo, type SaveResult } from "./store";
 
 export type Guide = { name: string; body: string };
 
@@ -70,4 +70,15 @@ export async function guidesInCourse(db: Db, courseId: string, guideIds: readonl
     [courseId, ids],
   );
   return new Map(rows.map((r) => [r.id, r.chars]));
+}
+
+/** Copies AI-only notes into another course the actor teaches (store.ts `copyTo`); null if any isn't theirs. */
+export async function copyGuides(
+  db: Db,
+  actor: Actor,
+  fromCourseId: string,
+  toCourseId: string,
+  guideIds: readonly string[],
+): Promise<string[] | null> {
+  return copyTo(db, "course_guides", actor, fromCourseId, toCourseId, guideIds);
 }
