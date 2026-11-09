@@ -7,12 +7,13 @@ import { addMaterialAction, type AddMaterialState } from "../actions";
 import { SeenByField } from "./seen-by";
 
 /** Upload or paste one material, and say who sees it. */
-export function AddMaterialForm({ courseId, creationKey, kind }: { courseId: string; creationKey: string; kind: "upload" | "paste" }) {
+export function AddMaterialForm({ courseId, creationKey, kind, next }: { courseId: string; creationKey: string; next: string | null; kind: "upload" | "paste" }) {
   const [state, action, pending] = useActionState<AddMaterialState, FormData>(addMaterialAction, {});
   return (
     <form action={action} className="flex max-w-2xl flex-col gap-5">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="creationKey" value={creationKey} />
+      {next && <input type="hidden" name="next" value={next} />}
       {kind === "upload" ? (
         <div className="flex flex-col gap-2">
           <label htmlFor="file" className="font-bold">

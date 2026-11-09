@@ -17,6 +17,7 @@ import type { Db } from "@/db/types";
 import { fence, guideBlocks, type Material } from "./material";
 import { MODE_SLUGS, MODES, type ModeSlug } from "./modes";
 import { StudyChatDraftFields, StudyChatSettings } from "./schema";
+import { MINUTES, type Minutes } from "./wizard/query";
 
 export type DraftRequest = {
   /** What students will study (`course_content`), in the teacher's order, each with its name, e.g. "Case: Harbor Bikes". */
@@ -26,6 +27,10 @@ export type DraftRequest = {
   guides: readonly Material[];
   /** The teacher's switch: each student brings their own paper, code or plan, and the chat is about it. */
   studentWork: boolean;
+  /** The teacher's learning goal from the wizard: kept word for word as `goal`, and the rest is drafted around it. */
+  goal?: string | null;
+  /** "About how long?" from the wizard: a hint for the chat's length. */
+  minutes?: Minutes | null;
 };
 
 export type DraftResult = { ok: true; settings: StudyChatSettings } | { ok: false; reason: string };
@@ -83,6 +88,16 @@ export function draftPrompt(request: DraftRequest): { system: string; prompt: st
         "The AI sees it; you don't. Write the situation, opening, touchpoints and rubric to work for any student's work on this material.",
     );
   }
+  if (request.goal) {
+    parts.push(
+      `The teacher's learning goal, which is the chat's "goal" word for word. Build the rest of the chat around it. ` +
+        `When students finish, they should be able to: ${request.goal.trim()}`,
+    );
+  }
+  if (request.minutes) {
+    const label = MINUTES.find((m) => m.value === request.minutes)!.label.replace("–", " to ");
+    parts.push(`The teacher expects a student to spend about ${label} on this chat. Size the turn limit and the number of touchpoints to fit.`);
+  }
   parts.push(...guideBlocks(request.guides));
   return { system: SYSTEM, prompt: parts.join("\n\n") };
 }
@@ -102,10 +117,12 @@ export async function draftSettings(
       const draft = await generateStructured(db, model, { ...ctx, purpose: "draft" }, StudyChatDraftFields, prompt);
       // The teacher's choices of mode and of student work win over the model's;
       // showing progress is the teacher's too, set by create.ts.
+      // So is the goal they wrote, word for word.
       const mode = request.mode === "suggest" ? draft.mode : request.mode;
+      const goal = request.goal?.trim() || draft.goal;
       return {
         ok: true,
-        settings: StudyChatSettings.parse({ ...draft, mode, studentWork: studentWork(mode, request.studentWork), showProgress: false }),
+        settings: StudyChatSettings.parse({ ...draft, mode, goal, studentWork: studentWork(mode, request.studentWork), showProgress: false }),
       };
     } catch (error) {
       if (NoObjectGeneratedError.isInstance(error) && attempt < ATTEMPTS) continue;

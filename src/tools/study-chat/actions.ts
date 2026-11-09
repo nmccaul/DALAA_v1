@@ -4,12 +4,18 @@ import { redirect } from "next/navigation";
 import { addActivityGuide, removeActivityGuide } from "@/activities/materials";
 import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
+import { clientFor } from "@/canvas/connection";
+import { VaultError } from "@/canvas/vault";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
+import { parsePicks, savePicks } from "./wizard/picks";
+import { materialsQuery } from "./wizard/query";
+import { isSetupStep, nextSetupStep, setupPath } from "./wizard/steps";
+import { typeRequestFrom } from "./wizard/type-request";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
@@ -53,6 +59,62 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
   redirect(keepPicker(`${newPath(courseId)}?${query}`, pickerRequest(form.get(PICKER_PARAM))));
 }
 
+/**
+ * Wizard step 1: the ticked materials. Canvas items are saved now; the saved
+ * ids go on to the learning goal step in the URL.
+ */
+export type MaterialsPickState = FormState & { reconnect?: string; ticked?: string[] };
+
+export async function wizardMaterialsAction(_prev: MaterialsPickState, form: FormData): Promise<MaterialsPickState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const picker = pickerRequest(form.get(PICKER_PARAM));
+  const ticked = form.getAll("pick").map(String);
+  const picks = parsePicks(ticked);
+  const canvas =
+    picks.canvas.length > 0
+      ? await clientFor(db(), actor).catch((e) => {
+          if (e instanceof VaultError) return null;
+          throw e;
+        })
+      : null;
+  const saved = await savePicks(db(), actor, canvas, courseId, String(form.get("formKey") ?? ""), picks);
+  if (!saved.ok) {
+    const back = keepPicker(`${newPath(courseId)}?step=materials`, picker);
+    // The form resets after the action; `ticked` keeps the teacher's ticks.
+    return { error: saved.reason, reconnect: saved.reconnect ? `/canvas/connect?next=${encodeURIComponent(back)}` : undefined, ticked };
+  }
+  redirect(keepPicker(`${newPath(courseId)}?step=goal&${materialsQuery(saved)}`, picker));
+}
+
+/**
+ * Wizard step 3: the chosen type. The AI drafts the activity from the picks
+ * and the goal, and step 4 opens on the draft. A failed
+ * draft comes back with the choice kept (`mode`).
+ */
+export type TypeState = FormState & { mode?: string };
+
+export async function wizardTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const mode = String(form.get("mode") ?? "") || undefined;
+  const request = typeRequestFrom(form);
+  if (!request.ok) return { error: request.reason, mode };
+
+  const created = await createStudyChat(db(), graderModel(), actor, courseId, {
+    contentIds: request.ids.contentIds,
+    guideIds: request.ids.guideIds,
+    mode: request.mode,
+    studentWork: request.studentWork,
+    goal: request.goal,
+    minutes: request.minutes,
+    typeReason: request.typeReason,
+    creationKey: request.creationKey,
+  });
+  if (!created.ok) return { error: created.reason, mode };
+  redirect(keepPicker(setupPath(courseId, created.activityId, "scenario"), pickerRequest(form.get(PICKER_PARAM))));
+}
+
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */
 export async function draftAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
@@ -64,8 +126,8 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
   if (!mode) return { error: "Pick a kind of chat, or let DALAA suggest one." };
 
   const created = await createStudyChat(db(), graderModel(), actor, courseId, {
-    contentId: String(form.get("contentId") ?? ""),
-    guideId: form.get("guideId") ? String(form.get("guideId")) : null,
+    contentIds: [String(form.get("contentId") ?? "")],
+    guideIds: form.get("guideId") ? [String(form.get("guideId"))] : [],
     mode,
     studentWork: form.get("studentWork") === "on",
     showProgress: form.get("showProgress") === "on",
@@ -91,11 +153,23 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   }
   const saved = await saveStudyChat(db(), actor, activityId, settings);
   if (!saved.ok) return { error: saved.reason, problems: saved.problems };
+  const step = form.get("wizardStep");
+  if (form.get("intent") === "next" && isSetupStep(step)) {
+    redirect(keepPicker(setupPath(courseId, activityId, nextSetupStep(step) ?? step), pickerRequest(form.get(PICKER_PARAM))));
+  }
   if (form.get("intent") !== "publish") return { savedAt: Date.now() };
 
   const published = await publishStudyChat(db(), actor, activityId);
   if (!published.ok) return { error: published.reason };
   redirect(afterPublishPath(courseId, pickerRequest(form.get(PICKER_PARAM))));
+}
+
+/** Wizard step 7's Publish (no Canvas assignment from DALAA): publishes the saved chat, then the course or the picker. */
+export async function publishAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await requireActor();
+  const published = await publishStudyChat(db(), actor, String(form.get("activityId") ?? ""));
+  if (!published.ok) return { error: published.reason };
+  redirect(afterPublishPath(String(form.get("courseId") ?? ""), pickerRequest(form.get(PICKER_PARAM))));
 }
 
 /** The review screen's "Remove" next to an AI-only note: the chat and grader stop reading it. */

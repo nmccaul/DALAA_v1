@@ -9,7 +9,7 @@ import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
-import { findTool } from "@/tools/catalog";
+import { findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction } from "./actions";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -28,7 +28,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
     listCourseActivities(db(), actor, course.id),
     listOtherCourseActivities(db(), actor, course.id),
   ]);
-  const create = <ButtonLink href={`/courses/${course.id}/activities/new`}>+ Activity</ButtonLink>;
+  const create = <ButtonLink href={newActivityPath(course.id)}>+ Activity</ButtonLink>;
 
   if (activities.length === 0 && elsewhere.length === 0) {
     const host = (await headers()).get("host") ?? "";
@@ -156,7 +156,7 @@ function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; 
       )}
       <div className="flex min-w-0 flex-[1_1_260px] flex-col">
         <Link
-          href={`/courses/${courseId}/activities/${a.id}`}
+          href={teacherActivityPath(courseId, a)}
           className="font-bold break-words text-text hover:text-accent hover:underline"
         >
           {a.title}

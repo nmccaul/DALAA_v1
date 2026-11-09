@@ -31,17 +31,28 @@ reports show up under DALAA **Settings → Feedback reports**.
 2. Canvas's people (you as teacher, and the Test Student once Student View has
    been used at least once) show up. Sync adds and flags; it never removes.
 
-## 3. Teacher: create a Study Chat from the Harbor Bikes page
-1. **Assigned Activities** tab → **+ Activity** → **Study Chat**.
-2. **Use a Canvas page or file**. The first time, it asks you to
-   **Connect Canvas ↗** in a new tab; approve, come back, then pick the page
-   `case-harbor-bikes`.
+## 3. Teacher: create a Study Chat from the Harbor Bikes page (the wizard)
+1. **Assigned Activities** tab → **+ Activity** → **Study Chat**. The wizard's
+   seven steps show on the left; the DALAA wizard note on the right.
+2. **Step 1, Materials.** Pick the Canvas page `case-harbor-bikes` from the
+   list (the first time, it asks you to **Connect Canvas ↗** in a new tab;
+   approve, come back). Add more if you like: readings are seen by students
+   and the AI, notes by the AI only. **Next**.
    (Fallback if the connection fails: copy the page text and paste it.)
-3. Pick a mode (try **Case Chat**) or **Suggest for me**. Drafting takes up to
-   a minute.
-4. Read the summary cards (Goal, Scenario, Positions, Touchpoints, Persona,
-   Completion, Grading). Open one, change something small, then **Publish**.
+3. **Step 2, Learning goal.** It opens with a goal suggested from the
+   materials. Edit it, set the length, **Next**.
+4. **Step 3, Activity type.** The suggested type is marked **Suggested** with
+   its reason; two more are cards; the rest are under **More types**. Pick one
+   (try **Case Chat**) and **Next**. Drafting takes up to a minute.
+5. **Steps 4–6** (Scenario and persona · Chat options · Grading) open on the
+   draft. Change something small on one, **Next** each time. Options marked
+   **Coming soon** are shown but can't be used yet.
    - Check: the draft matches the case; nothing is blank; nothing invented.
+6. **Step 7, Review and assign.** Read the summary (title, type, materials,
+   touchpoints, points), **Try it with a sample student** once, then **Publish**
+   (or **Assign** when `ASSIGN_TO_CANVAS=1`, which adds the Canvas assignment
+   itself; then skip step 4 below). **Save as draft** instead leaves it under
+   **Not assigned** on the Activities tab; clicking it there reopens the wizard.
 
 ## 4. Teacher: add it to Canvas as an assignment
 1. In Canvas: **Assignments → + Assignment**. Submission type **External

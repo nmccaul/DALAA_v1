@@ -25,6 +25,10 @@ export type ToolInfo = {
   draft: string;
   /** Tools may differ in accent color and nothing else (CLAUDE.md). White text on it >= 4.5:1. */
   accent: string;
+  /** Query that opens the tool's create screen at its first step, when it has one. */
+  start?: string;
+  /** Where a draft opens, under the activity's own path, when the tool has setup steps (`setup/[step]`). */
+  draftOpens?: string;
 };
 
 export const TOOLS: readonly ToolInfo[] = [
@@ -39,6 +43,8 @@ export const TOOLS: readonly ToolInfo[] = [
     material: "A Canvas page, a file, or text you paste",
     draft: "the goal, the scenario, the AI's character, when the chat ends, and a rubric",
     accent: "#0b7f74",
+    start: "?step=materials",
+    draftOpens: "/setup/scenario",
   },
   {
     slug: "quizzer",
@@ -70,4 +76,24 @@ export function findTool(slug: string): ToolInfo | undefined {
 
 export function isLive(tool: ToolInfo): boolean {
   return tool.status === "live";
+}
+
+/**
+ * Where "+ Activity" goes: straight into the one live tool's first step while
+ * there is only one (no choice to make), else the page to pick a type.
+ */
+export function newActivityPath(courseId: string, tools: readonly ToolInfo[] = TOOLS): string {
+  const live = tools.filter(isLive);
+  const base = `/courses/${courseId}/activities/new`;
+  return live.length === 1 ? `${base}/${live[0].slug}${live[0].start ?? ""}` : base;
+}
+
+/**
+ * Where an activity's title links for its teacher: a draft reopens its tool's
+ * setup steps when the tool has them, anything else the activity's page.
+ */
+export function teacherActivityPath(courseId: string, a: { id: string; tool: string; status: "draft" | "published" }): string {
+  const path = `/courses/${courseId}/activities/${a.id}`;
+  const opens = a.status === "draft" ? findTool(a.tool)?.draftOpens : undefined;
+  return opens ? `${path}${opens}` : path;
 }

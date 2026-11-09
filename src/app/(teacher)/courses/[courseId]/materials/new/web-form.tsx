@@ -6,7 +6,7 @@ import { addWebPageAction, type WebPageState } from "../actions";
 import { SeenByField } from "./seen-by";
 
 /** Add a web page: Fetch shows a preview of the saved text; Add this page saves the copy. */
-export function WebPageForm({ courseId, creationKey }: { courseId: string; creationKey: string }) {
+export function WebPageForm({ courseId, creationKey, next }: { courseId: string; creationKey: string; next: string | null }) {
   const [state, action, pending] = useActionState<WebPageState, FormData>(addWebPageAction, {});
   const [url, setUrl] = useState("");
   const preview = state.preview && state.preview.url.replace(/\/$/, "") === url.trim().replace(/\/$/, "") ? state.preview : null;
@@ -15,6 +15,7 @@ export function WebPageForm({ courseId, creationKey }: { courseId: string; creat
     <form action={action} className="flex max-w-2xl flex-col gap-5">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="creationKey" value={creationKey} />
+      {next && <input type="hidden" name="next" value={next} />}
       {preview && <input type="hidden" name="confirm" value="1" />}
       <div className="flex flex-col gap-2">
         <label htmlFor="url" className="font-bold">

@@ -4,10 +4,13 @@ import { useActionState, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
-import { cardOf, FIELDS, fieldId } from "./fields";
+import Link from "next/link";
+import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
+import { OptionTable } from "./wizard/option-table";
+import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
 
 type S = StudyChatSettings;
 type Item = { label: string; description: string };
@@ -15,7 +18,6 @@ type Item = { label: string; description: string };
 const HELPFULNESS = { challenging: "Challenging", balanced: "Balanced", supportive: "Supportive" } as const;
 const STRICTNESS_LABELS = { strict: "Strict", balanced: "Balanced", lenient: "Lenient" } as const;
 
-type CardKey = "goal" | "scenarios" | "positions" | "touchpoints" | "persona" | "completion" | "rubric";
 type EditorState = FormState & { snapshot?: string };
 
 function endings(c: S["completion"]): string[] {
@@ -104,9 +106,16 @@ function ItemsEditor({ path, items, max, onChange }: { path: string[]; items: It
 }
 
 /**
+ * In the wizard: which step this is (the server works out where Next goes)
+ * and where Back goes. The step's cards start open, with no search box and no Publish.
+ */
+export type WizardEditing = { step: string; back: string | null };
+
+/**
  * The review screen's body: one short summary card per part of the chat, each
  * opening to edit it, a search box that jumps to any setting, then Save draft
  * and Publish. Everything is checked against the schema on the server.
+ * `cards` limits it to some cards (a wizard step's); the save action is the same.
  */
 export function StudyChatEditor({
   courseId,
@@ -114,15 +123,20 @@ export function StudyChatEditor({
   published,
   initial,
   addToCanvas,
+  cards,
+  wizard,
 }: {
   courseId: string;
   activityId: string;
   published: boolean;
   initial: S;
   addToCanvas: string | null;
+  cards?: readonly CardKey[];
+  wizard?: WizardEditing;
 }) {
+  const shown = shownCards(cards);
   const [s, setS] = useState(initial);
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set(wizard ? shown : []));
   const [query, setQuery] = useState("");
   const [state, action, pending] = useActionState<EditorState, FormData>(
     async (prev, form) => ({
@@ -155,31 +169,69 @@ export function StudyChatEditor({
     setQuery("");
   };
 
-  const card = (key: CardKey, summary: ReactNode, body: ReactNode, more?: ReactNode) => (
-    <details
-      key={key}
-      open={open.has(key)}
-      onToggle={(e) => toggle(key, e.currentTarget.open)}
-      className="rounded-panel border border-border bg-surface"
-    >
-      <summary className="flex cursor-pointer list-none flex-col gap-2 p-5 [&::-webkit-details-marker]:hidden">
-        <span className="flex items-baseline justify-between gap-3">
-          <h3 className="font-display text-lg font-semibold">{key === "rubric" ? `${settingTitle([key])}: ${rubricPoints(s)} points` : settingTitle([key])}</h3>
-          <span className="shrink-0 text-sm text-accent-text underline">{open.has(key) ? "Close" : "Edit"}</span>
-        </span>
-        <span className="flex flex-col gap-2 text-sm">{summary}</span>
-      </summary>
-      <div className="flex flex-col gap-4 border-t border-border p-5">
-        {body}
-        {more && (
-          <details open={open.has(`${key}:more`)} onToggle={(e) => toggle(`${key}:more`, e.currentTarget.open)}>
-            <summary className="cursor-pointer text-sm font-medium text-muted">More options</summary>
-            <div className="mt-3 flex flex-col gap-4">{more}</div>
-          </details>
-        )}
-      </div>
-    </details>
-  );
+  const card = (key: CardKey, summary: ReactNode, body: ReactNode, more?: ReactNode) =>
+    shown.includes(key) && (
+      <details
+        key={key}
+        open={open.has(key)}
+        onToggle={(e) => toggle(key, e.currentTarget.open)}
+        className="rounded-panel border border-border bg-surface"
+      >
+        <summary className="flex cursor-pointer list-none flex-col gap-2 p-5 [&::-webkit-details-marker]:hidden">
+          <span className="flex items-baseline justify-between gap-3">
+            <h3 className="font-display text-lg font-semibold">{key === "rubric" ? `${settingTitle([key])}: ${rubricPoints(s)} points` : settingTitle([key])}</h3>
+            <span className="shrink-0 text-sm text-accent-text underline">{open.has(key) ? "Close" : "Edit"}</span>
+          </span>
+          <span className="flex flex-col gap-2 text-sm">{summary}</span>
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-border p-5">
+          {body}
+          {more && (
+            <details open={open.has(`${key}:more`)} onToggle={(e) => toggle(`${key}:more`, e.currentTarget.open)}>
+              <summary className="cursor-pointer text-sm font-medium text-muted">More options</summary>
+              <div className="mt-3 flex flex-col gap-4">{more}</div>
+            </details>
+          )}
+        </div>
+      </details>
+    );
+
+  // The two student switches: in their cards on the review screen, on their own step in the wizard.
+  const switches = {
+    studentWork: {
+      id: fieldId(["studentWork"]),
+      label: settingTitle(["studentWork"]),
+      input: (
+        <input
+          id={fieldId(["studentWork"])}
+          type="checkbox"
+          checked={s.studentWork}
+          disabled={MODES[s.mode].needsStudentWork}
+          onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
+        />
+      ),
+    },
+    showProgress: {
+      id: fieldId(["showProgress"]),
+      label: settingTitle(["showProgress"]),
+      input: (
+        <input
+          id={fieldId(["showProgress"])}
+          type="checkbox"
+          checked={s.showProgress}
+          onChange={(e) => change((d) => void (d.showProgress = e.target.checked))}
+        />
+      ),
+    },
+  };
+  const inCard = (sw: (typeof switches)[keyof typeof switches]) =>
+    !wizard && (
+      <label className="flex items-center gap-2 text-sm font-medium">
+        {sw.input}
+        {sw.label}
+      </label>
+    );
+  const comingSoon = wizard ? (SETUP_COMING_SOON[wizard.step as keyof typeof SETUP_COMING_SOON] ?? []) : [];
 
   const scenario = s.scenarios[0];
   return (
@@ -192,40 +244,43 @@ export function StudyChatEditor({
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="activityId" value={activityId} />
       <input type="hidden" name="settings" value={json} />
+      {wizard && <input type="hidden" name="wizardStep" value={wizard.step} />}
       <PickerField addToCanvas={addToCanvas} />
 
-      <div className="relative max-w-md">
-        <label htmlFor="setting-search" className="sr-only">
-          Find a setting
-        </label>
-        <input
-          id="setting-search"
-          type="search"
-          placeholder="Find a setting, e.g. time limit"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (matches[0]) jump(matches[0]);
-            }
-          }}
-          className={inputStyles}
-          autoComplete="off"
-        />
-        {q && (
-          <ul className="absolute z-10 mt-1 flex w-full flex-col rounded-control border border-border bg-surface py-1 shadow-sm">
-            {matches.length === 0 && <li className="px-3 py-2 text-sm text-muted">No setting matches “{query.trim()}”.</li>}
-            {matches.map((f) => (
-              <li key={f.path.join(".")}>
-                <button type="button" onClick={() => jump(f)} className="w-full px-3 py-2 text-left text-sm hover:bg-accent-soft">
-                  {f.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {!wizard && (
+        <div className="relative max-w-md">
+          <label htmlFor="setting-search" className="sr-only">
+            Find a setting
+          </label>
+          <input
+            id="setting-search"
+            type="search"
+            placeholder="Find a setting, e.g. time limit"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (matches[0]) jump(matches[0]);
+              }
+            }}
+            className={inputStyles}
+            autoComplete="off"
+          />
+          {q && (
+            <ul className="absolute z-10 mt-1 flex w-full flex-col rounded-control border border-border bg-surface py-1 shadow-sm">
+              {matches.length === 0 && <li className="px-3 py-2 text-sm text-muted">No setting matches “{query.trim()}”.</li>}
+              {matches.map((f) => (
+                <li key={f.path.join(".")}>
+                  <button type="button" onClick={() => jump(f)} className="w-full px-3 py-2 text-left text-sm hover:bg-accent-soft">
+                    {f.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="flex max-w-3xl flex-col gap-4">
         {card(
@@ -245,16 +300,7 @@ export function StudyChatEditor({
             <Field path={["scenarios", "situation"]}>
               {text(scenario.situation, (v) => change((d) => void (d.scenarios[0].situation = v)), 6)}
             </Field>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                id={fieldId(["studentWork"])}
-                type="checkbox"
-                checked={s.studentWork}
-                disabled={MODES[s.mode].needsStudentWork}
-                onChange={(e) => change((d) => void (d.studentWork = e.target.checked))}
-              />
-              {settingTitle(["studentWork"])}
-            </label>
+            {inCard(switches.studentWork)}
           </>,
           <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>,
         )}
@@ -271,15 +317,7 @@ export function StudyChatEditor({
           </>,
           <>
             <ItemsEditor path={["touchpoints"]} items={s.touchpoints} max={12} onChange={(v) => change((d) => void (d.touchpoints = v))} />
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                id={fieldId(["showProgress"])}
-                type="checkbox"
-                checked={s.showProgress}
-                onChange={(e) => change((d) => void (d.showProgress = e.target.checked))}
-              />
-              {settingTitle(["showProgress"])}
-            </label>
+            {inCard(switches.showProgress)}
           </>,
         )}
         {card(
@@ -410,6 +448,25 @@ export function StudyChatEditor({
             )}
           </Field>,
         )}
+        {wizard?.step === STUDENT_SWITCHES_STEP && (
+          <OptionTable
+            title="What students see and do"
+            rows={[switches.studentWork, switches.showProgress].map((sw) => ({
+              label: <label htmlFor={sw.id}>{sw.label}</label>,
+              control: sw.input,
+            }))}
+            comingSoon={comingSoon}
+          />
+        )}
+        {wizard?.step === "grading" && (
+          <>
+            <p className="text-sm">
+              <span className="font-medium">Total: {rubricPoints(s)} points.</span>{" "}
+              <span className="text-muted">The activity is worth the total, and Canvas gets the same.</span>
+            </p>
+            <OptionTable title="More grading options" comingSoon={comingSoon} />
+          </>
+        )}
       </div>
 
       {(state.error || state.problems) && (
@@ -425,7 +482,21 @@ export function StudyChatEditor({
         </div>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        {published ? (
+        {wizard ? (
+          <>
+            <Button name="intent" value="next" disabled={pending}>
+              {pending ? "Saving…" : "Next"}
+            </Button>
+            <Button variant="secondary" name="intent" value="save" disabled={pending}>
+              Save as draft
+            </Button>
+            {wizard.back && (
+              <Link href={wizard.back} className="text-sm text-muted hover:text-text">
+                ← Back
+              </Link>
+            )}
+          </>
+        ) : published ? (
           <Button name="intent" value="save" disabled={pending}>
             {pending ? "Saving…" : "Save changes"}
           </Button>

@@ -103,6 +103,20 @@ export async function listCourseCanvasContent(
 
 export type CanvasPick = { kind: "page"; url: string } | { kind: "file"; id: number };
 
+/** A pick as a form value: `page:<url>` or `file:<id>`. */
+export function canvasPickValue(pick: CanvasPick): string {
+  return pick.kind === "page" ? `page:${pick.url}` : `file:${pick.id}`;
+}
+
+/** The pick a form value names, or null for anything else. */
+export function parseCanvasPick(value: string): CanvasPick | null {
+  const [kind, ...rest] = value.split(":");
+  const ref = rest.join(":");
+  if (kind === "page" && ref) return { kind: "page", url: ref };
+  if (kind === "file" && /^\d+$/.test(ref)) return { kind: "file", id: Number(ref) };
+  return null;
+}
+
 export type SaveFromCanvasResult =
   | { ok: true; content: SavedContent }
   | { ok: false; reason: string; reconnect: boolean };

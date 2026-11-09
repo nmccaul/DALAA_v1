@@ -92,12 +92,8 @@ export async function setActivityMaterials(
         [activity.id, activity.courseId, row.contentId, row.guideId, position],
       );
     }
-    // Until every reader uses activity_materials, the old columns name the first of each kind.
-    await tx.query("update activities set content_id = $2, guide_id = $3, updated_at = now() where id = $1", [
-      activity.id,
-      contentIds[0] ?? null,
-      guideIds[0] ?? null,
-    ]);
+    // activities.content_id / guide_id are retired (kept, no longer written): activity_materials is the list.
+    await tx.query("update activities set updated_at = now() where id = $1", [activity.id]);
   });
   return { ok: true };
 }

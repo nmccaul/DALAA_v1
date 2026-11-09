@@ -212,7 +212,7 @@ describe("the AI-only guide", () => {
     const content = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Case", text: "Harbor Bikes sells bikes." });
     if (!content.ok) throw new Error(content.reason);
     const model = answering(drafted());
-    const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
+    const request = { contentIds: [content.content.id], guideIds: [guideId], mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
     expect(await activityGuides(db, created.activityId)).toMatchObject([{ body: GUIDE }]);
@@ -221,8 +221,8 @@ describe("the AI-only guide", () => {
     const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
     if (!elsewhere.ok) throw new Error(elsewhere.reason);
     expect(
-      await createStudyChat(db, model, prof, course, { ...request, guideId: elsewhere.content.id, creationKey: randomUUID() }),
-    ).toEqual({ ok: false, reason: "We couldn't find those AI instructions. Add them again." });
+      await createStudyChat(db, model, prof, course, { ...request, guideIds: [elsewhere.content.id], creationKey: randomUUID() }),
+    ).toEqual({ ok: false, reason: "One of those materials isn't in this course anymore. Go back and pick again." });
   });
 
   it("is added and removed after drafting, by the course's teachers only", async () => {
@@ -234,15 +234,11 @@ describe("the AI-only guide", () => {
 
     expect(await removeActivityGuide(db, prof, activity, guideId)).toEqual({ ok: true });
     expect(await activityGuides(db, activity)).toMatchObject([{ name: "Argument map", body: "Map." }]);
-    // The reading stays, and the old columns follow the list until they're retired.
+    // The reading stays.
     expect((await activityMaterials(db, activity)).readings.map((r) => r.name)).toEqual(["Case"]);
-    const [columns] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
-    expect(columns.guide_id).toBe(other.content.id);
 
     expect(await removeActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
     expect(await activityGuides(db, activity)).toEqual([]);
-    const [cleared] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
-    expect(cleared.guide_id).toBeNull();
 
     const refused = { ok: false, reason: "That assignment isn't one of yours." };
     expect(await addActivityGuide(db, student, activity, guideId)).toEqual(refused);

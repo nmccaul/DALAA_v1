@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findTool, isLive, TOOLS } from "./catalog";
+import { findTool, isLive, newActivityPath, teacherActivityPath, TOOLS } from "./catalog";
 
 describe("tool registry", () => {
   it("has unique, URL-safe slugs", () => {
@@ -26,5 +26,18 @@ describe("tool registry", () => {
       const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
       expect(1.05 / (luminance + 0.05), tool.slug).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it("sends + Activity straight to the only live tool's first step, else to the type picker", () => {
+    expect(newActivityPath("c1")).toBe("/courses/c1/activities/new/study-chat?step=materials");
+    const twoLive = TOOLS.map((t) => ({ ...t, status: "live" as const }));
+    expect(newActivityPath("c1", twoLive)).toBe("/courses/c1/activities/new");
+  });
+
+  it("opens a draft at its tool's setup steps, and anything else (or a tool without them) at the activity", () => {
+    expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "draft" })).toBe("/courses/c1/activities/a1/setup/scenario");
+    expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "published" })).toBe("/courses/c1/activities/a1");
+    expect(teacherActivityPath("c1", { id: "a1", tool: "quizzer", status: "draft" })).toBe("/courses/c1/activities/a1");
+    expect(teacherActivityPath("c1", { id: "a1", tool: "gone", status: "draft" })).toBe("/courses/c1/activities/a1");
   });
 });

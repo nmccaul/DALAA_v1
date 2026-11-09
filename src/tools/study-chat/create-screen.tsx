@@ -8,6 +8,13 @@ import type { CreateScreenProps } from "@/tools/screens";
 import { MaterialForm, ModeForm } from "./forms";
 import { canvasGuideHref, GuidePanel } from "./guide-panel";
 import { MODE_SLUGS, MODES } from "./modes";
+import { PreviewNote } from "@/components/preview-note";
+import { GoalStep } from "./wizard/goal-step";
+import { MaterialsStep } from "./wizard/materials-step";
+import { TypeStep } from "./wizard/type-step";
+import { goalFromQuery, goalStepPath, materialsFromQuery, materialsStepPath } from "./wizard/query";
+import { WizardShell } from "./wizard/shell";
+import { isWizardStep, WIZARD_STEPS } from "./wizard/steps";
 
 /**
  * New Study Chat: the material (paste, upload, or a Canvas page or file), then
@@ -17,6 +24,12 @@ import { MODE_SLUGS, MODES } from "./modes";
  * uploaded, or from Canvas).
  */
 export async function StudyChatCreate({ actor, course, searchParams }: CreateScreenProps) {
+  // The new wizard (D-034), step by step as it's built; without ?step= the current flow stays.
+  if (searchParams.step === "materials") return MaterialsStep({ actor, course, searchParams });
+  if (searchParams.step === "goal") return GoalStep({ actor, course, searchParams });
+  if (searchParams.step === "type") return TypeStep({ actor, course, searchParams });
+  if (isWizardStep(searchParams.step)) return WizardNotYet({ courseId: course.id, step: searchParams.step, searchParams });
+
   const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);
   const here = keepPicker(`/courses/${course.id}/activities/new/study-chat`, addToCanvas);
   const content = typeof searchParams.content === "string" ? await getContent(db(), actor, course.id, searchParams.content) : null;
@@ -72,5 +85,38 @@ export async function StudyChatCreate({ actor, course, searchParams }: CreateScr
         modes={MODE_SLUGS.map((slug) => ({ slug, label: MODES[slug].label, description: MODES[slug].description }))}
       />
     </section>
+  );
+}
+
+/** A wizard step that isn't built yet: says so, and goes back to the goal (or the materials when there's no goal yet). */
+function WizardNotYet({
+  courseId,
+  step,
+  searchParams,
+}: {
+  courseId: string;
+  step: (typeof WIZARD_STEPS)[number]["slug"];
+  searchParams: CreateScreenProps["searchParams"];
+}) {
+  const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);
+  const picked = materialsFromQuery(searchParams);
+  const label = WIZARD_STEPS.find((s) => s.slug === step)!.label;
+  const answers = goalFromQuery(searchParams);
+  return (
+    <WizardShell step={step} title={label} note={<p>This step is still being built.</p>}>
+      <PreviewNote>
+        {label} isn&apos;t built yet. You picked {picked.contentIds.length} reading{picked.contentIds.length === 1 ? "" : "s"}
+        {picked.guideIds.length > 0 ? ` and ${picked.guideIds.length} AI-only note${picked.guideIds.length === 1 ? "" : "s"}` : ""}.
+      </PreviewNote>
+      {answers.goal ? (
+        <Link href={goalStepPath(courseId, picked, answers, addToCanvas)} className="self-start text-sm text-muted hover:text-text">
+          ← Back to the learning goal
+        </Link>
+      ) : (
+        <Link href={materialsStepPath(courseId, picked, addToCanvas)} className="self-start text-sm text-muted hover:text-text">
+          ← Back to materials
+        </Link>
+      )}
+    </WizardShell>
   );
 }

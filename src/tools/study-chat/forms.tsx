@@ -5,7 +5,7 @@ import { capitalize, FILE_ACCEPT, FILE_TYPES_LABEL } from "@/content/file-types"
 import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { GUIDE_LABEL } from "@/content/guide-label";
 import { PICKER_PARAM } from "@/lti/picker";
-import { draftAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
+import { draftAction, publishAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
 import { settingTitle } from "./schema";
 
@@ -102,6 +102,24 @@ export function RemoveGuideForm({
       <button disabled={pending} className="text-sm text-muted underline hover:text-text">
         {pending ? "Removing…" : "Remove"}
       </button>
+      <Problem state={state} />
+    </form>
+  );
+}
+
+/** Wizard step 7's Publish, for when DALAA doesn't add the Canvas assignment itself. */
+export function PublishForm({ courseId, activityId, addToCanvas }: { courseId: string; activityId: string; addToCanvas: string | null }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(publishAction, {});
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <input type="hidden" name="courseId" value={courseId} />
+      <input type="hidden" name="activityId" value={activityId} />
+      <PickerField addToCanvas={addToCanvas} />
+      <div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Publishing…" : "Publish"}
+        </Button>
+      </div>
       <Problem state={state} />
     </form>
   );
