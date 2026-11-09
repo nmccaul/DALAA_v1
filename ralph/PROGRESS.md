@@ -33,3 +33,9 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Materials tab "used in" reads `activity_materials` instead of the old columns.
 - Checked locally on the running dev server (:3000): an activity with one reading and two notes lists all three with pills. A local-only user `ralph.t04` (staff allowlist) and course "T04 check" were added to the local DB for that.
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:45 UTC · T05 CHECKPOINT B · done
+- Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). One new migration since main, `20261109071641_activity_materials.sql`: additive (new table, unique (id, course_id) over the PK, backfill inserts). Applied to production with `scripts/migrate-prod.sh` → `migrations up to date`.
+- PR #124 (feat/creation-wizard → main), CI passed in 6m12s, merged; main is `c2ae5b9`.
+- Production deploy of `c2ae5b9` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
+- Nathan: an activity created in production between the migration and the deploy (a few minutes, overnight) would have no `activity_materials` row; unlikely, but if one exists, re-attach its material on the review screen.
