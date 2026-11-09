@@ -52,3 +52,9 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - New `courses/[courseId]/actions.ts` `copyActivityAction` (Copy / Copy to this course, `creationKey` from `randomUUID()` at render), landing on the copy. A refusal shows a fixed sentence (`?copyerror=1`), never text from the URL.
 - Checked locally with playwright-cli at desktop and 390px: three lists render; Copy and Copy to this course each opened the new draft. Local-only data added: course "T07 other" for `ralph.t04` and an activity with a fake LTI link `local-t07-link`. Dark mode not screenshotted (only design tokens used).
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 07:56 UTC · T08 Library removed · done
+- `main-nav.tsx`: Library dropped from `AREAS` (rail is Courses · Settings). `library/page.tsx` is now just `redirect("/courses")` (signed-out visitors still hit the sign-in guard first; checked with curl: 307 → /sign-in).
+- The "Reuse it from your Library" line on the activity-type picker now links to `/courses/<id>?show=other` ("Copy it into this course").
+- `listLibraryActivities` and its test deleted (no callers left); `LibraryActivity` type renamed `OtherCourseActivity`.
+- No `/library` link remains in `src`. Lint, typecheck green; tests: the same 12 Node-20 `Array.fromAsync` failures only.
