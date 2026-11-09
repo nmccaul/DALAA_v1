@@ -91,3 +91,9 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Checked locally with playwright-cli: practice course BUS M 499 imported for `ralph.t04`, an activity copied in, assigned (group "Case discussions", due Feb 1 11:59 PM) → moved to Assigned; Change due date → Feb 3 5:00 PM saved. 390px fine. Dark mode not screenshotted (tokens only).
 - Added `ASSIGN_TO_CANVAS=1` to local `.env.local` (non-secret, named in PLAN) so the running dev server on :3000 shows it. Production stays off.
 - Publishing still uses the chassis `publishActivity` (points check), not Study Chat's schema check — fine while every save is schema-checked, but a tool publish hook in the catalog would be cleaner later. Same 12 Node-20 local failures, nothing new.
+
+## 2026-11-09 08:33 UTC · T13 CHECKPOINT D · done
+- Green locally (lint, typecheck; tests: the same 12 Node-20 failures only). One new migration since checkpoint C, `20261109080544_activity_canvas_assignment.sql` (additive: nullable column + partial unique index), applied to production with `scripts/migrate-prod.sh` → `migrations up to date`.
+- PR #126 (feat/creation-wizard → main): Canvas assignment client, link-URI launch fallback, `assignActivity`, Assign UI behind `ASSIGN_TO_CANVAS`. CI passed in 5m17s, merged; main is `feb13a4`.
+- Production deploy of `feb13a4` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200. `ASSIGN_TO_CANVAS` stays unset in production.
+- VERIFY (Nathan): set ASSIGN_TO_CANVAS=1 locally or in a preview, assign in gitgrade course 42, open it as Student View from Canvas Assignments, chat, grade, send grade; then turn the flag on in production.
