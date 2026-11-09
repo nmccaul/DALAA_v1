@@ -15,7 +15,8 @@
  *   set it aside.
  * - A Deep Linking launch (a teacher adding DALAA as a Canvas assignment) goes
  *   to the picker (src/lti/deep-link.ts); a Resource Link launch carrying an
- *   `activity_id` opens that assignment and remembers its Canvas link.
+ *   `activity_id` (custom field, else the target link URI's query) opens that
+ *   assignment and remembers its Canvas link.
  */
 
 import { studentHomePath, takePath } from "@/attempts/store";
@@ -174,6 +175,25 @@ async function findOrCreateUser(
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
+ * The `activity_id` a launch names: the custom field a deep-linked assignment
+ * carries, else the `activity_id` in the target link URI's query (an
+ * assignment DALAA created through Canvas REST may launch without our custom
+ * field). Only a UUID counts.
+ */
+export function launchActivityId(claims: Pick<LaunchClaims, "custom" | "targetLinkUri">): string | null {
+  const id = claims.custom[ACTIVITY_ID_FIELD] || fromLinkUri(claims.targetLinkUri);
+  return id && UUID.test(id) ? id.toLowerCase() : null;
+}
+
+function fromLinkUri(uri: string): string | null {
+  try {
+    return new URL(uri).searchParams.get(ACTIVITY_ID_FIELD);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The assignment a Canvas link opens: its `activity_id`, if that assignment is
  * in this course (a link copied into another Canvas course opens the course
  * instead). The first launch of a link records it, with its gradebook line
@@ -182,8 +202,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * keeps its first.
  */
 async function linkedActivity(tx: Db, courseId: string, claims: LaunchClaims): Promise<string | null> {
-  const id = claims.custom[ACTIVITY_ID_FIELD];
-  if (claims.messageType !== RESOURCE_LINK || !claims.resourceLink || !id || !UUID.test(id)) return null;
+  const id = launchActivityId(claims);
+  if (claims.messageType !== RESOURCE_LINK || !claims.resourceLink || !id) return null;
   const [activity] = await tx.query<{ id: string; lti_resource_link_id: string | null }>(
     "select id, lti_resource_link_id from activities where id = $1 and course_id = $2",
     [id, courseId],

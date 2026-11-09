@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTime } from "./time";
+import { formatTime, localInputValue } from "./time";
 
 // 16:15:09 UTC is 10:15 in Denver (MDT) and 01:15 the next day in Tokyo.
 const at = new Date("2026-10-29T16:15:09Z");
@@ -22,5 +22,13 @@ describe("formatTime", () => {
 
   it("follows daylight saving time", () => {
     expect(formatTime(new Date("2026-12-01T16:15:00Z"), "dateTime", "America/Denver")).toBe("Dec 1, 2026, 9:15 AM");
+  });
+});
+
+describe("localInputValue", () => {
+  it("reads back as the same minute in the same zone", () => {
+    const at = new Date("2027-02-01T06:59:42Z");
+    expect(localInputValue(at)).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(new Date(localInputValue(at)).getTime()).toBe(new Date("2027-02-01T06:59:00Z").getTime());
   });
 });

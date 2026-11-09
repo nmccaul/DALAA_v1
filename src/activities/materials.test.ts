@@ -63,7 +63,7 @@ describe("activity materials", () => {
       const guide = await material("course_guides", course, "Notes");
       const both = await newActivity(course, reading, guide);
       const none = await newActivity(course);
-      expect(await db.migrateRest()).toEqual([MIGRATION]);
+      expect((await db.migrateRest())[0]).toBe(MIGRATION);
 
       const m = await activityMaterials(db, both);
       expect(m.readings.map((r) => r.name)).toEqual(["Case"]);

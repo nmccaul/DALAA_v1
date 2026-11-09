@@ -4,3 +4,13 @@ import { practiceCanvas } from "@/canvas/practice/server";
 export function GET(request: Request) {
   return practiceCanvas(request);
 }
+
+/** Making an assignment (the one thing practice Canvas writes). */
+export function POST(request: Request) {
+  return practiceCanvas(request);
+}
+
+/** Changing an assignment. */
+export function PUT(request: Request) {
+  return practiceCanvas(request);
+}

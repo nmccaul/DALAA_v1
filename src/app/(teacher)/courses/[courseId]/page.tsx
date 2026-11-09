@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { assignToCanvasOn } from "@/activities/assign";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { LocalTime } from "@/components/local-time";
@@ -48,6 +49,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const assigned = activities.filter((a) => a.assigned);
   const notAssigned = activities.filter((a) => !a.assigned);
   const base = `/courses/${course.id}`;
+  const assignOn = assignToCanvasOn();
   const showOther = q.show === "other" || (q.show !== "unassigned" && notAssigned.length === 0 && elsewhere.length > 0);
 
   return (
@@ -69,7 +71,19 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           </h2>
           <ul className="flex flex-col divide-y divide-border">
             {assigned.map((a) => (
-              <CourseRow key={a.id} activity={a} courseId={course.id} />
+              <CourseRow
+                key={a.id}
+                activity={a}
+                courseId={course.id}
+                actions={
+                  assignOn &&
+                  a.canvasAssignmentId && (
+                    <Link href={`${base}/activities/${a.id}/assign`} className="text-sm text-accent-text hover:underline">
+                      Change due date
+                    </Link>
+                  )
+                }
+              />
             ))}
           </ul>
         </section>
@@ -106,20 +120,31 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
               key={a.id}
               activity={a}
               courseId={course.id}
-              copy={<CopyButton activityId={a.id} courseId={course.id} label="Copy" />}
+              actions={
+                <>
+                  {assignOn && (
+                    <ButtonLink href={`${base}/activities/${a.id}/assign`} className="text-sm">
+                      Assign
+                    </ButtonLink>
+                  )}
+                  <CopyButton activityId={a.id} courseId={course.id} label="Copy" />
+                </>
+              }
             />
           ))}
         </ul>
       )}
 
       <p className="text-sm text-muted">
-        Each published activity also appears in Canvas Assignments, where students open it and where its grade goes.
+        {assignOn
+          ? "Assign adds an activity to Canvas Assignments, where students open it and where its grade goes."
+          : "Each published activity also appears in Canvas Assignments, where students open it and where its grade goes."}
       </p>
     </div>
   );
 }
 
-function CourseRow({ activity: a, courseId, copy }: { activity: ActivityRow; courseId: string; copy?: ReactNode }) {
+function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; courseId: string; actions?: ReactNode }) {
   const tool = findTool(a.tool);
   const Icon = tool?.icon;
   return (
@@ -153,7 +178,7 @@ function CourseRow({ activity: a, courseId, copy }: { activity: ActivityRow; cou
             Results
           </Link>
         )}
-        {copy}
+        {actions}
       </div>
     </li>
   );

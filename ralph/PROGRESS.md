@@ -58,3 +58,36 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - The "Reuse it from your Library" line on the activity-type picker now links to `/courses/<id>?show=other` ("Copy it into this course").
 - `listLibraryActivities` and its test deleted (no callers left); `LibraryActivity` type renamed `OtherCourseActivity`.
 - No `/library` link remains in `src`. Lint, typecheck green; tests: the same 12 Node-20 `Array.fromAsync` failures only.
+
+## 2026-11-09 08:05 UTC · T09 CHECKPOINT C · done
+- Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). No new migrations since checkpoint B, so nothing applied to production.
+- PR #125 (feat/creation-wizard → main): copyActivity, Activities tab sections with Copy / Copy to this course, Library page removed. CI passed in 5m1s, merged; main is `3f33fad`.
+- Production deploy of `3f33fad` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
+
+## 2026-11-09 08:08 UTC · T10 Canvas client + column · done
+- Migration `20261109080544_activity_canvas_assignment.sql` (additive): nullable `activities.canvas_assignment_id text` (check `<> ''`) and a partial unique index on (course_id, canvas_assignment_id) where not null. Applied locally only; checkpoint D applies it to production.
+- `src/canvas/client.ts`: `assignmentGroups`, `createAssignment` (POST), `updateAssignment` (PUT), `AssignmentInput` and `assignmentBody`. Sent as a JSON body `{ assignment: … }`; dates ISO; on update a field left out is untouched and a `null` date clears it (JSON null, never `''`). Only a reply with a numeric id counts as done. `request()` now takes a method.
+- Practice Canvas: `practiceCanvas` is now async; it lists assignment groups (two per practice course, `PRACTICE_ASSIGNMENT_GROUPS`) and keeps created assignments in process memory (lost on restart), checking name, points, dates and group like Canvas. The route also exports POST/PUT.
+- `materials.test.ts` backfill test expected its migration to be the last one; now it checks it runs first.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 08:11 UTC · T11 Launch finds the activity from the link URI · done
+- `src/lti/launch.ts`: new exported `launchActivityId(claims)` — the `activity_id` custom field when present, else `activity_id` from the target link URI's query; only a UUID counts (lowercased). `linkedActivity` uses it, so the same-course check and first-launch recording of resource link + line item apply to both.
+- A custom field that is present but not a UUID does not fall back to the URI (the task says fallback only when the field is missing).
+- Tests in `src/lti/deep-link.test.ts`: link-URI launch opens and records link + line item; activity in another DALAA course and a non-UUID value open the course and record nothing; unit test of the precedence rules.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 08:16 UTC · T12a assignActivity · done
+- T12 split: T12a (service, this pass) and T12b (Assign dialog + due-date edit behind `ASSIGN_TO_CANVAS`).
+- `src/activities/assign.ts` `assignActivity(db, actor, canvas, activityId, { dueAt, lockAt, groupId, publish }, appUrl)`: publishes in DALAA (`publishActivity`), then creates the external-tool assignment (launch URL `<APP_URL>/api/lti/launch?activity_id=…`) or updates the one in `canvas_assignment_id`; stores the id and `due_at`. The activity row is locked (`for update`) while Canvas is asked, so a double click makes one assignment.
+- Departures from the task text: **points aren't an input** — Canvas gets the activity's own points (they follow the rubric; one place per concept, no rescaling). `appUrl` is a 6th argument (callers pass `appUrl(request)` / `APP_URL`). An activity already linked from Canvas the old way (`lti_resource_link_id`, no `canvas_assignment_id`) is refused rather than given a second assignment that would split its grades.
+- Publishing uses the chassis `publishActivity` (points check only), not `publishStudyChat`'s schema check, since the chassis can't branch on the tool. T12b's action should run the tool's publish first, or the catalog should register a publish check.
+- `listCourseActivities` counts `canvas_assignment_id` as assigned. 11 tests in `assign.test.ts`. Same 12 local failures as before (Node 20; note: `progress.test.ts`/`work.test.ts` are in that 12 too, not only `read.test.ts`).
+
+## 2026-11-09 08:24 UTC · T12b Assign UI · done
+- New page `courses/[courseId]/activities/[activityId]/assign` (+ `assign-form.tsx`, `actions.ts`): due, closes, assignment group (from `assignmentGroups`, by position), "Students can see it in Canvas now". For an activity with a `canvas_assignment_id` the same page is "Change the due date" with only the due field. 404 unless `ASSIGN_TO_CANVAS=1`. Not connected / reconnect links to `/canvas/connect?next=<assign page>`; course not linked links to the course's Connect to Canvas page; added-from-Canvas activities are told to change dates in Canvas.
+- Activities tab (flag on): *Not assigned* rows get **Assign**; *Assigned* rows with a `canvas_assignment_id` get **Change due date**. Flag off: unchanged.
+- `src/activities/assign.ts`: `lockAt` and `publish` are now optional (left out on update = unchanged in Canvas, so the due-date edit doesn't clear the close date or unpublish); new `assignToCanvasOn()`, `assignSetup()` and `assignRequestFrom(form)`. Dates go to the server as ISO from the browser (teacher's zone), via `localInputValue` in `components/time.ts`. `appUrlFromHeaders` in `lti/config.ts` for server actions (APP_URL wins).
+- Checked locally with playwright-cli: practice course BUS M 499 imported for `ralph.t04`, an activity copied in, assigned (group "Case discussions", due Feb 1 11:59 PM) → moved to Assigned; Change due date → Feb 3 5:00 PM saved. 390px fine. Dark mode not screenshotted (tokens only).
+- Added `ASSIGN_TO_CANVAS=1` to local `.env.local` (non-secret, named in PLAN) so the running dev server on :3000 shows it. Production stays off.
+- Publishing still uses the chassis `publishActivity` (points check), not Study Chat's schema check — fine while every save is schema-checked, but a tool publish hook in the catalog would be cleaner later. Same 12 Node-20 local failures, nothing new.

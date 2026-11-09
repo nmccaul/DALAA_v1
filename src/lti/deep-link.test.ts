@@ -7,7 +7,7 @@ import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
 import { answerDeepLink, DEEP_LINKING_RESPONSE, pendingDeepLink, resourceLinkItem, returnUrlAllowed } from "./deep-link";
 import { loadToolKey, type ToolKey } from "./keys";
-import { signInFromLaunch } from "./launch";
+import { launchActivityId, signInFromLaunch } from "./launch";
 import { CANVAS_CLOUD_ISSUER, ensurePlatform, envRegistration, type Platform, type Registration } from "./registration";
 import { DEEP_LINKING, RESOURCE_LINK, type LaunchClaims } from "./validate";
 
@@ -200,6 +200,50 @@ describe("deep linking", () => {
     // An unknown or copied activity id opens the course.
     const copied = link("rl-3", { custom: { login_id: "teacher@example.edu", activity_id: randomUUID() } });
     expect(await signInFromLaunch(db, copied)).toMatchObject({ ok: true, path: `/courses/${courseId}` });
+  });
+
+  it("an assignment DALAA created in Canvas opens from the activity_id in its link URI", async () => {
+    const { courseId, actor } = await teacherLaunch();
+    const activityId = await addActivity(courseId, actor, "published");
+    const viaUri = (id: string, uri: string) =>
+      claims({
+        messageType: RESOURCE_LINK,
+        deepLinking: undefined,
+        resourceLink: { id },
+        custom: { login_id: "teacher@example.edu" },
+        targetLinkUri: uri,
+        ags: { scope: [], lineItem: LINE_ITEM },
+      });
+    const stored = async (id: string) =>
+      (await db.query("select lti_resource_link_id, lti_line_item_url from activities where id = $1", [id]))[0];
+
+    expect(await signInFromLaunch(db, viaUri("rl-u", `${LAUNCH_URL}?activity_id=${activityId}`))).toMatchObject({
+      ok: true,
+      path: `/courses/${courseId}/activities/${activityId}`,
+    });
+    expect(await stored(activityId)).toEqual({ lti_resource_link_id: "rl-u", lti_line_item_url: LINE_ITEM });
+
+    // An activity in another DALAA course, or a value that isn't an id, opens the course and records nothing.
+    const [{ id: otherCourse }] = await db.query<{ id: string }>(
+      `insert into courses (institution_id, code, title, term, created_by, creation_key)
+       select institution_id, 'X', 'Other', 'W', $1, gen_random_uuid() from courses where id = $2 returning id`,
+      [actor.userId, courseId],
+    );
+    const elsewhere = await addActivity(otherCourse, actor, "published");
+    expect(await signInFromLaunch(db, viaUri("rl-x", `${LAUNCH_URL}?activity_id=${elsewhere}`))).toMatchObject({ ok: true, path: `/courses/${courseId}` });
+    expect(await stored(elsewhere)).toEqual({ lti_resource_link_id: null, lti_line_item_url: null });
+    expect(await signInFromLaunch(db, viaUri("rl-y", `${LAUNCH_URL}?activity_id=1%20or%201=1`))).toMatchObject({ ok: true, path: `/courses/${courseId}` });
+  });
+
+  it("launchActivityId prefers the custom field, falls back to the link URI, and takes only a UUID", () => {
+    const a = randomUUID();
+    const b = randomUUID();
+    expect(launchActivityId({ custom: { activity_id: a }, targetLinkUri: `${LAUNCH_URL}?activity_id=${b}` })).toBe(a);
+    expect(launchActivityId({ custom: {}, targetLinkUri: `${LAUNCH_URL}?activity_id=${b.toUpperCase()}` })).toBe(b);
+    expect(launchActivityId({ custom: {}, targetLinkUri: LAUNCH_URL })).toBeNull();
+    expect(launchActivityId({ custom: {}, targetLinkUri: `${LAUNCH_URL}?activity_id=nope` })).toBeNull();
+    expect(launchActivityId({ custom: { activity_id: "nope" }, targetLinkUri: `${LAUNCH_URL}?activity_id=${b}` })).toBeNull();
+    expect(launchActivityId({ custom: {}, targetLinkUri: "not a url" })).toBeNull();
   });
 
   it("resourceLinkItem carries the assignment id and points", () => {

@@ -84,6 +84,55 @@ export type CanvasFile = {
   updated_at: string;
 };
 
+export type CanvasAssignmentGroup = { id: number; name: string; position: number };
+
+/** An assignment as Canvas returns it (the fields DALAA reads). */
+export type CanvasAssignment = {
+  id: number;
+  name: string;
+  points_possible: number | null;
+  due_at: string | null;
+  lock_at: string | null;
+  assignment_group_id: number;
+  published: boolean;
+  submission_types: string[];
+  html_url: string;
+  external_tool_tag_attributes?: { url: string; new_tab: boolean } | null;
+};
+
+/**
+ * An external-tool assignment that launches an activity. On update, a field
+ * left out is left alone in Canvas, and a date set to `null` clears it (sent
+ * as JSON null, never `''`).
+ */
+export type AssignmentInput = {
+  name: string;
+  pointsPossible: number;
+  dueAt: Date | null;
+  lockAt: Date | null;
+  /** Canvas's default group when left out. */
+  groupId?: number;
+  published: boolean;
+  /** The LTI launch URL for the activity (`<APP_URL>/api/lti/launch?activity_id=<uuid>`). */
+  launchUrl: string;
+};
+
+/** Canvas's `{ assignment: … }` body. Only the fields given are sent. */
+export function assignmentBody(input: Partial<AssignmentInput>): { assignment: Record<string, unknown> } {
+  const a: Record<string, unknown> = {};
+  if (input.name !== undefined) a.name = input.name;
+  if (input.pointsPossible !== undefined) a.points_possible = input.pointsPossible;
+  if (input.dueAt !== undefined) a.due_at = input.dueAt?.toISOString() ?? null;
+  if (input.lockAt !== undefined) a.lock_at = input.lockAt?.toISOString() ?? null;
+  if (input.groupId !== undefined) a.assignment_group_id = input.groupId;
+  if (input.published !== undefined) a.published = input.published;
+  if (input.launchUrl !== undefined) {
+    a.submission_types = ["external_tool"];
+    a.external_tool_tag_attributes = { url: input.launchUrl, new_tab: false };
+  }
+  return { assignment: a };
+}
+
 /** A member of a course from LTI Names and Role Provisioning (NRPS v2). */
 export type NrpsMember = {
   user_id: string;
@@ -131,11 +180,15 @@ export function canvasClient(config: CanvasConfig) {
   const maxPages = config.maxPages ?? 50;
   const base = config.baseUrl.replace(/\/+$/, "");
 
-  async function request(url: string, accept = "application/json", send?: { type: string; body: unknown }): Promise<Response> {
+  async function request(
+    url: string,
+    accept = "application/json",
+    send?: { type: string; body: unknown; method?: "POST" | "PUT" },
+  ): Promise<Response> {
     let res: Response;
     try {
       res = await doFetch(url, {
-        method: send ? "POST" : "GET",
+        method: send ? (send.method ?? "POST") : "GET",
         headers: { Authorization: `Bearer ${config.token}`, Accept: accept, ...(send && { "Content-Type": send.type }) },
         body: send ? JSON.stringify(send.body) : undefined,
         signal: AbortSignal.timeout(timeoutMs),
@@ -210,6 +263,14 @@ export function canvasClient(config: CanvasConfig) {
     } catch {
       throw new CanvasError("bad-response", res.status);
     }
+  }
+
+  /** Sends JSON to a path on this Canvas; only a reply with a numeric id counts as done. */
+  async function sendOne<T extends { id: number }>(method: "POST" | "PUT", path: string, body: unknown): Promise<T> {
+    const res = await request(`${base}${path}`, "application/json", { type: "application/json", body, method });
+    const reply = (await res.json().catch(() => null)) as Partial<T> | null;
+    if (typeof reply?.id !== "number") throw new CanvasError("bad-response", res.status);
+    return reply as T;
   }
 
   /** Every page, following Link: rel="next". Raises past maxPages. */
@@ -325,6 +386,17 @@ export function canvasClient(config: CanvasConfig) {
     file: (courseId: number, fileId: number) => getOne<CanvasFile>(`/api/v1/courses/${courseId}/files/${fileId}`),
 
     download,
+
+    assignmentGroups: (courseId: number) =>
+      getAll<CanvasAssignmentGroup>(`/api/v1/courses/${courseId}/assignment_groups`),
+
+    /** Makes an external-tool assignment. Resolves only once Canvas returns the new assignment. */
+    createAssignment: (courseId: number, input: AssignmentInput) =>
+      sendOne<CanvasAssignment>("POST", `/api/v1/courses/${courseId}/assignments`, assignmentBody(input)),
+
+    /** Changes only the fields given; a `null` date clears it. */
+    updateAssignment: (courseId: number, assignmentId: number, input: Partial<AssignmentInput>) =>
+      sendOne<CanvasAssignment>("PUT", `/api/v1/courses/${courseId}/assignments/${assignmentId}`, assignmentBody(input)),
 
     /** The class list through LTI NRPS; the token is an LTI service token (src/lti/services.ts). */
     nrpsMembers,
