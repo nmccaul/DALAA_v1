@@ -63,3 +63,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). No new migrations since checkpoint B, so nothing applied to production.
 - PR #125 (feat/creation-wizard → main): copyActivity, Activities tab sections with Copy / Copy to this course, Library page removed. CI passed in 5m1s, merged; main is `3f33fad`.
 - Production deploy of `3f33fad` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
+
+## 2026-11-09 08:08 UTC · T10 Canvas client + column · done
+- Migration `20261109080544_activity_canvas_assignment.sql` (additive): nullable `activities.canvas_assignment_id text` (check `<> ''`) and a partial unique index on (course_id, canvas_assignment_id) where not null. Applied locally only; checkpoint D applies it to production.
+- `src/canvas/client.ts`: `assignmentGroups`, `createAssignment` (POST), `updateAssignment` (PUT), `AssignmentInput` and `assignmentBody`. Sent as a JSON body `{ assignment: … }`; dates ISO; on update a field left out is untouched and a `null` date clears it (JSON null, never `''`). Only a reply with a numeric id counts as done. `request()` now takes a method.
+- Practice Canvas: `practiceCanvas` is now async; it lists assignment groups (two per practice course, `PRACTICE_ASSIGNMENT_GROUPS`) and keeps created assignments in process memory (lost on restart), checking name, points, dates and group like Canvas. The route also exports POST/PUT.
+- `materials.test.ts` backfill test expected its migration to be the last one; now it checks it runs first.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
