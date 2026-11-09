@@ -70,3 +70,9 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Practice Canvas: `practiceCanvas` is now async; it lists assignment groups (two per practice course, `PRACTICE_ASSIGNMENT_GROUPS`) and keeps created assignments in process memory (lost on restart), checking name, points, dates and group like Canvas. The route also exports POST/PUT.
 - `materials.test.ts` backfill test expected its migration to be the last one; now it checks it runs first.
 - Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+
+## 2026-11-09 08:11 UTC · T11 Launch finds the activity from the link URI · done
+- `src/lti/launch.ts`: new exported `launchActivityId(claims)` — the `activity_id` custom field when present, else `activity_id` from the target link URI's query; only a UUID counts (lowercased). `linkedActivity` uses it, so the same-course check and first-launch recording of resource link + line item apply to both.
+- A custom field that is present but not a UUID does not fall back to the URI (the task says fallback only when the field is missing).
+- Tests in `src/lti/deep-link.test.ts`: link-URI launch opens and records link + line item; activity in another DALAA course and a non-UUID value open the course and record nothing; unit test of the precedence rules.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
