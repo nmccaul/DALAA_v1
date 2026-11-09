@@ -16,6 +16,19 @@ import { getTaughtActivity } from "./store";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * The most an activity's readings and AI-only notes may hold together: every
+ * model call about the activity carries all of them.
+ */
+export const MAX_MATERIALS_CHARS = 150_000;
+
+/** NULL when materials of these lengths fit together; otherwise the plain sentence to show. */
+export function materialsTooLong(lengths: readonly number[]): string | null {
+  const total = lengths.reduce((sum, n) => sum + n, 0);
+  if (total <= MAX_MATERIALS_CHARS) return null;
+  return `Together these materials are ${total.toLocaleString("en-US")} characters; the limit is ${MAX_MATERIALS_CHARS.toLocaleString("en-US")}. Leave one out or use a shorter excerpt.`;
+}
+
 export type ActivityMaterials = { readings: SavedContent[]; guides: (Guide & { id: string })[] };
 
 /** The readings of an activity, in the teacher's order. Safe for a student request: no AI-only notes. */
@@ -39,7 +52,8 @@ export async function activityMaterials(db: Db, activityId: string): Promise<Act
 /**
  * Replaces an activity's materials with these, readings first, each list in
  * the order given. Saving the same set twice changes nothing. Refuses an
- * activity the actor doesn't teach and a material from another course.
+ * activity the actor doesn't teach, a material from another course, and a set
+ * longer than MAX_MATERIALS_CHARS.
  */
 export async function setActivityMaterials(
   db: Db,
@@ -54,8 +68,8 @@ export async function setActivityMaterials(
   const guideIds = [...new Set(materials.guideIds)];
   const valid = contentIds.filter((id) => UUID.test(id));
   const readings = valid.length
-    ? await db.query<{ id: string }>(
-        "select id from course_content where course_id = $1 and id = any($2::uuid[])",
+    ? await db.query<{ id: string; chars: number }>(
+        "select id, length(body)::int as chars from course_content where course_id = $1 and id = any($2::uuid[])",
         [activity.courseId, valid],
       )
     : [];
@@ -63,6 +77,8 @@ export async function setActivityMaterials(
   if (readings.length !== contentIds.length || guides.size !== guideIds.length) {
     return { ok: false, reason: "We couldn't find one of those materials in this course. Add it again." };
   }
+  const tooLong = materialsTooLong([...readings.map((r) => r.chars), ...guides.values()]);
+  if (tooLong) return { ok: false, reason: tooLong };
 
   await db.transaction(async (tx) => {
     await tx.query("delete from activity_materials where activity_id = $1", [activity.id]);

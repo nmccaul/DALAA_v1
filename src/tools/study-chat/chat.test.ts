@@ -10,7 +10,7 @@ import type { Db } from "@/db/types";
 import { finishChat, readChat, sendTurn, type ChatModels, type SendResult } from "./chat";
 import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, mirrorMaterials } from "./test-fixtures";
 
 const usage = {
   inputTokens: { total: 50, noCache: 50, cacheRead: undefined, cacheWrite: undefined },
@@ -93,6 +93,7 @@ describe("a student's Study Chat", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, 'published', 10, $4, $5) returning id`,
       [course, STUDY_CHAT, JSON.stringify(draft()), saved.content.id, prof.userId],
     );
+    await mirrorMaterials(db, activity);
     models = { reply: chatModel(), check: answering({ answered: false, awaitingStudent: false }) };
   });
 

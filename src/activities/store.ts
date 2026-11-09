@@ -59,14 +59,28 @@ export async function createActivity(
   if (!UUID.test(creationKey)) throw new Error("Activity creation key must be a UUID");
   if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: "That course isn't one you teach." };
 
-  // Through text: postgres.js would otherwise send the JSON string as a JSON string.
-  const [inserted] = await db.query<{ id: string }>(
-    `insert into activities (course_id, tool, title, settings, points, content_id, guide_id, creation_key, created_by)
-     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8, $9)
-     on conflict (creation_key) do nothing
-     returning id`,
-    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, activity.contentId, activity.guideId, creationKey, actor.userId],
-  );
+  const inserted = await db.transaction(async (tx) => {
+    // Through text: postgres.js would otherwise send the JSON string as a JSON string.
+    const [row] = await tx.query<{ id: string }>(
+      `insert into activities (course_id, tool, title, settings, points, content_id, guide_id, creation_key, created_by)
+       values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8, $9)
+       on conflict (creation_key) do nothing
+       returning id`,
+      [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, activity.contentId, activity.guideId, creationKey, actor.userId],
+    );
+    // The materials' readers use activity_materials (src/activities/materials.ts); until
+    // every writer goes through setActivityMaterials, the two columns are mirrored there.
+    if (row) {
+      await tx.query(
+        `insert into activity_materials (activity_id, course_id, content_id, guide_id, position)
+         select $1, $2, m.content_id, m.guide_id, m.position
+           from (values ($3::uuid, null::uuid, 0), (null::uuid, $4::uuid, 1)) as m(content_id, guide_id, position)
+          where m.content_id is not null or m.guide_id is not null`,
+        [row.id, courseId, activity.contentId, activity.guideId],
+      );
+    }
+    return row;
+  });
   if (inserted) return { ok: true, id: inserted.id };
 
   const [existing] = await db.query<{ id: string; course_id: string; created_by: string }>(
@@ -142,6 +156,17 @@ export async function setActivityGuide(
   if (guideId !== null && !(await getTaughtGuide(db, actor, activity.courseId, guideId))) {
     return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
   }
-  await db.query("update activities set guide_id = $2, updated_at = now() where id = $1", [activity.id, guideId]);
+  await db.transaction(async (tx) => {
+    await tx.query("update activities set guide_id = $2, updated_at = now() where id = $1", [activity.id, guideId]);
+    // Mirrored as in createActivity: this guide replaces the activity's AI-only notes.
+    await tx.query("delete from activity_materials where activity_id = $1 and guide_id is not null", [activity.id]);
+    if (guideId !== null) {
+      await tx.query(
+        `insert into activity_materials (activity_id, course_id, guide_id, position)
+         select $1, $2, $3, coalesce(max(position) + 1, 0) from activity_materials where activity_id = $1`,
+        [activity.id, activity.courseId, guideId],
+      );
+    }
+  });
   return { ok: true };
 }

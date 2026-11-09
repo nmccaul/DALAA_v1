@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
+import { activityMaterials } from "@/activities/materials";
 import { getTaughtActivity } from "@/activities/store";
+import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
@@ -92,6 +94,41 @@ describe("creating a Study Chat", () => {
     expect(notTheirs.ok).toBe(false);
     expect(model.doGenerateCalls).toHaveLength(0);
     expect(await db.query("select id from activities")).toEqual([]);
+  });
+
+  it("attaches its reading and AI-only notes for every model that reads them", async () => {
+    const guide = await saveGuide(db, prof, course, randomUUID(), { kind: "paste", name: "Teaching note", text: "Key." });
+    if (!guide.ok) throw new Error(guide.reason);
+    const result = await createStudyChat(db, answering(drafted()), prof, course, {
+      contentId: content,
+      guideId: guide.content.id,
+      studentWork: false,
+      mode: "case-chat",
+      creationKey: randomUUID(),
+    });
+    if (!result.ok) throw new Error(result.reason);
+    const { readings, guides } = await activityMaterials(db, result.activityId);
+    expect(readings.map((r) => r.id)).toEqual([content]);
+    expect(guides.map((g) => g.id)).toEqual([guide.content.id]);
+  });
+
+  it("refuses materials longer than the limit together, before asking the AI", async () => {
+    const long = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Long case", text: "a".repeat(90_000) });
+    const guide = await saveGuide(db, prof, course, randomUUID(), { kind: "paste", name: "Long note", text: "b".repeat(70_000) });
+    if (!long.ok || !guide.ok) throw new Error("setup");
+    const model = answering(drafted());
+    const result = await createStudyChat(db, model, prof, course, {
+      contentId: long.content.id,
+      guideId: guide.content.id,
+      studentWork: false,
+      mode: "case-chat",
+      creationKey: randomUUID(),
+    });
+    expect(result).toEqual({
+      ok: false,
+      reason: "Together these materials are 160,000 characters; the limit is 150,000. Leave one out or use a shorter excerpt.",
+    });
+    expect(model.doGenerateCalls).toHaveLength(0);
   });
 
   it("keeps the teacher's 'Students bring their own work' switch, whatever the draft says", async () => {

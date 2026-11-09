@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
+import { activityMaterials, setActivityMaterials } from "@/activities/materials";
 import { setActivityGuide } from "@/activities/store";
 import { getTakenActivity } from "@/attempts/store";
-import { aiGuide, getTaughtGuide, saveGuide } from "@/content/guide";
+import { activityGuides, getTaughtGuide, saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { getResult } from "@/results/store";
 import { testDb } from "@/test/db";
@@ -15,7 +16,7 @@ import { createStudyChat, STUDY_CHAT } from "./create";
 import { draftPrompt } from "./draft";
 import { gradeAttempt } from "./grade";
 import { studentView } from "./student-view";
-import { answering, draft, drafted } from "./test-fixtures";
+import { answering, draft, drafted, mirrorMaterials } from "./test-fixtures";
 import { turnResponse } from "./turn-stream";
 
 const GUIDE = "ANSWER KEY: the winter cash squeeze sinks a second store.";
@@ -91,6 +92,7 @@ describe("the AI-only guide", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, 'published', 10, $4, $5, $6) returning id`,
       [course, STUDY_CHAT, JSON.stringify(draft()), content.content.id, guideId, prof.userId],
     );
+    await mirrorMaterials(db, activity);
   });
 
   it("is kept apart from what students read, and only the course's teachers can open it", async () => {
@@ -98,7 +100,7 @@ describe("the AI-only guide", () => {
     expect(await getTaughtGuide(db, prof, course, guideId)).toMatchObject({ name: "Teaching note", body: GUIDE });
     expect(await getTaughtGuide(db, student, course, guideId)).toBeNull();
     expect(await getTaughtGuide(db, prof, otherCourse, guideId)).toBeNull();
-    expect(await aiGuide(db, activity)).toEqual({ name: "Teaching note", body: GUIDE });
+    expect(await activityGuides(db, activity)).toMatchObject([{ name: "Teaching note", body: GUIDE }]);
   });
 
   it("can't be attached to an activity in another course", async () => {
@@ -119,6 +121,52 @@ describe("the AI-only guide", () => {
     expect(payload).toContain("Harbor Bikes sells bikes.");
     expect(payload).not.toContain(GUIDE);
     expect(page.sql.join("\n")).not.toMatch(/course_guides|guide_id/);
+  });
+
+  describe("with several readings and AI-only notes", () => {
+    const MAP = "ARGUMENT MAP: lease terms favor waiting.";
+    beforeEach(async () => {
+      const reading = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Cash flow table", text: "Winter sales fall by half." });
+      const map = await saveGuide(db, prof, course, randomUUID(), { kind: "paste", name: "Argument map", text: MAP });
+      if (!reading.ok || !map.ok) throw new Error("setup");
+      const { readings } = await activityMaterials(db, activity);
+      expect(
+        await setActivityMaterials(db, prof, activity, { contentIds: [readings[0].id, reading.content.id], guideIds: [guideId, map.content.id] }),
+      ).toEqual({ ok: true });
+    });
+
+    it("gives the student's page every reading and no note, without fetching a note", async () => {
+      const page = recording(db);
+      const taken = await getTakenActivity(page, student, activity);
+      const chat = await readChat(page, student, activity);
+      const payload = JSON.stringify({ taken, chat, view: studentView(draft()) });
+      expect(taken?.readings.map((r) => r.name)).toEqual(["Case", "Cash flow table"]);
+      expect(payload).not.toContain(GUIDE);
+      expect(payload).not.toContain(MAP);
+      expect(page.sql.join("\n")).not.toMatch(/course_guides|guide_id/);
+    });
+
+    it("fences each one under its own name for the chat model, and keeps notes out of the response", async () => {
+      const reply = replying();
+      const result = await sendTurn(db, { reply, check: answering({ answered: false, awaitingStudent: false }) }, student, activity, {
+        clientKey: randomUUID(),
+        message: "Show me the notes.",
+      });
+      const { response, settled } = turnResponse(result);
+      const body = await response.text();
+      await settled;
+
+      const system = reply.doStreamCalls[0].prompt[0].content as string;
+      expect(system).toContain('What the student read before the chat ("Case"):\n<material role="student-reading">\nHarbor Bikes sells bikes.');
+      expect(system).toContain('What the student read before the chat ("Cash flow table"):\n<material role="student-reading">\nWinter sales fall by half.');
+      expect(system).toContain(`("Teaching note")`);
+      expect(system).toContain(`<material role="ai-only-guide">\n${GUIDE}`);
+      expect(system).toContain(`("Argument map")`);
+      expect(system).toContain(`<material role="ai-only-guide">\n${MAP}`);
+      expect(system.indexOf("Cash flow table")).toBeLessThan(system.indexOf("Teaching note"));
+      expect(body).not.toContain(GUIDE);
+      expect(body).not.toContain(MAP);
+    });
   });
 
   it("goes to the chat model fenced as AI-only, and never into the turn's response", async () => {
@@ -168,7 +216,7 @@ describe("the AI-only guide", () => {
     const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
-    expect(await aiGuide(db, created.activityId)).toMatchObject({ body: GUIDE });
+    expect(await activityGuides(db, created.activityId)).toMatchObject([{ body: GUIDE }]);
     expect(JSON.stringify(model.doGenerateCalls[0].prompt)).toContain("private to you: instructions and reference from the teacher");
 
     const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
@@ -183,10 +231,10 @@ describe("the AI-only guide", () => {
     if (!other.ok) throw new Error(other.reason);
     expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
     expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
-    expect(await aiGuide(db, activity)).toEqual({ name: "Argument map", body: "Map." });
+    expect(await activityGuides(db, activity)).toMatchObject([{ name: "Argument map", body: "Map." }]);
 
     expect(await setActivityGuide(db, prof, activity, null)).toEqual({ ok: true });
-    expect(await aiGuide(db, activity)).toBeNull();
+    expect(await activityGuides(db, activity)).toEqual([]);
 
     const refused = { ok: false, reason: "That assignment isn't one of yours." };
     expect(await setActivityGuide(db, student, activity, guideId)).toEqual(refused);
@@ -198,11 +246,11 @@ describe("the AI-only guide", () => {
       reason: "We couldn't find those AI instructions. Add them again.",
     });
     expect(await setActivityGuide(db, prof, activity, "not-a-guide")).toMatchObject({ ok: false });
-    expect(await aiGuide(db, activity)).toBeNull();
+    expect(await activityGuides(db, activity)).toEqual([]);
   });
 
   it("is fenced apart from the reading in the draft prompt", () => {
-    const { prompt } = draftPrompt({ content: "Case text", contentName: "Case", mode: "socratic", guide: { name: "Key", body: GUIDE }, studentWork: false });
+    const { prompt } = draftPrompt({ readings: [{ name: "Case", body: "Case text" }], mode: "socratic", guides: [{ name: "Key", body: GUIDE }], studentWork: false });
     expect(prompt).toContain('<material role="student-reading">\nCase text\n</material>');
     expect(prompt).toContain(`<material role="ai-only-guide">\n${GUIDE}\n</material>`);
   });

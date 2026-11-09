@@ -4,7 +4,7 @@
  * (db/migrations/*_activity_guides.sql). The only code that reads
  * `course_guides`.
  *
- * Students' pages never call `aiGuide` (CLAUDE.md: hidden material is not
+ * Students' pages never call `activityGuides` (CLAUDE.md: hidden material is not
  * fetched for student requests). It's for server code that's about to call a
  * model, and what it returns goes into the prompt, never into a response.
  */
@@ -45,16 +45,6 @@ export async function getTaughtGuide(
   return row ?? null;
 }
 
-/** The guide of an activity, for the model about to run or grade it; null when it has none. */
-export async function aiGuide(db: Db, activityId: string): Promise<Guide | null> {
-  if (!UUID.test(activityId)) return null;
-  const [row] = await db.query<Guide>(
-    "select g.name, g.body from activities a join course_guides g on g.id = a.guide_id where a.id = $1",
-    [activityId],
-  );
-  return row ?? null;
-}
-
 /**
  * Every AI-only note of an activity (db/migrations/*_activity_materials.sql),
  * in the teacher's order, for the model about to run or grade it, or for the
@@ -71,13 +61,13 @@ export async function activityGuides(db: Db, activityId: string): Promise<(Guide
   );
 }
 
-/** Which of these ids are guides of this course. */
-export async function guidesInCourse(db: Db, courseId: string, guideIds: readonly string[]): Promise<Set<string>> {
+/** Which of these ids are guides of this course, each with its length in characters. */
+export async function guidesInCourse(db: Db, courseId: string, guideIds: readonly string[]): Promise<Map<string, number>> {
   const ids = guideIds.filter((id) => UUID.test(id));
-  if (ids.length === 0) return new Set();
-  const rows = await db.query<{ id: string }>(
-    "select id from course_guides where course_id = $1 and id = any($2::uuid[])",
+  if (ids.length === 0) return new Map();
+  const rows = await db.query<{ id: string; chars: number }>(
+    "select id, length(body)::int as chars from course_guides where course_id = $1 and id = any($2::uuid[])",
     [courseId, ids],
   );
-  return new Set(rows.map((r) => r.id));
+  return new Map(rows.map((r) => [r.id, r.chars]));
 }

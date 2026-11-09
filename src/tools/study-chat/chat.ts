@@ -14,7 +14,7 @@ import { z } from "zod";
 import { completeAttempt, getAttempt, getTakenActivity, startAttempt, type Attempt, type TakenActivity } from "@/attempts/store";
 import { getStudentWork, saveStudentWork, type SaveWorkResult, type StudentWork, type WorkInput } from "@/attempts/work";
 import { generateStructured, streamReply, type AiCallContext } from "@/ai/call";
-import { aiGuide } from "@/content/guide";
+import { activityGuides } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
@@ -210,13 +210,13 @@ export async function sendTurn(
   if (!claimed) return { kind: "refused", reason: "Wait for the reply to your last message." };
 
   const started = attempt;
-  // The guide goes into the prompt only; nothing below sends it to the student.
-  const guide = await aiGuide(db, chat.activity.id);
+  // The guides go into the prompt only; nothing below sends them to the student.
+  const guides = await activityGuides(db, chat.activity.id);
   const stream = streamReply(
     db,
     models.reply,
     { purpose: "chat.reply", userId: actor.userId, courseId: chat.activity.courseId },
-    { system: chatSystemPrompt(chat.settings, chat.activity.content, guide, work), messages: chatMessages(history, message) },
+    { system: chatSystemPrompt(chat.settings, chat.activity.readings, guides, work), messages: chatMessages(history, message) },
   );
   const done = (async (): Promise<TurnOutcome> => {
     try {

@@ -1,6 +1,7 @@
 /** Shared by the Study Chat tests: a valid Harbor Bikes draft and a mock model that answers with it. */
 
 import { MockLanguageModelV4 } from "ai/test";
+import type { Db } from "@/db/types";
 import type { StudyChatSettings } from "./schema";
 
 const usage = {
@@ -65,4 +66,19 @@ export function answering(...answers: unknown[]) {
       };
     },
   });
+}
+
+/**
+ * Gives an activity inserted by hand the materials its `content_id` and
+ * `guide_id` name, as the activity_materials migration's backfill did.
+ */
+export async function mirrorMaterials(db: Db, activityId: string): Promise<void> {
+  await db.query(
+    `insert into activity_materials (activity_id, course_id, content_id, guide_id, position)
+     select a.id, a.course_id, m.content_id, m.guide_id, m.position
+       from activities a
+       cross join lateral (values (a.content_id, null::uuid, 0), (null::uuid, a.guide_id, 1)) as m(content_id, guide_id, position)
+      where a.id = $1 and (m.content_id is not null or m.guide_id is not null)`,
+    [activityId],
+  );
 }

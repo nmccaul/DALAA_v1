@@ -51,21 +51,21 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[1.75rem] font-normal text-balance break-words">{view.title}</h1>
-        <Directions view={view} hasContent={activity.content !== null} hasWork={chat.work !== null} />
+        <Directions view={view} hasContent={activity.readings.length > 0} hasWork={chat.work !== null} />
       </div>
-      {activity.content && (
-        <details open={attempt === null} className="group rounded-panel border border-border bg-surface">
+      {activity.readings.map((reading, i) => (
+        <details key={i} open={attempt === null} className="group rounded-panel border border-border bg-surface">
           <summary className="cursor-pointer list-none px-4 py-3 font-medium select-none">
             <span className="mr-2 inline-block transition-transform group-open:rotate-90" aria-hidden>
               ▸
             </span>
-            Read first: {activity.content.name}
+            Read first: {reading.name}
           </summary>
           <div className="max-h-[60vh] overflow-y-auto border-t border-border px-4 py-4 leading-relaxed whitespace-pre-wrap break-words">
-            {activity.content.body}
+            {reading.body}
           </div>
         </details>
-      )}
+      ))}
       {chat.work && (
         <details className="group rounded-panel border border-border bg-surface">
           <summary className="cursor-pointer list-none px-4 py-3 font-medium select-none">

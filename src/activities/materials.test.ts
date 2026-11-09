@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { activityMaterials, activityReadings, setActivityMaterials } from "./materials";
+import { activityMaterials, activityReadings, MAX_MATERIALS_CHARS, setActivityMaterials } from "./materials";
 
 const MIGRATION = "20261109071641_activity_materials.sql";
 
@@ -132,6 +132,27 @@ describe("activity materials", () => {
       expect(await setActivityMaterials(db, prof, activity, { contentIds: [mine], guideIds: [foreignGuide] })).toEqual(refusal);
       expect(await setActivityMaterials(db, prof, activity, { contentIds: ["not-a-uuid"], guideIds: [] })).toEqual(refusal);
       expect((await activityMaterials(db, activity)).readings.map((r) => r.name)).toEqual(["Mine"]);
+    });
+
+    it("refuses readings and notes longer than the limit together, and changes nothing", async () => {
+      const a = await material("course_content", course, "A");
+      expect(await setActivityMaterials(db, prof, activity, { contentIds: [a], guideIds: [] })).toEqual({ ok: true });
+      const long = async (table: "course_content" | "course_guides", chars: number) => {
+        const [{ id }] = await db.query<{ id: string }>(
+          `insert into ${table} (course_id, source, name, body, creation_key, created_by)
+           values ($1, 'paste', 'Long', $2, $3, $4) returning id`,
+          [course, "x".repeat(chars), randomUUID(), prof.userId],
+        );
+        return id;
+      };
+      const reading = await long("course_content", MAX_MATERIALS_CHARS - 10);
+      const note = await long("course_guides", 11);
+      expect(await setActivityMaterials(db, prof, activity, { contentIds: [reading], guideIds: [note] })).toEqual({
+        ok: false,
+        reason: "Together these materials are 150,001 characters; the limit is 150,000. Leave one out or use a shorter excerpt.",
+      });
+      expect((await activityMaterials(db, activity)).readings.map((r) => r.name)).toEqual(["A"]);
+      expect(await setActivityMaterials(db, prof, activity, { contentIds: [reading], guideIds: [] })).toEqual({ ok: true });
     });
 
     it("the database refuses a row with both kinds, or neither", async () => {
