@@ -5,7 +5,8 @@ import { db } from "@/db/client";
 import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
 import { MaterialsPickForm, type PickRow } from "./materials-form";
-import { materialsFromQuery, pickValue } from "./picks";
+import { pickValue } from "./picks";
+import { materialsFromQuery } from "./query";
 import { WizardShell } from "./shell";
 
 /** Wizard step 1: tick the course's materials (saved, and the Canvas course's Pages and Files) the activity uses. */
@@ -31,7 +32,7 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
           from them next.
         </p>
       }
-      comingSoon={["Write a new case with Case Writer", "Ask the wizard for changes"]}
+      comingSoon={["Ask the wizard for changes"]}
     >
       {canvas === "not-connected" ? (
         <p className="text-sm text-muted">
@@ -43,23 +44,13 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
       ) : (
         canvas !== "connected" && <p className="text-sm text-muted">{CANVAS_PROBLEM[canvas]}</p>
       )}
-      {picks.length === 0 ? (
-        <p className="border border-dashed border-border-strong px-6 py-10 text-muted">
-          This course has no materials yet. Add one on the{" "}
-          <Link href={`/courses/${course.id}/materials`} className="text-accent-text hover:underline">
-            Materials
-          </Link>{" "}
-          tab.
-        </p>
-      ) : (
-        <MaterialsPickForm
-          courseId={course.id}
-          formKey={randomUUID()}
-          addToCanvas={addToCanvas}
-          rows={picks}
-          back={keepPicker(`/courses/${course.id}/activities/new`, addToCanvas)}
-        />
-      )}
+      <MaterialsPickForm
+        courseId={course.id}
+        formKey={randomUUID()}
+        addToCanvas={addToCanvas}
+        rows={picks}
+        back={keepPicker(`/courses/${course.id}/activities/new`, addToCanvas)}
+      />
     </WizardShell>
   );
 }

@@ -12,8 +12,8 @@ import type { MaterialRow } from "@/content/materials";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import type { MaterialIds } from "./query";
 
-export type MaterialIds = { contentIds: string[]; guideIds: string[] };
 export type WizardPicks = MaterialIds & { canvas: CanvasPick[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -93,20 +93,4 @@ export async function savePicks(
     if (!contentIds.includes(saved.content.id)) contentIds.push(saved.content.id);
   }
   return { ok: true, contentIds, guideIds: picks.guideIds };
-}
-
-/** The picks as the query the next steps carry: `content=a,b&guide=c`. */
-export function materialsQuery({ contentIds, guideIds }: MaterialIds): string {
-  const query = new URLSearchParams({ content: contentIds.join(",") });
-  if (guideIds.length > 0) query.set("guide", guideIds.join(","));
-  return query.toString();
-}
-
-/** The picks a wizard URL carries (malformed ids dropped), e.g. to keep them ticked on Back. */
-export function materialsFromQuery(searchParams: Record<string, string | string[] | undefined>): MaterialIds {
-  const ids = (key: string) => {
-    const value = searchParams[key];
-    return typeof value === "string" ? [...new Set(value.split(",").map((id) => id.toLowerCase()).filter((id) => UUID.test(id)))] : [];
-  };
-  return { contentIds: ids("content"), guideIds: ids("guide") };
 }

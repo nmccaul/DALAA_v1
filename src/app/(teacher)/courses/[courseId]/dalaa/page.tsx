@@ -6,6 +6,7 @@ import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { isLtiCourse } from "@/lti/roster";
+import { newActivityPath } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Course setup" };
 
@@ -40,7 +41,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
       done: activities.length > 0,
       title: "Create an activity",
       detail: "Give it your reading; DALAA drafts the rest for you to edit.",
-      link: { href: `${base}/activities/new`, label: "+ Activity" },
+      link: { href: newActivityPath(course.id), label: "+ Activity" },
     },
     {
       done: activities.some((a) => a.status === "published"),

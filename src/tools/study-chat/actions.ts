@@ -12,7 +12,8 @@ import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
-import { materialsQuery, parsePicks, savePicks } from "./wizard/picks";
+import { parsePicks, savePicks } from "./wizard/picks";
+import { materialsQuery } from "./wizard/query";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };

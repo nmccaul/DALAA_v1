@@ -10,7 +10,7 @@ import { canvasGuideHref, GuidePanel } from "./guide-panel";
 import { MODE_SLUGS, MODES } from "./modes";
 import { PreviewNote } from "@/components/preview-note";
 import { MaterialsStep } from "./wizard/materials-step";
-import { materialsQuery, materialsFromQuery } from "./wizard/picks";
+import { materialsFromQuery, materialsStepPath } from "./wizard/query";
 import { WizardShell } from "./wizard/shell";
 import { isWizardStep, WIZARD_STEPS } from "./wizard/steps";
 
@@ -104,7 +104,7 @@ function WizardNotYet({
         {picked.guideIds.length > 0 ? ` and ${picked.guideIds.length} AI-only note${picked.guideIds.length === 1 ? "" : "s"}` : ""}.
       </PreviewNote>
       <Link
-        href={keepPicker(`/courses/${courseId}/activities/new/study-chat?step=materials&${materialsQuery(picked)}`, addToCanvas)}
+        href={materialsStepPath(courseId, picked, addToCanvas)}
         className="self-start text-sm text-muted hover:text-text"
       >
         ← Back to materials

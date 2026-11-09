@@ -11,7 +11,8 @@ import { createCourse } from "@/courses/create";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { materialsFromQuery, materialsQuery, parsePicks, pickCreationKey, pickValue, savePicks } from "./picks";
+import { parsePicks, pickCreationKey, pickValue, savePicks } from "./picks";
+import { materialsFromQuery, materialsQuery } from "./query";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
