@@ -1,21 +1,97 @@
-# Study Chat test build: what we're building and why
+# Creation wizard, several materials, reuse, Assign to Canvas
 
-*Approved by Nathan 2026-10-29. Source of truth for the overnight loop; the task
-list is `ralph/TASKS.md`, the running log is `ralph/PROGRESS.md`.*
+*Approved by Nathan 2026-11-09. Source of truth for this loop; the task list is
+`ralph/TASKS.md`, the running log is `ralph/PROGRESS.md`. The previous run
+(Study Chat over LTI, 2026-10-29) is in `ralph/archive/2026-10-29-study-chat-lti/`.*
 
 ## Goal
-A working product to test inside Nathan's own Canvas
-(https://gitgrade.opencanvaslms.org, he is admin) as an **LTI 1.3** tool:
-a teacher creates a **Study Chat** assignment from course content, AI suggests
-its settings, students read and chat, an AI grader scores the transcript,
-students see grades and can dispute, and the teacher sends grades to the Canvas
-gradebook. Canvas keeps doing what it already does (roster, gradebook, content);
-DALAA pulls what it needs and doesn't rebuild it.
+Make creating and reusing activities match Nathan's mockup ("DAALAA Course
+Tabs Mockup", Canvas look, D-032):
 
-Built on the existing DALAA_v1 chassis (Next 16, Postgres, sessions, `admit`,
-scope builder, courses/sections/members, Canvas client module). The REST/token
-path stays for BYU alongside LTI. LTI code is written fresh: **nothing is
-copied from `~/Desktop/volli/scholarly`** (keeps that IP separate).
+1. **A 7-step wizard**: 1 Materials · 2 Learning goal · 3 Activity type ·
+   4 Scenario and persona · 5 Chat options · 6 Grading · 7 Review and assign.
+   Materials come first so the AI can **suggest the learning goal** from them,
+   then **suggest the type** (Study Chat mode) from materials + goal.
+2. **Several materials per activity**: any number of "Students + AI" readings
+   (`course_content`) and "AI only" notes (`course_guides`); Canvas Pages and
+   Files picked straight from the list (saved on pick with `saveFromCanvas`).
+3. **The Activities tab** (course page, "Assigned Activities"): *Assigned* on
+   top; below it a filter: *Not assigned* (this course: drafts and activities
+   with no Canvas assignment) and *From my other courses* (every activity the
+   teacher made in other courses/semesters). Copying from another course
+   brings its materials along. Lucy's ideas 45605e53, 19b72dae, fd8358d1.
+4. **The top-level Library page is removed**: the rail is Courses · Settings;
+   `/library` redirects to `/courses`.
+5. **Assign = DALAA creates the Canvas assignment** with the teacher's Canvas
+   connection (Canvas REST): same name, points, due date, assignment group,
+   published or not; it is an external-tool assignment that launches the
+   activity, so grades flow back over AGS as today. Changing the due date in
+   DALAA updates Canvas. Behind `ASSIGN_TO_CANVAS=1` until Nathan verifies it on
+   gitgrade.
+
+## Decisions to respect
+- Type step: the AI's pick is marked **Suggested** with its one-line reason; the
+  next 2 are cards; every other mode is under **More types**.
+- Options in the mockup that don't exist yet are **shown, disabled, marked
+  "Coming soon"**: hints, reading beside the chat, minimum exchanges,
+  criterion-by-criterion feedback, allowed attempts, score to keep, activity
+  group, start from a copy (in the wizard), saved rubrics / "Use a saved
+  rubric", "Redraft with AI", Case Writer. Never fake them working.
+- The **wizard side panel** ("DAALAA wizard") in this run shows a short note per
+  step built from stored data (the type's reason, counts of what was drafted)
+  plus the Coming soon chips. **No chat box and no one-click edits** (second pass).
+- A blank field is never a screen's primary state (CLAUDE.md): the goal step
+  opens pre-filled by `suggestGoal`; steps 4–6 open on the AI's draft.
+- Students get readings only, never AI-only notes: not fetched, not filtered,
+  not fetched at all (CLAUDE.md).
+- Wizard steps 1–3 keep their state in the URL (material ids, goal, minutes,
+  mode) until the draft exists; from step 4 on the activity row is the state.
+  "Save as draft" shows from step 4.
+
+## Where things are (read before changing)
+- Create flow today: `src/app/(teacher)/courses/[courseId]/activities/new/`
+  (tool picker) → `new/[tool]/page.tsx` → `src/tools/study-chat/create-screen.tsx`
+  (`StudyChatCreate`), forms in `forms.tsx`, actions in `actions.ts`
+  (`saveMaterialAction`, `draftAction`), drafting `draft.ts` (`draftSettings`,
+  `draftPrompt`), creation `create.ts` (`createStudyChat`, `publishStudyChat`).
+- Review/edit today: `activities/[activityId]/page.tsx` → `review-screen.tsx`
+  (`StudyChatReview`) → `editor.tsx` (`StudyChatEditor`, cards keyed
+  goal|scenarios|positions|touchpoints|persona|completion|rubric; `fields.ts`
+  `FIELDS`/`cardOf`), `trial-panel.tsx` (sample student), `guide-panel.tsx`.
+- Settings schema `schema.ts` (`StudyChatFields`, `StudyChatSettings`,
+  `rubricPoints`), modes `modes.ts` (`MODE_SLUGS`, `MODES`).
+- Material readers: `chat.ts` (`chatSystemPrompt`, `aiGuide`), `grade.ts`
+  (`gradePrompt`), `trial.ts`, `student-view.ts`, helpers `material.ts`
+  (`fence`, `guideHeading`). Content: `src/content/store.ts` (`saveContent`,
+  `getContent`), `guide.ts` (`saveGuide`, `getTaughtGuide`, `aiGuide`),
+  `materials.ts` (`listCourseMaterials`, `mergeMaterials`), `read.ts`.
+- Activities: `src/activities/store.ts` (`createActivity`, `getTaughtActivity`),
+  `queries.ts` (`listCourseActivities`, `listLibraryActivities`).
+- Canvas: `src/canvas/client.ts` (all Canvas HTTP), `connection.ts`
+  (`clientFor`), `content.ts` (`listCourseCanvasContent`, `saveFromCanvas`),
+  practice fake `src/canvas/practice/`. LTI launch: `src/lti/launch.ts`
+  (`linkedActivity`, custom field `activity_id`), deep linking `deep-link.ts`.
+- AI: `src/ai/call.ts` (`generateStructured`, ledger `ai_calls`; purpose is
+  free text like `suggest.goal`), models `src/ai/models.ts`.
+- UI: tokens in `src/app/globals.css`; `src/components/ui.tsx`, `tabs.tsx`,
+  `preview-note.tsx`; course tabs in `courses/[courseId]/layout.tsx`; rail in
+  `src/components/main-nav.tsx`; Materials tab `courses/[courseId]/materials/`.
+
+## Facts that shape the code
+- Next 16 (read `node_modules/next/dist/docs/` before an unfamiliar API).
+- Tests use PGlite and mock AI/Canvas; no network. **Local Node is 20**, so
+  `src/content/read.test.ts`'s two PDF tests fail locally (`Array.fromAsync`);
+  CI (Node 22) passes them. Those two are the only acceptable local failures.
+- Canvas REST quirks: sending `''` for a date clears it; follow `Link` paging;
+  403 can be throttling. External-tool assignment via REST:
+  `POST /api/v1/courses/:id/assignments` with `assignment[submission_types][]=external_tool`,
+  `assignment[external_tool_tag_attributes][url]=<APP_URL>/api/lti/launch?activity_id=<uuid>`,
+  `[new_tab]=false`, plus name, points_possible, due_at, lock_at,
+  assignment_group_id, published. The LTI 1.3 launch for it may not carry our
+  `activity_id` custom field, so `linkedActivity` also reads it from the
+  launch's target link URI query.
+- Production and preview share one database. Migrations must be additive and
+  are applied to production **before** the merge that needs them.
 
 ## Already set up (do not redo)
 - gitgrade **LTI Developer Key** "DALAA", Client ID `10000000000013`, ON,
@@ -47,86 +123,3 @@ copied from `~/Desktop/volli/scholarly`** (keeps that IP separate).
   `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-## Facts that shape the code
-- **Identity on gitgrade is an email.** Canvas `login_id` there is an email
-  (`nathanmccauley10@gmail.com`), but `normalizeNetId` in `src/auth/admit.ts`
-  rejects `@`. Identity must accept email-shaped login IDs (lowercased) while
-  BYU NetIDs keep working. `users.external_id` stays the one identity key.
-- **Issuer:** self-hosted Canvas usually signs launches with
-  `iss = https://canvas.instructure.com` while its endpoints live on the host:
-  auth `${LTI_PLATFORM_URL}/api/lti/authorize_redirect`, token
-  `${LTI_PLATFORM_URL}/login/oauth2/token`, JWKS
-  `${LTI_PLATFORM_URL}/api/lti/security/jwks` (verified: 200). Accept the `iss`
-  from the OIDC login request only if it is in an allowed list
-  (`https://canvas.instructure.com`, `LTI_PLATFORM_URL`); store and log the one
-  actually seen (never log tokens).
-- **Inside the Canvas iframe** the session cookie needs `SameSite=None; Secure`
-  in production. Don't rely on cookies for OIDC state: keep state + nonce in
-  Postgres (expiring rows). If the session cookie still doesn't stick, show an
-  "Open DALAA in a new tab" button that carries a one-time, short-lived login code.
-- **Signup without email:** students sign up with Supabase Auth through the
-  admin API (`auth.admin.createUser({ email, password, email_confirm: true })`
-  with the service-role key, server side only), so no confirmation email is sent.
-  Only `SCHOOL_EMAIL_DOMAINS` emails may sign up. Supabase only proves the
-  identity; `admit()` decides. Okta/CAS later = another provider into `admit()`.
-- **Shared test teacher:** `TEST_TEACHER_EMAIL` / `TEST_TEACHER_PASSWORD`
-  (constant-time compare), admitted as staff. Test-only; recorded as a decision
-  to remove before the pilot.
-- **Account linking by email:** an LTI launch, roster sync or signup whose email
-  matches an existing user attaches to that user. Never create a second account.
-- **AI** goes through one module `src/ai/` using the AI SDK (`ai`) with Vercel AI
-  Gateway model strings from `CHAT_MODEL` / `GRADER_MODEL`. One ledger row per
-  real call; cost NULL when unknown, never 0. Tests mock the model.
-- **Grades** follow existing rules (`CLAUDE.md`, `docs/CANVAS.md`): explicit
-  teacher push, unconfirmed is never recorded as sent, a grade changed in Canvas
-  is reported not overwritten, a points mismatch refuses. Sent through LTI AGS.
-
-## Study Chat (the first tool)
-Content the student reads, then a chat. Settings (one JSON schema,
-`src/tools/study-chat/schema.ts`, every field has an AI-drafted default and a
-plain-language label):
-- **Content**: what students study (Canvas page/file, upload, or pasted text).
-- **Goal**: the learning objective.
-- **Scenario**: what the chat is about and how it unfolds. (Stages/Phases are a
-  later feature; the schema leaves room: `scenarios: Scenario[]`, v1 uses one.)
-- **Positions**: alternative directions a student may take (e.g. for/against).
-- **Touchpoints**: elements the teacher wants tracked (cost, culture, …).
-- **Persona**: name/title, background, tone, strictness/helpfulness.
-- **Completion**: turns, time, a question answered, or student finishes.
-- **Rubric**: criteria the AI grader uses, plus grader strictness
-  (strict · balanced · lenient).
-
-**Modes** are presets that seed the AI's draft: Explain (Feynman: explain to a
-beginner), Apply (apply a concept to a new situation), LikenToMe (apply to my
-life), Case Chat (talk with the case protagonist), Debate (take and defend a
-position, answer counter-arguments), Pitch (pitch an idea), Interview (practice
-discovery/proposal interviews), Roleplay (communication/problem-solving
-practice), Liken2Us (apply scripture to our lives), Socratic (expose and
-question assumptions).
-
-Reference for prompt and settings design (read, don't copy):
-`~/Desktop/volli/MakeTheCase` — `types.ts` (CaseScenario),
-`server/services/chatOptions.js` (DEFAULT_CHAT_OPTIONS, max_exchanges + action),
-`server/services/chatPrompt.js` (`buildChatSystemPrompt`),
-`server/services/chatPromptTemplates.js` (personas),
-`server/services/promptBuilder.js` (`buildCoachPrompt`, JSON grading output),
-`server/routes/caseWriter.js` (extract settings from uploaded content).
-New in DALAA (MakeTheCase lacks them): touchpoints, "question answered"
-completion, grader strictness, student disputes.
-
-## UX
-- Look like an extension of Canvas (clean, white, Canvas-like nav), using the
-  existing tokens in `src/app/globals.css`.
-- **The teacher must not be overwhelmed.** Upload content → pick a mode (or
-  "Suggest for me") → AI drafts everything → review screen of short summary
-  cards, each expandable to edit, plus a search box over all settings → Publish.
-  Nothing blank. Advanced settings stay collapsed.
-- Assignment types: **Study Chat** (live), **Quizzer** and **Oral Assessment**
-  shown as "Coming soon".
-- Teacher course page: Assignments · Grading (scores, edit, disputes, send to
-  Canvas) · Students.
-- Student: course → assignments (with grades) → assignment: directions, content,
-  chat → result with per-criterion feedback → "Dispute this grade".
-- **Feedback button on every page** (spec: `~/Desktop/volli/agent-team-kit/docs/FEEDBACK-LOOP-SPEC.md`):
-  screenshot + URL + user + recent console errors + note → `feedback_reports`
-  table → a `/fix-bug` skill in `.claude/skills/fix-bug/` reads a report.

@@ -1,7 +1,7 @@
 # One pass of the overnight build
 
 You are one pass of an unattended build loop on DALAA_v1
-(`/Users/natesmacbookair/Desktop/volli/DALAA_v1`, branch `feat/study-chat-lti`).
+(`/Users/natesmacbookair/Desktop/volli/DALAA_v1`, branch `feat/creation-wizard`).
 Nobody is watching, and nobody will answer questions until morning. Do exactly
 **one task**, leave everything committed and recorded, then stop.
 
@@ -11,7 +11,7 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 2. Read `CLAUDE.md` and `AGENTS.md`. Next 16 differs from what you remember, so
    read the relevant guide in `node_modules/next/dist/docs/` before using a Next
    API you're unsure of.
-3. `git status`: you must be on `feat/study-chat-lti`. If the tree is dirty from
+3. `git status`: you must be on `feat/creation-wizard`. If the tree is dirty from
    a pass that crashed, finish that work if it's clearly the current task,
    otherwise `git stash` it and note that in PROGRESS.
 4. Local database: if nothing listens on 127.0.0.1:54329, start
@@ -31,11 +31,13 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 
 ## 3. Check, commit, record
 1. `npm run lint && npm run typecheck && npm test` must pass. Fix what you
-   broke. Don't skip or delete tests to get green.
+   broke. Don't skip or delete tests to get green. Local Node is 20: the two
+   PDF tests in `src/content/read.test.ts` (`Array.fromAsync`) are the only
+   acceptable local failures; CI (Node 22) is the real gate at checkpoints.
 2. Commit with explicit paths (`git add <paths>`, never `git add -A`). Use a
    plain, descriptive message. **No `Co-Authored-By` trailer and no "Generated
    with Claude" line.**
-3. Push the branch: `git push -u origin feat/study-chat-lti`.
+3. Push the branch: `git push -u origin feat/creation-wizard`.
 4. In `ralph/TASKS.md`, mark the task `[x]` (or update its attempts / BLOCKED).
 5. Append to `ralph/PROGRESS.md`:
    `## <UTC time> · T<nn> <title> · done|partial|blocked`, then 2–6 bullets:
@@ -47,19 +49,23 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 2. New migrations since the last checkpoint must all be additive (create
    table/index, add nullable column). If any isn't, mark the checkpoint
    `BLOCKED: non-additive migration` and stop.
-3. Apply them to production first:
-   `S=$(mktemp -d)/p.env; vercel -Q ~/.vercel-dalaa env pull "$S" --environment=production --yes >/dev/null`
-   then run `DATABASE_URL=` set to that file's `POSTGRES_URL_NON_POOLING` value
-   with `npm run migrate`, and finally `rm -rf "$(dirname "$S")"`.
-   Never print the file or the URL.
-4. Open or reuse a PR from `feat/study-chat-lti` to `main` (`gh pr create` /
+3. Apply them to production first with `scripts/migrate-prod.sh` (it pulls
+   production's env to a private temp file, migrates, deletes the file, and
+   never prints the URL). It must end with `migrations up to date`.
+4. Open or reuse a PR from `feat/creation-wizard` to `main` (`gh pr create` /
    `gh pr view`). The body summarizes what's in it. No Claude attribution.
-   Merge it with `gh pr merge --merge` (Nathan authorized self-merge for this
-   overnight run only). Stay on `feat/study-chat-lti` afterwards and
-   `git pull origin main`.
-5. Wait for the production deployment
-   (`vercel -Q ~/.vercel-dalaa ls dalaa-v1 --prod`). If none starts within
-   5 minutes, run `vercel -Q ~/.vercel-dalaa deploy --prod` from the repo.
+   Wait for CI with `gh pr checks` (check once first to see the output shape;
+   at most 10 minutes). Green → merge with `gh pr merge --merge` (Nathan's
+   standing authorization, 2026-11-08/09: build, apply migrations, merge on
+   green CI, deploy). Red → fix it in this pass if small, else mark the
+   checkpoint partial with the failing check. Stay on `feat/creation-wizard`
+   afterwards and `git pull origin main`.
+5. Wait for the production deployment of the merge: run
+   `vercel -Q ~/.vercel-dalaa ls dalaa-v1 --format json` once and read it, then
+   wait (8 minutes at most) for the `target: production` entry whose
+   `meta.githubCommitSha` is the merged `main` HEAD to reach `READY`
+   (`ERROR`/`CANCELED` = failed). Don't grep the table output and don't
+   `vercel inspect` the alias (it shows the old deploy while the new builds).
 6. Smoke test: `https://dalaa-v1.vercel.app/api/health` reports the database up,
    `/api/lti/jwks` returns a key, and `/` loads. If the smoke test fails, roll back
    (`vercel -Q ~/.vercel-dalaa rollback`), record why, and mark the checkpoint
