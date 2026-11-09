@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
+import { readContent } from "@/content/read";
+import { fetchWebPage } from "@/content/web";
 import { db } from "@/db/client";
 
 export type AddMaterialState = { error?: string };
@@ -25,6 +27,30 @@ export async function addMaterialAction(_prev: AddMaterialState, form: FormData)
 
   const save = form.get("seenBy") === "ai" ? saveGuide : saveContent;
   const saved = await save(db(), actor, courseId, creationKey, input);
+  if (!saved.ok) return { error: saved.reason };
+  redirect(`/courses/${courseId}/materials?added=${saved.content.id}`);
+}
+
+export type WebPageState = { error?: string; preview?: { url: string; title: string; excerpt: string } };
+
+/**
+ * Add a web page, in two steps: "Fetch" shows the page's title and opening
+ * text so the teacher can check it's the right page; "Add this page" fetches
+ * it again and saves the copy.
+ */
+export async function addWebPageAction(_prev: WebPageState, form: FormData): Promise<WebPageState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const fetched = await fetchWebPage(String(form.get("url") ?? ""));
+  if (!fetched.ok) return { error: fetched.reason };
+
+  if (form.get("confirm") !== "1") {
+    const read = await readContent(fetched.input);
+    if (!read.ok) return { error: read.reason };
+    return { preview: { url: fetched.input.url, title: read.name, excerpt: read.body.slice(0, 600) } };
+  }
+  const save = form.get("seenBy") === "ai" ? saveGuide : saveContent;
+  const saved = await save(db(), actor, courseId, String(form.get("creationKey") ?? ""), fetched.input);
   if (!saved.ok) return { error: saved.reason };
   redirect(`/courses/${courseId}/materials?added=${saved.content.id}`);
 }

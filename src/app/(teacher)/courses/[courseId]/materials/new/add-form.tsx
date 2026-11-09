@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { capitalize, FILE_ACCEPT, FILE_TYPES_LABEL } from "@/content/file-types";
 import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { addMaterialAction, type AddMaterialState } from "../actions";
+import { SeenByField } from "./seen-by";
 
 /** Upload or paste one material, and say who sees it. */
 export function AddMaterialForm({ courseId, creationKey, kind }: { courseId: string; creationKey: string; kind: "upload" | "paste" }) {
@@ -16,8 +18,8 @@ export function AddMaterialForm({ courseId, creationKey, kind }: { courseId: str
           <label htmlFor="file" className="font-bold">
             File
           </label>
-          <p className="-mt-1 text-sm text-muted">A .pdf, .txt or .md file, up to 4 MB. Kept in DALAA, not in Canvas Files.</p>
-          <input id="file" name="file" type="file" accept=".pdf,.txt,.md" required className={fileInputStyles} />
+          <p className="-mt-1 text-sm text-muted">{capitalize(FILE_TYPES_LABEL)}, up to 4 MB. Kept in DALAA, not in Canvas Files.</p>
+          <input id="file" name="file" type="file" accept={FILE_ACCEPT} required className={fileInputStyles} />
         </div>
       ) : (
         <>
@@ -36,21 +38,7 @@ export function AddMaterialForm({ courseId, creationKey, kind }: { courseId: str
           </div>
         </>
       )}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-bold">Who sees it</legend>
-        <label className="flex items-start gap-2">
-          <input type="radio" name="seenBy" value="students" defaultChecked className="mt-1" />
-          <span>
-            Students and the AI <span className="block text-sm text-muted">A reading students study inside an activity.</span>
-          </span>
-        </label>
-        <label className="flex items-start gap-2">
-          <input type="radio" name="seenBy" value="ai" className="mt-1" />
-          <span>
-            Only the AI <span className="block text-sm text-muted">Teaching notes or an answer key. Never sent to students.</span>
-          </span>
-        </label>
-      </fieldset>
+      <SeenByField />
       {state.error && (
         <p role="alert" className="text-danger">
           {state.error}

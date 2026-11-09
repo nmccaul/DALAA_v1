@@ -19,6 +19,7 @@ const FILTERS: { source: Source | null; label: string }[] = [
   { source: "canvas-file", label: "Canvas Files" },
   { source: "upload", label: "Uploaded" },
   { source: "paste", label: "Pasted" },
+  { source: "web", label: "Web pages" },
 ];
 
 const CANVAS_PROBLEM: Record<CourseContentProblem, string> = {
@@ -111,7 +112,17 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
                 <tr key={r.key} className="border-b border-border align-top">
                   <td className="px-3 py-3">
                     <span className="font-bold break-words">{r.name}</span>
-                    <span className="block text-[13px] text-muted">{SOURCE_LABEL[r.source]}</span>
+                    <span className="block text-[13px] text-muted">
+                      {SOURCE_LABEL[r.source]}
+                      {r.url && (
+                        <>
+                          {" · "}
+                          <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:underline">
+                            Open page
+                          </a>
+                        </>
+                      )}
+                    </span>
                   </td>
                   <td className="px-3 py-3">
                     <span className={SEEN_BY[r.seenBy].className}>{SEEN_BY[r.seenBy].label}</span>
@@ -143,7 +154,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
       <p className="text-sm text-muted">
         This course&apos;s Canvas Pages and Files are listed automatically; edit them in Canvas. Students see a material
         only inside an activity that uses it, and AI-only materials never reach students. Canvas Files are listed when
-        DALAA can read them (.pdf, .txt, .md).
+        DALAA can read them: PDF, Word, PowerPoint, .txt and .md.
       </p>
     </div>
   );

@@ -1,5 +1,5 @@
 /**
- * Turns what a teacher gives us — pasted text, a .txt, .md or .pdf file, or a
+ * Turns what a teacher gives us — pasted text, a .pdf, .docx, .pptx, .txt or .md file, or a
  * Canvas page or file (fetched by src/canvas/content.ts) — into the plain text students read and the AI drafts from.
  *
  * Pure: no database. Every refusal is a sentence the teacher can act on.
@@ -7,6 +7,8 @@
 
 import { convert } from "html-to-text";
 import { extractText, getDocumentProxy } from "unpdf";
+import { FILE_TYPES, FILE_TYPES_LABEL } from "./file-types";
+import { docxText, pptxText } from "./office";
 
 /** Under Vercel's 4.5 MB request body limit, so the refusal is ours, not a 413. */
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -17,16 +19,15 @@ export type ContentInput =
   | { kind: "paste"; name: string; text: string }
   | { kind: "file"; name: string; bytes: Uint8Array }
   | { kind: "canvas-page"; name: string; html: string }
-  | { kind: "canvas-file"; name: string; bytes: Uint8Array };
+  | { kind: "canvas-file"; name: string; bytes: Uint8Array }
+  | { kind: "web"; name: string; html: string; url: string };
 
 /** Matches the check on course_content.source. */
-export type ContentSource = "paste" | "upload" | "canvas-page" | "canvas-file";
+export type ContentSource = "paste" | "upload" | "canvas-page" | "canvas-file" | "web";
 
 export type ReadContent =
-  | { ok: true; source: ContentSource; name: string; body: string }
+  | { ok: true; source: ContentSource; name: string; body: string; url?: string }
   | { ok: false; reason: string };
-
-const FILE_TYPES = ["txt", "md", "pdf"] as const;
 
 /** Whether a file of this name is one DALAA can read (used to filter Canvas's file list). */
 export function isReadableFile(name: string): boolean {
@@ -94,12 +95,17 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
 
   if (input.kind === "paste") return finish("paste", name || "Pasted text", input.text);
   if (input.kind === "canvas-page") return finish("canvas-page", name || "Canvas page", htmlToText(input.html));
+  if (input.kind === "web") {
+    const read = finish("web", name || input.url, htmlToText(input.html));
+    return read.ok ? { ...read, url: input.url } : read;
+  }
 
   const source = input.kind === "file" ? "upload" : "canvas-file";
   if (!name) return { ok: false, reason: "That file has no name." };
   const ext = extension(name);
   if (!isReadableFile(name)) {
-    return { ok: false, reason: `${name} isn't a file DALAA can read. Use a .pdf, .txt or .md file, or paste the text.` };
+    const old = ext === "doc" || ext === "ppt" ? ` Save it as .${ext}x in Word or PowerPoint first.` : "";
+    return { ok: false, reason: `${name} isn't a file DALAA can read.${old} Use ${FILE_TYPES_LABEL}, or paste the text.` };
   }
   if (input.bytes.byteLength > MAX_UPLOAD_BYTES) {
     return { ok: false, reason: `${name} is over 4 MB. Use a smaller file, or paste the part students need.` };
@@ -111,6 +117,15 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
     if (text === null) return { ok: false, reason: `We couldn't read ${name}. It may be damaged or password-protected.` };
     if (!cleanText(text)) {
       return { ok: false, reason: `${name} has no text we can read; it may be a scan. Paste the text instead.` };
+    }
+    return finish(source, name, text);
+  }
+
+  if (ext === "docx" || ext === "pptx") {
+    const text = ext === "docx" ? docxText(input.bytes) : pptxText(input.bytes);
+    if (text === null) return { ok: false, reason: `We couldn't read ${name}. It may be damaged or password-protected.` };
+    if (!cleanText(text.replace(/^Slide \d+$/gm, ""))) {
+      return { ok: false, reason: `${name} has no text we can read; it may be only pictures. Paste the text instead.` };
     }
     return finish(source, name, text);
   }

@@ -58,6 +58,24 @@ describe("listCourseMaterials", () => {
     expect(byName["Unused reading"].usedIn).toEqual([]);
   });
 
+  it("lists a saved web page with its address, and refuses a web page without one", async () => {
+    const page = await saveContent(db, prof, course, randomUUID(), {
+      kind: "web",
+      name: "Chatbot refund ruling",
+      html: "<p>The tribunal ruled.</p>",
+      url: "https://example.com/ruling",
+    });
+    expect(page).toMatchObject({ ok: true, content: { source: "web" } });
+    expect(await listCourseMaterials(db, prof, course)).toMatchObject([{ source: "web", url: "https://example.com/ruling" }]);
+    await expect(
+      db.query(
+        `insert into course_content (course_id, source, name, body, creation_key, created_by)
+         values ($1, 'web', 'x', 'x', $2, $3)`,
+        [course, randomUUID(), prof.userId],
+      ),
+    ).rejects.toThrow();
+  });
+
   it("shows nothing for a course the actor doesn't teach", async () => {
     await saveContent(db, prof, course, randomUUID(), paste("Harbor Bikes case"));
     expect(await listCourseMaterials(db, other, course)).toEqual([]);
@@ -82,6 +100,7 @@ describe("mergeMaterials", () => {
     seenBy: "students",
     createdAt: new Date("2026-11-02T00:00:00Z"),
     usedIn: [],
+    url: null,
     ...over,
   });
 
