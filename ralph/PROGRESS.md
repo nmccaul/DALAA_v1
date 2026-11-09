@@ -133,3 +133,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Step 4 doesn't exist yet (T17): Next lands on the activity's review screen.
 - Checked locally (playwright-cli, ralph.t04, "T04 check", real AI): Reading Harbor + Note Alpha → goal → step 3 suggested Socratic / Defend / Explain with reasons → Next drafted a Socratic chat with both materials and the goal word for word. 390px fine.
 - Worth a look: the AI suggested Defend (needs students' own work) for a goal about interpreting a reading, despite the prompt's rule. Same 12 Node-20 local test failures, nothing new.
+
+## 2026-11-09 13:10 UTC · T17a Setup route + step 4 · done
+- T17 split: T17a (route, editor `cards`, step 4, this pass) and T17b (step 5/6 Coming soon rows, moving show progress / students bring work to step 5, drafts opening the wizard).
+- New route `courses/[courseId]/activities/[activityId]/setup/[step]`; tools register a `setup` screen in `src/tools/screens.ts` (chassis doesn't branch on the tool). `wizard/setup-step.tsx` `StudyChatSetup`: steps 4–6 show their editor cards (`wizard/setup-cards.ts` `SETUP_CARDS`), step 7 is a Preview "isn't built yet" note linking to the activity.
+- `StudyChatEditor` takes `cards` (`fields.ts` `CARD_KEYS`/`shownCards`) and `wizard` (cards start open, no search box, Next / Save as draft / Back). `saveSettingsAction` with `intent=next` saves, then redirects to the next step computed server-side from `wizardStep` (no client-supplied path). `wizardTypeAction` now lands on step 4.
+- Panel note from stored data (`setupNote`): "I drafted this chat as Socratic, with 5 touchpoints, and … to lead it." Step 4 has no Back (step 3 was before the draft existed).
+- Checked locally (playwright-cli, ralph.t04, "T04 check"): step 4 of an existing draft shows steps 1–3 checked, four cards open; Next saved and opened step 5; 390px fine. Same 12 Node-20 local test failures, nothing new.
