@@ -96,8 +96,8 @@ export async function draftAction(_prev: FormState, form: FormData): Promise<For
   if (!mode) return { error: "Pick a kind of chat, or let DALAA suggest one." };
 
   const created = await createStudyChat(db(), graderModel(), actor, courseId, {
-    contentId: String(form.get("contentId") ?? ""),
-    guideId: form.get("guideId") ? String(form.get("guideId")) : null,
+    contentIds: [String(form.get("contentId") ?? "")],
+    guideIds: form.get("guideId") ? [String(form.get("guideId"))] : [],
     mode,
     studentWork: form.get("studentWork") === "on",
     showProgress: form.get("showProgress") === "on",

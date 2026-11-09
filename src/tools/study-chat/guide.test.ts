@@ -212,7 +212,7 @@ describe("the AI-only guide", () => {
     const content = await saveContent(db, prof, course, randomUUID(), { kind: "paste", name: "Case", text: "Harbor Bikes sells bikes." });
     if (!content.ok) throw new Error(content.reason);
     const model = answering(drafted());
-    const request = { contentId: content.content.id, guideId, mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
+    const request = { contentIds: [content.content.id], guideIds: [guideId], mode: "case-chat" as const, studentWork: false, creationKey: randomUUID() };
     const created = await createStudyChat(db, model, prof, course, request);
     if (!created.ok) throw new Error(created.reason);
     expect(await activityGuides(db, created.activityId)).toMatchObject([{ body: GUIDE }]);
@@ -221,8 +221,8 @@ describe("the AI-only guide", () => {
     const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
     if (!elsewhere.ok) throw new Error(elsewhere.reason);
     expect(
-      await createStudyChat(db, model, prof, course, { ...request, guideId: elsewhere.content.id, creationKey: randomUUID() }),
-    ).toEqual({ ok: false, reason: "We couldn't find those AI instructions. Add them again." });
+      await createStudyChat(db, model, prof, course, { ...request, guideIds: [elsewhere.content.id], creationKey: randomUUID() }),
+    ).toEqual({ ok: false, reason: "One of those materials isn't in this course anymore. Go back and pick again." });
   });
 
   it("is added and removed after drafting, by the course's teachers only", async () => {

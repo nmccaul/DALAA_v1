@@ -5,33 +5,44 @@
  */
 
 import type { LanguageModel } from "ai";
-import { materialsTooLong, setActivityMaterials } from "@/activities/materials";
+import { setActivityMaterials } from "@/activities/materials";
 import { activityForKey, createActivity, getTaughtActivity, publishActivity, updateActivity } from "@/activities/store";
-import { getTaughtGuide } from "@/content/guide";
-import { getContent } from "@/content/store";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { draftSettings } from "./draft";
 import type { ModeSlug } from "./modes";
 import { rubricPoints, settingProblems, StudyChatSettings } from "./schema";
+import { MAX_REASON_CHARS } from "./suggest";
+import { pickedMaterials } from "./wizard/picks";
+import type { Minutes } from "./wizard/query";
 
 /** This tool's slug in src/tools/catalog.ts (create.test.ts checks they match). */
 export const STUDY_CHAT = "study-chat";
 
 export type CreateRequest = {
-  contentId: string;
-  /** The AI-only guide the teacher added, if any (src/content/guide.ts). */
-  guideId: string | null;
+  /** What students read (`course_content`), in the teacher's order; at least one. */
+  contentIds: readonly string[];
+  /** The teacher's AI-only notes (src/content/guide.ts), in their order; may be empty. */
+  guideIds: readonly string[];
   mode: ModeSlug | "suggest";
   /** The "Students bring their own work" switch: the draft keeps it as set here (on for a mode that needs it). */
   studentWork: boolean;
   /** The "Show students their progress" switch; off when missing. */
   showProgress?: boolean;
+  /** The wizard's learning goal (step 2), kept word for word; missing: the AI writes one. */
+  goal?: string | null;
+  /** The wizard's "About how long?" (step 2), a hint for the draft. */
+  minutes?: Minutes | null;
+  /** Why the wizard suggested this type (step 3), kept for the teacher only (`settings.typeReason`). */
+  typeReason?: string | null;
   /** Client-generated: a retry returns the first activity and drafts nothing new. */
   creationKey: string;
 };
 
 export type CreateResult = { ok: true; activityId: string } | { ok: false; reason: string };
+
+/** The longest goal a Study Chat keeps (schema.ts `goal`). */
+const MAX_GOAL_CHARS = 1000;
 
 export async function createStudyChat(
   db: Db,
@@ -43,21 +54,32 @@ export async function createStudyChat(
   const already = await activityForKey(db, actor, request.creationKey);
   if (already) return { ok: true, activityId: already };
 
-  const content = await getContent(db, actor, courseId, request.contentId);
-  if (!content) return { ok: false, reason: "We couldn't find that material. Add it again." };
-  const guide = request.guideId === null ? null : await getTaughtGuide(db, actor, courseId, request.guideId);
-  if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
-  const tooLong = materialsTooLong([content.body.length, guide?.body.length ?? 0]);
-  if (tooLong) return { ok: false, reason: tooLong };
+  const goal = request.goal?.trim() || null;
+  if (goal && goal.length > MAX_GOAL_CHARS) {
+    return { ok: false, reason: `Keep the learning goal under ${MAX_GOAL_CHARS.toLocaleString("en-US")} characters.` };
+  }
+  const picked = await pickedMaterials(db, actor, courseId, {
+    contentIds: [...request.contentIds],
+    guideIds: [...request.guideIds],
+  });
+  if (!picked.ok) return picked;
 
   const draft = await draftSettings(
     db,
     model,
     { userId: actor.userId, courseId },
-    { readings: [content], mode: request.mode, guides: guide ? [guide] : [], studentWork: request.studentWork },
+    {
+      readings: picked.readings,
+      mode: request.mode,
+      guides: picked.guides,
+      studentWork: request.studentWork,
+      goal,
+      minutes: request.minutes ?? null,
+    },
   );
   if (!draft.ok) return draft;
-  const settings = { ...draft.settings, showProgress: request.showProgress ?? false };
+  const typeReason = request.typeReason?.trim().replace(/\s+/g, " ").slice(0, MAX_REASON_CHARS) || undefined;
+  const settings = { ...draft.settings, showProgress: request.showProgress ?? false, ...(typeReason ? { typeReason } : {}) };
 
   const saved = await createActivity(db, actor, courseId, request.creationKey, {
     tool: STUDY_CHAT,
@@ -67,8 +89,8 @@ export async function createStudyChat(
   });
   if (!saved.ok) return saved;
   const attached = await setActivityMaterials(db, actor, saved.id, {
-    contentIds: [content.id],
-    guideIds: guide ? [guide.id] : [],
+    contentIds: picked.readings.map((reading) => reading.id),
+    guideIds: picked.guides.map((guide) => guide.id),
   });
   return attached.ok ? { ok: true, activityId: saved.id } : attached;
 }

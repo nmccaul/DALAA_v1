@@ -57,6 +57,14 @@ export const StudyChatFields = z
       title: "Goal",
       description: "What students should be able to do after the chat, in one or two sentences.",
     }),
+    // Why the wizard suggested this type (suggest.ts), for the teacher's
+    // wizard panel. The teacher's only: the student view and every prompt are
+    // built field by field and never read it. Missing when the type wasn't
+    // suggested, or in settings saved before it existed.
+    typeReason: text(300).optional().meta({
+      title: "Why this type",
+      description: "Why DALAA suggested this kind of chat.",
+    }),
     // A list so stages can come later; v1 runs exactly one.
     scenarios: z.array(Scenario).length(1).meta({ title: "Scenario" }),
     positions: z
@@ -138,10 +146,11 @@ export const StudyChatFields = z
 
 /**
  * What the model drafts (draft.ts): every setting but the teacher's own
- * switches, which draft.ts sets after it answers. OpenAI's structured output
+ * switches, which draft.ts sets after it answers, and the type's reason,
+ * which create.ts keeps from the suggestion. OpenAI's structured output
  * refuses a schema with any field not required, and those two have defaults.
  */
-export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true });
+export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true });
 
 export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
   message: "A Defend chat is about each student's own work, so “Students bring their own work” stays on.",
