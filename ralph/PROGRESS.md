@@ -105,3 +105,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - `loadMaterialRows` and `CANVAS_PROBLEM` moved into `src/content/materials.ts` (the Materials tab uses them too).
 - Surprise: React 19 resets the form after a server action, which unticked boxes after an error; the action now returns `ticked` and the boxes use it as their default.
 - Checked locally (playwright-cli, ralph.t04, course "T04 check"): notes-only refused with a sentence and ticks kept; reading + note → step 2 with both ids; Back keeps both ticked; 390px fine. Canvas-item picking not exercised in the browser (practice Canvas lists ralph.t04 as not a teacher of BUS M 499); covered by tests. Same 12 Node-20 local test failures, nothing new.
+
+## 2026-11-09 12:47 UTC · T14b Step 1 links + entry · done
+- Step 1 has a "+ Materials" row (Upload a file · Paste text · Add a web page) and a disabled "Write a new case with Case Writer · Coming soon"; it moved out of the panel's chips. The empty course now shows the form with "Add one below" instead of pointing at the Materials tab.
+- `next` on `materials/new`: `src/content/return-path.ts` (`materialReturnPath` accepts only a path inside the same course; `afterAddPath` appends `added=content:<id>`/`guide:<id>`). Both add forms and the web form carry it; "‹ Back to the new activity" when present. The wizard's `materialsFromQuery` counts `added` as ticked.
+- The links read the boxes as ticked at click time (client `router.push`), so ticks made before clicking survive. Unsaved Canvas Page/File ticks are not carried (only saved ids travel in the URL).
+- `materialsQuery`/`materialsFromQuery` moved from `picks.ts` to the client-safe `wizard/query.ts` (picks.ts imports node:crypto). `newActivityPath` in `src/tools/catalog.ts` (tool registers `start`): "+ Activity" on the Activities tab and the course checklist go straight to `study-chat?step=materials` while it's the only live tool.
+- Checked locally (playwright-cli, ralph.t04, "T04 check"): ticked a reading, Paste text → AI-only note saved → back on step 1 with both ticked; 390px fine. Same 12 Node-20 local test failures, nothing new.
