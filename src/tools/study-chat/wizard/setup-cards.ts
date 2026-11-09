@@ -43,3 +43,23 @@ export function setupNote(step: SetupStep, s: StudyChatSettings): string {
       return "Check the summary, try it as a student, then assign it.";
   }
 }
+
+/**
+ * Step 7's summary rows, from what's stored. Positions show only for a chat
+ * that has them; points NULL (not drafted yet) says so rather than 0.
+ */
+export function reviewSummary(
+  s: StudyChatSettings,
+  title: string,
+  materials: number,
+  points: number | null,
+): { label: string; value: string }[] {
+  return [
+    { label: "Title", value: title },
+    { label: "Type", value: MODES[s.mode].label },
+    { label: "Materials", value: count(materials, "material", "materials") },
+    ...(s.positions.length > 0 ? [{ label: "Positions", value: count(s.positions.length, "position", "positions") }] : []),
+    { label: "Touchpoints", value: count(s.touchpoints.length, "touchpoint", "touchpoints") },
+    { label: "Points", value: points === null ? "Not set" : String(points) },
+  ];
+}

@@ -3,7 +3,7 @@ import { CARD_KEYS, shownCards } from "../fields";
 import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
 import { STUDY_CHAT } from "../create";
-import { SETUP_CARDS, SETUP_COMING_SOON, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
+import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
 import { isSetupStep, nextSetupStep, previousSetupStep, SETUP_STEPS, setupPath } from "./steps";
 
 describe("shownCards", () => {
@@ -61,5 +61,23 @@ describe("setupNote", () => {
 
   it("leaves positions out when there are none", () => {
     expect(setupNote("scenario", draft({ positions: [] }))).toMatch(/^I drafted this chat as Case Chat, with 1 touchpoint, and/);
+  });
+});
+
+describe("reviewSummary", () => {
+  it("names what each row counts, from what's stored", () => {
+    const s = draft();
+    const rows = Object.fromEntries(reviewSummary(s, "Harbor Bikes", 2, 10).map((r) => [r.label, r.value]));
+    expect(rows.Title).toBe("Harbor Bikes");
+    expect(rows.Materials).toBe("2 materials");
+    expect(rows.Touchpoints).toBe(`${s.touchpoints.length} touchpoint${s.touchpoints.length === 1 ? "" : "s"}`);
+    expect(rows.Points).toBe("10");
+  });
+
+  it("leaves out positions a chat doesn't have, and says Not set for no points (never 0)", () => {
+    const rows = reviewSummary(draft({ positions: [] }), "T", 1, null);
+    expect(rows.map((r) => r.label)).not.toContain("Positions");
+    expect(rows.find((r) => r.label === "Materials")?.value).toBe("1 material");
+    expect(rows.find((r) => r.label === "Points")?.value).toBe("Not set");
   });
 });

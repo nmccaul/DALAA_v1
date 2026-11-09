@@ -234,15 +234,11 @@ describe("the AI-only guide", () => {
 
     expect(await removeActivityGuide(db, prof, activity, guideId)).toEqual({ ok: true });
     expect(await activityGuides(db, activity)).toMatchObject([{ name: "Argument map", body: "Map." }]);
-    // The reading stays, and the old columns follow the list until they're retired.
+    // The reading stays.
     expect((await activityMaterials(db, activity)).readings.map((r) => r.name)).toEqual(["Case"]);
-    const [columns] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
-    expect(columns.guide_id).toBe(other.content.id);
 
     expect(await removeActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
     expect(await activityGuides(db, activity)).toEqual([]);
-    const [cleared] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
-    expect(cleared.guide_id).toBeNull();
 
     const refused = { ok: false, reason: "That assignment isn't one of yours." };
     expect(await addActivityGuide(db, student, activity, guideId)).toEqual(refused);

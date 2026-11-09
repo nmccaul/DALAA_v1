@@ -164,6 +164,14 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   redirect(afterPublishPath(courseId, pickerRequest(form.get(PICKER_PARAM))));
 }
 
+/** Wizard step 7's Publish (no Canvas assignment from DALAA): publishes the saved chat, then the course or the picker. */
+export async function publishAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const actor = await requireActor();
+  const published = await publishStudyChat(db(), actor, String(form.get("activityId") ?? ""));
+  if (!published.ok) return { error: published.reason };
+  redirect(afterPublishPath(String(form.get("courseId") ?? ""), pickerRequest(form.get(PICKER_PARAM))));
+}
+
 /** The review screen's "Remove" next to an AI-only note: the chat and grader stop reading it. */
 export async function removeGuideAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
