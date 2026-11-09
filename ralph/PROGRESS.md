@@ -18,3 +18,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - Guide reads stay in `src/content/guide.ts` (new `activityGuides`, `guidesInCourse`), keeping it the only reader of `course_guides`.
 - `src/test/db.ts`: `testDb({ before })` + `migrateRest()` so a migration's backfill can be tested.
 - Local `npm run migrate` needs `.env.local` loaded into the shell (`set -a; . ./.env.local`). Same 12 Node-20 `Array.fromAsync` failures, nothing new.
+
+## 2026-11-09 07:28 UTC · T03 Readers take lists · done
+- `draftPrompt`/`chatSystemPrompt`/`gradePrompt`/`studentPrompt` take `readings[]` and `guides[]`, each fenced under its own name (`material.ts` `Material`, `guideBlocks`); single-material wording unchanged. `chat.ts`, `grade.ts`, `trial.ts` read `activityGuides`/`activityMaterials`; `aiGuide` removed.
+- Student side: `TakenActivity.content` → `readings[]` from `activityReadings` (never touches `course_guides`/`guide_id`); take screen shows every reading. New guide.test cases prove two notes reach the chat model and never the student payload.
+- Cap: `MAX_MATERIALS_CHARS = 150_000` / `materialsTooLong` in `src/activities/materials.ts`, enforced in `setActivityMaterials` and `createStudyChat` (before any model call). `guidesInCourse` now returns id → length.
+- Bridge until T04: `createActivity` and `setActivityGuide` also write `activity_materials` from `content_id`/`guide_id`, so the new readers see activities made by the old writers. Test fixtures that insert activities by hand call `mirrorMaterials`.
+- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
