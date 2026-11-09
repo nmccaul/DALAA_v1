@@ -119,3 +119,10 @@ to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
 - `wizard/picks.ts` `pickedMaterials` loads the URL's ids in order (teacher-only, same course, combined 150,000-character cap). `wizard/query.ts`: `MINUTES`, `goalFromQuery`, `goalStepPath`. Step 3 is still the "isn't built yet" note, now with "← Back to the learning goal".
 - Checked locally (playwright-cli, ralph.t04, "T04 check", real AI via gateway): reading + note → a suggested goal; edited it, picked 45+, Next → step 3 URL; Back → same goal and length. 390px fine. First live answer used markdown italics, so the prompt now says plain text.
 - The suggestion runs on every load of step 2 without `goal` in the URL (a reload costs one more call). Same 12 Node-20 local test failures, nothing new.
+
+## 2026-11-09 12:58 UTC · T16a suggestTypes + createStudyChat for the wizard · done
+- T16 split: T16a (service, this pass) and T16b (step 3 screen + action → step 4).
+- `suggest.ts` `suggestTypes(db, model, ctx, materials, goal)` → up to 3 `{ mode, reason | null }`, best first; one call, purpose `suggest.type`; the answer's `mode` is a free string so unknown slugs and repeats are dropped (case-insensitive) rather than failing the whole answer; nothing usable or any failure → `[{ mode: "explain", reason: null }]`.
+- `createStudyChat` now takes `contentIds`/`guideIds` (loaded and checked with the wizard's `pickedMaterials`, so one-course + 150,000-character cap in one place), `goal` (trimmed, kept verbatim over whatever the model wrote; over 1,000 characters refused), `minutes` (a sentence in the draft prompt) and `typeReason`. The old create flow's action passes one-item lists. A missing guide now says "One of those materials isn't in this course anymore. Go back and pick again." (guide.test.ts updated).
+- Type reason stored as optional `settings.typeReason` (schema; omitted from `StudyChatDraftFields`, so the model is never asked for it). The student view and the chat/grader prompts are built field by field, so it never reaches a student; a test checks the student view.
+- Same 12 Node-20 local test failures, nothing new.
