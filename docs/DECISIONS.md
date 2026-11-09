@@ -232,3 +232,18 @@ Results already keep each criterion's label and max with its score.
 Attempts from before the column existed are **left NULL, not backfilled**, and
 read the activity's current settings: that keeps the migration additive (it can
 reach production before the code) and those were test attempts anyway.
+
+### D-032 · DALAA looks like Canvas; inside Canvas it draws no navigation of its own
+*2026-11-08, Nathan.* Reference: Nathan's "DAALAA Course Tabs Mockup".
+- **Canvas's look everywhere:** Lato, navy primary (`#002E5D`), grey borders,
+  3–4px corners, underlined tabs, status pills. **Light only.** Canvas has no
+  dark mode, so `dark:` is switched off. All of it lives in the tokens in
+  `src/app/globals.css`.
+- **Inside Canvas (a frame), Canvas's own menu and breadcrumb are the shell.**
+  DALAA shows only its tabs and content (`src/components/embed.ts` reads
+  `Sec-Fetch-Dest: iframe`). On its own, DALAA draws a Canvas-like navy rail.
+- **One course-menu entry, "AI Activities"** (`COURSE_MENU_LABEL`), with tabs
+  inside it: Assigned Activities · Materials · Grading · DALAA. Canvas allows
+  each tool only one menu entry, and three tools would mean three keys per school.
+- Instructure UI was considered. The mockup is plain CSS, and the tokens get
+  the look without a large dependency, so we're not using it for now.
