@@ -19,6 +19,8 @@ export type ActivityRow = {
   submitted: number;
   /** Finished attempts with a grade saved. */
   graded: number;
+  /** Added to the Canvas course (it has a Canvas link). */
+  assigned: boolean;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,7 +36,8 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points, a.due_at as "dueAt",
             (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
-              where t.activity_id = a.id and r.status = 'graded') as graded
+              where t.activity_id = a.id and r.status = 'graded') as graded,
+            a.lti_resource_link_id is not null as assigned
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}
@@ -70,6 +73,25 @@ export async function listLibraryActivities(db: Db, actor: Actor): Promise<Libra
        join courses c on c.id = a.course_id
       where ${where.text}
       order by a.updated_at desc, a.created_at desc`,
+    where.values,
+  );
+}
+
+/**
+ * "From my other courses" on a course's Activities tab: every activity in the
+ * other courses the actor teaches, drafts included, for copying into this
+ * one. Newest course first, then last changed first within a course.
+ */
+export async function listOtherCourseActivities(db: Db, actor: Actor, courseId: string): Promise<LibraryActivity[]> {
+  if (!UUID.test(courseId)) return [];
+  const where = and({ text: "c.id <> $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
+  return db.query<LibraryActivity>(
+    `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
+            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt"
+       from activities a
+       join courses c on c.id = a.course_id
+      where ${where.text}
+      order by c.created_at desc, c.id, a.updated_at desc, a.created_at desc`,
     where.values,
   );
 }
