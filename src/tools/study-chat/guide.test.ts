@@ -2,8 +2,7 @@ import { randomUUID } from "node:crypto";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { activityMaterials, setActivityMaterials } from "@/activities/materials";
-import { setActivityGuide } from "@/activities/store";
+import { activityMaterials, addActivityGuide, removeActivityGuide, setActivityMaterials } from "@/activities/materials";
 import { getTakenActivity } from "@/attempts/store";
 import { activityGuides, getTaughtGuide, saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
@@ -229,23 +228,32 @@ describe("the AI-only guide", () => {
   it("is added and removed after drafting, by the course's teachers only", async () => {
     const other = await saveGuide(db, prof, course, randomUUID(), { kind: "paste", name: "Argument map", text: "Map." });
     if (!other.ok) throw new Error(other.reason);
-    expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
-    expect(await setActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
-    expect(await activityGuides(db, activity)).toMatchObject([{ name: "Argument map", body: "Map." }]);
+    expect(await addActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
+    expect(await addActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
+    expect((await activityGuides(db, activity)).map((g) => g.name)).toEqual(["Teaching note", "Argument map"]);
 
-    expect(await setActivityGuide(db, prof, activity, null)).toEqual({ ok: true });
+    expect(await removeActivityGuide(db, prof, activity, guideId)).toEqual({ ok: true });
+    expect(await activityGuides(db, activity)).toMatchObject([{ name: "Argument map", body: "Map." }]);
+    // The reading stays, and the old columns follow the list until they're retired.
+    expect((await activityMaterials(db, activity)).readings.map((r) => r.name)).toEqual(["Case"]);
+    const [columns] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
+    expect(columns.guide_id).toBe(other.content.id);
+
+    expect(await removeActivityGuide(db, prof, activity, other.content.id)).toEqual({ ok: true });
     expect(await activityGuides(db, activity)).toEqual([]);
+    const [cleared] = await db.query<{ guide_id: string | null }>("select guide_id from activities where id = $1", [activity]);
+    expect(cleared.guide_id).toBeNull();
 
     const refused = { ok: false, reason: "That assignment isn't one of yours." };
-    expect(await setActivityGuide(db, student, activity, guideId)).toEqual(refused);
-    expect(await setActivityGuide(db, student, activity, null)).toEqual(refused);
+    expect(await addActivityGuide(db, student, activity, guideId)).toEqual(refused);
+    expect(await removeActivityGuide(db, student, activity, guideId)).toEqual(refused);
     const elsewhere = await saveGuide(db, prof, otherCourse, randomUUID(), { kind: "paste", name: "Other", text: "Other key." });
     if (!elsewhere.ok) throw new Error(elsewhere.reason);
-    expect(await setActivityGuide(db, prof, activity, elsewhere.content.id)).toEqual({
+    expect(await addActivityGuide(db, prof, activity, elsewhere.content.id)).toEqual({
       ok: false,
-      reason: "We couldn't find those AI instructions. Add them again.",
+      reason: "We couldn't find one of those materials in this course. Add it again.",
     });
-    expect(await setActivityGuide(db, prof, activity, "not-a-guide")).toMatchObject({ ok: false });
+    expect(await addActivityGuide(db, prof, activity, "not-a-guide")).toMatchObject({ ok: false });
     expect(await activityGuides(db, activity)).toEqual([]);
   });
 

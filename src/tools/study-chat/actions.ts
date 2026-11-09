@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { setActivityGuide } from "@/activities/store";
+import { addActivityGuide, removeActivityGuide } from "@/activities/materials";
 import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { saveGuide } from "@/content/guide";
@@ -43,7 +43,7 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
       : await saveContent(db(), actor, courseId, creationKey, input);
   if (!saved.ok) return { error: saved.reason };
   if (guideOf) {
-    const attached = await setActivityGuide(db(), actor, String(guideOf), saved.content.id);
+    const attached = await addActivityGuide(db(), actor, String(guideOf), saved.content.id);
     if (!attached.ok) return { error: attached.reason };
     redirect(keepPicker(reviewPath(courseId, String(guideOf)), pickerRequest(form.get(PICKER_PARAM))));
   }
@@ -98,12 +98,12 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   redirect(afterPublishPath(courseId, pickerRequest(form.get(PICKER_PARAM))));
 }
 
-/** The review screen's "Remove" next to the guide: the chat and grader stop reading it. */
+/** The review screen's "Remove" next to an AI-only note: the chat and grader stop reading it. */
 export async function removeGuideAction(_prev: FormState, form: FormData): Promise<FormState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
   const activityId = String(form.get("activityId") ?? "");
-  const removed = await setActivityGuide(db(), actor, activityId, null);
+  const removed = await removeActivityGuide(db(), actor, activityId, String(form.get("guideId") ?? ""));
   if (!removed.ok) return { error: removed.reason };
   redirect(keepPicker(reviewPath(courseId, activityId), pickerRequest(form.get(PICKER_PARAM))));
 }

@@ -5,7 +5,7 @@
  */
 
 import type { LanguageModel } from "ai";
-import { materialsTooLong } from "@/activities/materials";
+import { materialsTooLong, setActivityMaterials } from "@/activities/materials";
 import { activityForKey, createActivity, getTaughtActivity, publishActivity, updateActivity } from "@/activities/store";
 import { getTaughtGuide } from "@/content/guide";
 import { getContent } from "@/content/store";
@@ -64,10 +64,13 @@ export async function createStudyChat(
     title: settings.scenarios[0].title,
     settings,
     points: rubricPoints(settings),
-    contentId: content.id,
-    guideId: guide?.id ?? null,
   });
-  return saved.ok ? { ok: true, activityId: saved.id } : saved;
+  if (!saved.ok) return saved;
+  const attached = await setActivityMaterials(db, actor, saved.id, {
+    contentIds: [content.id],
+    guideIds: guide ? [guide.id] : [],
+  });
+  return attached.ok ? { ok: true, activityId: saved.id } : attached;
 }
 
 /** Publishes a Study Chat whose settings still fit the schema. */

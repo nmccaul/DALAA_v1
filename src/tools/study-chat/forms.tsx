@@ -81,12 +81,23 @@ export function MaterialForm({
 }
 
 /** Takes the AI-only guide off an activity, from its review screen. */
-export function RemoveGuideForm({ courseId, activityId, addToCanvas }: { courseId: string; activityId: string; addToCanvas: string | null }) {
+export function RemoveGuideForm({
+  courseId,
+  activityId,
+  guideId,
+  addToCanvas,
+}: {
+  courseId: string;
+  activityId: string;
+  guideId: string;
+  addToCanvas: string | null;
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(removeGuideAction, {});
   return (
     <form action={action} className="inline">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="activityId" value={activityId} />
+      <input type="hidden" name="guideId" value={guideId} />
       <PickerField addToCanvas={addToCanvas} />
       <button disabled={pending} className="text-sm text-muted underline hover:text-text">
         {pending ? "Removing…" : "Remove"}

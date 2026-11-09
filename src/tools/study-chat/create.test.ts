@@ -63,10 +63,15 @@ describe("creating a Study Chat", () => {
       status: "draft",
       points: 10,
       settings: draft(),
-      contentId: content,
-      guideId: null,
     });
     expect(await getTaughtActivity(db, other, result.activityId)).toBeNull();
+    // Written through the materials list; the old column still names the reading.
+    expect((await activityMaterials(db, result.activityId)).readings.map((r) => r.id)).toEqual([content]);
+    const [columns] = await db.query<{ content_id: string; guide_id: string | null }>(
+      "select content_id, guide_id from activities where id = $1",
+      [result.activityId],
+    );
+    expect(columns).toEqual({ content_id: content, guide_id: null });
   });
 
   it("returns the first activity on a retry and doesn't draft again", async () => {

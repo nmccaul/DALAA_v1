@@ -92,7 +92,33 @@ export async function setActivityMaterials(
         [activity.id, activity.courseId, row.contentId, row.guideId, position],
       );
     }
-    await tx.query("update activities set updated_at = now() where id = $1", [activity.id]);
+    // Until every reader uses activity_materials, the old columns name the first of each kind.
+    await tx.query("update activities set content_id = $2, guide_id = $3, updated_at = now() where id = $1", [
+      activity.id,
+      contentIds[0] ?? null,
+      guideIds[0] ?? null,
+    ]);
   });
   return { ok: true };
+}
+
+type Change = { ok: true } | { ok: false; reason: string };
+
+/** Adds one AI-only note from the same course after the others. Adding it twice changes nothing. */
+export async function addActivityGuide(db: Db, actor: Actor, activityId: string, guideId: string): Promise<Change> {
+  return changeGuides(db, actor, activityId, (ids) => [...ids, guideId]);
+}
+
+/** Takes one AI-only note off an activity; the chat and grader stop reading it. The note stays in the course. */
+export async function removeActivityGuide(db: Db, actor: Actor, activityId: string, guideId: string): Promise<Change> {
+  return changeGuides(db, actor, activityId, (ids) => ids.filter((id) => id !== guideId));
+}
+
+async function changeGuides(db: Db, actor: Actor, activityId: string, change: (ids: string[]) => string[]): Promise<Change> {
+  if (!(await getTaughtActivity(db, actor, activityId))) return { ok: false, reason: "That assignment isn't one of yours." };
+  const { readings, guides } = await activityMaterials(db, activityId);
+  return setActivityMaterials(db, actor, activityId, {
+    contentIds: readings.map((r) => r.id),
+    guideIds: change(guides.map((g) => g.id)),
+  });
 }
