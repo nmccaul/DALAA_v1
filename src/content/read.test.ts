@@ -107,9 +107,9 @@ describe("readContent: .pdf files", () => {
 
 describe("readContent: any file", () => {
   it("refuses other file types", async () => {
-    expect(await readContent({ kind: "file", name: "case.docx", bytes: bytes("x") })).toEqual({
+    expect(await readContent({ kind: "file", name: "case.key", bytes: bytes("x") })).toEqual({
       ok: false,
-      reason: "case.docx isn't a file DALAA can read. Use a .pdf, .txt or .md file, or paste the text.",
+      reason: "case.key isn't a file DALAA can read. Use a PDF, Word (.docx), PowerPoint (.pptx), .txt or .md file, or paste the text.",
     });
     expect(await readContent({ kind: "file", name: "README", bytes: bytes("x") })).toMatchObject({ ok: false });
   });

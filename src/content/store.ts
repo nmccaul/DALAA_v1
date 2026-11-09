@@ -44,11 +44,11 @@ export async function saveTo(
   if (!read.ok) return read;
 
   const [inserted] = await db.query<SavedContent>(
-    `insert into ${table} (course_id, source, name, body, creation_key, created_by)
-     values ($1, $2, $3, $4, $5, $6)
+    `insert into ${table} (course_id, source, name, body, creation_key, created_by, source_url)
+     values ($1, $2, $3, $4, $5, $6, $7)
      on conflict (creation_key) do nothing
      returning id, source, name, body`,
-    [courseId, read.source, read.name, read.body, creationKey, actor.userId],
+    [courseId, read.source, read.name, read.body, creationKey, actor.userId, read.url ?? null],
   );
   if (inserted) return { ok: true, content: inserted };
 

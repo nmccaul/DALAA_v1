@@ -38,7 +38,7 @@ Checks (CI runs the same): `npm run lint`, `npm run typecheck`, `npm test`,
 **Deploying:** https://dalaa-v1.vercel.app. Vercel project `dalaa-v1` (personal account) deploys `main` to
 production and every PR to a preview. Its database is Supabase, added through
 Vercel's Marketplace, which sets `POSTGRES_URL`. Run migrations with
-`DATABASE_URL=<POSTGRES_URL_NON_POOLING> npm run migrate` before merging a PR
+`scripts/migrate-prod.sh` (or `DATABASE_URL=<POSTGRES_URL_NON_POOLING> npm run migrate`) before merging a PR
 that adds one. On any other Node server (e.g. a BYU box),
 `npm run build`, copy `public/` and `.next/static/` into `.next/standalone/`,
 and run `node .next/standalone/server.js` under PM2 (D-007).

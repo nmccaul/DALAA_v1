@@ -4,16 +4,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadTaughtCourse } from "@/courses/load";
 import { AddMaterialForm } from "./add-form";
+import { WebPageForm } from "./web-form";
 
 export const metadata: Metadata = { title: "Add material" };
 
-const KINDS = { upload: "Upload a file", paste: "Paste text" } as const;
+const KINDS = { upload: "Upload a file", paste: "Paste text", web: "Add a web page" } as const;
 
-/** + Materials → Upload a file / Paste text. */
+/** + Materials → Upload a file / Paste text / Add a web page. */
 export default async function NewMaterialPage({ params, searchParams }: PageProps<"/courses/[courseId]/materials/new">) {
   const { course } = await loadTaughtCourse((await params).courseId);
   const kind = (await searchParams).kind;
-  if (kind !== "upload" && kind !== "paste") notFound();
+  if (kind !== "upload" && kind !== "paste" && kind !== "web") notFound();
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
@@ -22,7 +23,11 @@ export default async function NewMaterialPage({ params, searchParams }: PageProp
         </Link>
         <h2 className="text-2xl font-normal">{KINDS[kind]}</h2>
       </div>
-      <AddMaterialForm courseId={course.id} creationKey={randomUUID()} kind={kind} />
+      {kind === "web" ? (
+        <WebPageForm courseId={course.id} creationKey={randomUUID()} />
+      ) : (
+        <AddMaterialForm courseId={course.id} creationKey={randomUUID()} kind={kind} />
+      )}
     </div>
   );
 }
