@@ -28,10 +28,13 @@ export function appUrl(request: Request): string {
   return process.env.APP_URL?.trim() || new URL(request.url).origin;
 }
 
+/** What Canvas shows for DALAA in a course's menu (and as the tool's name). */
+export const COURSE_MENU_LABEL = "AI Activities";
+
 export function canvasConfig(appUrl: string) {
   const { base, login, launch, jwks } = ltiUrls(appUrl);
   return {
-    title: "DALAA",
+    title: COURSE_MENU_LABEL,
     description: "AI-assisted learning activities: students study, chat and get feedback; grades go to the Canvas gradebook.",
     oidc_initiation_url: login,
     target_link_uri: launch,
@@ -48,13 +51,13 @@ export function canvasConfig(appUrl: string) {
         platform: "canvas.instructure.com",
         privacy_level: "public",
         settings: {
-          text: "DALAA",
+          text: COURSE_MENU_LABEL,
           placements: [
             {
               placement: "course_navigation",
               message_type: "LtiResourceLinkRequest",
               target_link_uri: launch,
-              text: "DALAA",
+              text: COURSE_MENU_LABEL,
             },
             {
               placement: "assignment_selection",
