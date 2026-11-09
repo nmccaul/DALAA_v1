@@ -20,18 +20,19 @@ reports show up under DALAA **Settings → Feedback reports**.
 ## 1. Teacher: open DALAA from the course
 1. In course 42, click **AI Activities** in the course menu.
 2. You should land on the course in DALAA, inside the Canvas frame, with the
-   tabs **Assignments · Grading · Students**.
+   tabs **Assigned Activities · Materials · Grading · DALAA**, and no DALAA
+   sidebar (Canvas's menu is the navigation).
 3. If you see **Open DALAA in a new tab** instead, the browser blocked the
    cookie in the frame. Click it; DALAA opens in its own tab on the same page.
    Note which browser did this.
 
 ## 2. Teacher: sync the class list
-1. **Students** tab → **Sync with Canvas**.
+1. **DALAA** tab → **Class list** → **Sync with Canvas**.
 2. Canvas's people (you as teacher, and the Test Student once Student View has
    been used at least once) show up. Sync adds and flags; it never removes.
 
 ## 3. Teacher: create a Study Chat from the Harbor Bikes page
-1. **Assignments** tab → **Create assignment** → **Study Chat**.
+1. **Assigned Activities** tab → **+ Activity** → **Study Chat**.
 2. **Use a Canvas page or file**. The first time, it asks you to
    **Connect Canvas ↗** in a new tab; approve, come back, then pick the page
    `case-harbor-bikes`.

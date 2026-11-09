@@ -19,7 +19,7 @@ export const CATEGORY: Record<PushCategory, { title: string; detail: string }> =
   },
   not_in_canvas: {
     title: "Not known to Canvas yet",
-    detail: "Sync the class list on the Students tab, or have them open DALAA from Canvas once, then send again.",
+    detail: "Sync the class list (DALAA tab → Class list), or have them open DALAA from Canvas once, then send again.",
   },
   points_mismatch: {
     title: "Graded out of different points",

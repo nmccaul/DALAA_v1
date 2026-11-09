@@ -60,6 +60,12 @@ export default async function CourseStudentsPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <Link href={`/courses/${course.id}/dalaa`} className="text-sm text-accent-text hover:underline">
+          ‹ DALAA
+        </Link>
+        <h2 className="text-2xl font-normal">Class list</h2>
+      </div>
       {q.synced === "1" ? (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
           {syncChanges.length ? `Synced with Canvas: ${syncChanges.join(", ")}.` : "Synced with Canvas. Everything already matched."}
