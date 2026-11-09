@@ -10,11 +10,15 @@ reports show up under DALAA **Settings → Feedback reports**.
 
 ## Before you start
 - Production `/api/health` says `"db":"up"`.
+- The course menu entry is named **AI Activities** (`src/lti/config.ts`).
+  Canvas keeps its own copy of the tool config, so after that name changes,
+  refresh developer key 10000000000013 (Admin → Developer Keys → edit → re-read
+  the JSON from `https://dalaa-v1.vercel.app/api/lti/config` → Save).
 - Use a normal browser window. Safari blocks cookies inside the Canvas frame
   more often than Chrome, so try Chrome first and Safari second.
 
 ## 1. Teacher: open DALAA from the course
-1. In course 42, click **DALAA** in the course menu.
+1. In course 42, click **AI Activities** in the course menu.
 2. You should land on the course in DALAA, inside the Canvas frame, with the
    tabs **Assignments · Grading · Students**.
 3. If you see **Open DALAA in a new tab** instead, the browser blocked the

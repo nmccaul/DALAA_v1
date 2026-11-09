@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canvasConfig, LTI_SCOPES } from "./config";
+import { canvasConfig, COURSE_MENU_LABEL, LTI_SCOPES } from "./config";
 
 describe("canvasConfig", () => {
   const config = canvasConfig("https://dalaa-v1.vercel.app/");
@@ -28,5 +28,12 @@ describe("canvasConfig", () => {
       ["course_navigation", "LtiResourceLinkRequest"],
       ["assignment_selection", "LtiDeepLinkingRequest"],
     ]);
+  });
+
+  it('names the course menu entry "AI Activities"', () => {
+    expect(COURSE_MENU_LABEL).toBe("AI Activities");
+    expect(config.title).toBe(COURSE_MENU_LABEL);
+    const nav = config.extensions[0].settings.placements.find((p) => p.placement === "course_navigation");
+    expect(nav?.text).toBe(COURSE_MENU_LABEL);
   });
 });
