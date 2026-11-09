@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CanvasError, canvasClient, nextLink, servicePath, type AgsScore } from "./client";
+import { CanvasError, assignmentBody, canvasClient, nextLink, servicePath, type AgsScore, type AssignmentInput } from "./client";
 import { PRACTICE_TOKEN, practiceCanvas } from "./practice/server";
 
 const BASE = "https://dalaa.test/practice-canvas";
@@ -82,6 +82,95 @@ describe("canvas client against practice Canvas", () => {
       .self()
       .catch((e: Error) => e);
     expect(String((error as Error).message)).not.toContain(secret);
+  });
+});
+
+describe("assignments", () => {
+  const LAUNCH = "https://dalaa.test/api/lti/launch?activity_id=8d2f5c1e-0000-4000-8000-000000000001";
+  const input: AssignmentInput = {
+    name: "Harbor Bikes case chat",
+    pointsPossible: 10,
+    dueAt: new Date("2027-01-20T06:59:00.000Z"),
+    lockAt: null,
+    published: true,
+    launchUrl: LAUNCH,
+  };
+
+  it("lists a course's assignment groups", async () => {
+    const groups = await practice().client.assignmentGroups(1101);
+    expect(groups.map((g) => g.name)).toEqual(["Assignments", "Case discussions"]);
+    expect(await kindOf(practice().client.assignmentGroups(4242))).toBe("not-found");
+  });
+
+  it("makes an external-tool assignment in practice Canvas, then changes only what's given", async () => {
+    const { client } = practice();
+    const [, group] = await client.assignmentGroups(1102);
+    const made = await client.createAssignment(1102, { ...input, groupId: group.id });
+    expect(made).toMatchObject({
+      name: "Harbor Bikes case chat",
+      points_possible: 10,
+      due_at: "2027-01-20T06:59:00.000Z",
+      lock_at: null,
+      assignment_group_id: group.id,
+      published: true,
+      submission_types: ["external_tool"],
+      external_tool_tag_attributes: { url: LAUNCH, new_tab: false },
+    });
+    const moved = await client.updateAssignment(1102, made.id, { dueAt: new Date("2027-01-27T06:59:00.000Z") });
+    expect(moved).toMatchObject({ name: "Harbor Bikes case chat", due_at: "2027-01-27T06:59:00.000Z", published: true });
+    const cleared = await client.updateAssignment(1102, made.id, { dueAt: null });
+    expect(cleared.due_at).toBeNull();
+    expect(cleared.points_possible).toBe(10);
+  });
+
+  it("refuses what Canvas would refuse", async () => {
+    const { client } = practice();
+    expect(await kindOf(client.createAssignment(1101, { ...input, groupId: 1 }))).toBe("bad-response");
+    expect(await kindOf(client.createAssignment(1101, { ...input, name: " " }))).toBe("bad-response");
+    expect(await kindOf(client.createAssignment(4242, input))).toBe("not-found");
+    expect(await kindOf(client.updateAssignment(1101, 1, { name: "x" }))).toBe("not-found");
+  });
+
+  it("sends JSON: POST to create, PUT to update, ISO dates, null (never '') to clear", async () => {
+    const calls: { method: string; url: string; type: string | null; body: string }[] = [];
+    let reply = () => Response.json({ id: 77, name: "x" }, { status: 201 });
+    const client = canvasClient({
+      baseUrl: "https://canvas.example.edu/",
+      token: "t",
+      fetch: async (i, init) => {
+        const req = new Request(i, init);
+        calls.push({ method: req.method, url: req.url, type: req.headers.get("content-type"), body: await req.text() });
+        return reply();
+      },
+    });
+    await client.createAssignment(42, { ...input, groupId: 5 });
+    await client.updateAssignment(42, 77, { dueAt: null, lockAt: new Date("2027-02-01T00:00:00Z") });
+    expect(calls.map((c) => [c.method, c.url, c.type])).toEqual([
+      ["POST", "https://canvas.example.edu/api/v1/courses/42/assignments", "application/json"],
+      ["PUT", "https://canvas.example.edu/api/v1/courses/42/assignments/77", "application/json"],
+    ]);
+    expect(JSON.parse(calls[0].body)).toEqual({
+      assignment: {
+        name: "Harbor Bikes case chat",
+        points_possible: 10,
+        due_at: "2027-01-20T06:59:00.000Z",
+        lock_at: null,
+        assignment_group_id: 5,
+        published: true,
+        submission_types: ["external_tool"],
+        external_tool_tag_attributes: { url: LAUNCH, new_tab: false },
+      },
+    });
+    expect(JSON.parse(calls[1].body)).toEqual({ assignment: { due_at: null, lock_at: "2027-02-01T00:00:00.000Z" } });
+    expect(calls[1].body).not.toContain('""');
+
+    reply = () => Response.json({ errors: [] }, { status: 201 });
+    expect(await kindOf(client.createAssignment(42, input))).toBe("bad-response");
+  });
+
+  it("leaves out every field not given", () => {
+    expect(assignmentBody({})).toEqual({ assignment: {} });
+    expect(assignmentBody({ published: false })).toEqual({ assignment: { published: false } });
   });
 });
 

@@ -8,7 +8,7 @@
  */
 
 import { strToU8, zipSync } from "fflate";
-import type { CanvasCourse, CanvasEnrollment, CanvasFile, CanvasPageWithBody, CanvasSection, CanvasUser } from "../client";
+import type { CanvasAssignmentGroup, CanvasCourse, CanvasEnrollment, CanvasFile, CanvasPageWithBody, CanvasSection, CanvasUser } from "../client";
 
 export const PRACTICE_TEACHER: CanvasUser = { id: 9001, name: "Practice Professor" };
 
@@ -98,6 +98,17 @@ export const PRACTICE_COURSES: CanvasCourse[] = [
   { id: 1102, name: "Strategy Capstone", course_code: "BUS M 499", term: WINTER, total_students: activeStudents(1102) },
   { id: 1103, name: "Marketing Principles", course_code: "MKTG 201", term: FALL, total_students: activeStudents(1103) },
 ];
+
+/** Assignment groups, keyed by Canvas course id. Canvas puts new assignments in the first. */
+export const PRACTICE_ASSIGNMENT_GROUPS = new Map<number, CanvasAssignmentGroup[]>(
+  PRACTICE_COURSES.map((c, i) => [
+    c.id,
+    [
+      { id: 12_000 + i * 10 + 1, name: "Assignments", position: 1 },
+      { id: 12_000 + i * 10 + 2, name: "Case discussions", position: 2 },
+    ],
+  ]),
+);
 
 /** Course pages, keyed by Canvas course id. A made-up case, written as Canvas stores it (HTML). */
 export const PRACTICE_PAGES = new Map<number, CanvasPageWithBody[]>([
