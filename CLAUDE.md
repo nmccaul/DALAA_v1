@@ -33,8 +33,9 @@ v1 → v2 → v3 (`docs/ROADMAP.md`); build v1 scope only unless told otherwise.
 1. **Teacher setup must be as simple as possible.** Measure it: a colleague who
    has never seen DALAA gets from first sign-in to a live activity posting grades
    to Canvas in **under 60 minutes**, using content they already have.
-2. **The UI must be obvious to navigate.** Three top-level areas at most
-   (**Courses · Library · Settings**). The first-run path uses only **Courses**.
+2. **The UI must be obvious to navigate.** Two top-level areas
+   (**Courses · Settings**; reuse lives in each course's Activities tab, D-034).
+   The first-run path uses only **Courses**.
    If a screen needs the teacher to understand our object model first, the screen
    is wrong.
 

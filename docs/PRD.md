@@ -49,7 +49,7 @@ feel and shared plumbing.
 
 1. **Simple teacher setup** — first sign-in to live, grade-posting activity in
    **< 60 minutes**, validated by stopwatch with a colleague who has never seen it.
-2. **Navigable UI** — three top-level areas (Courses · Library · Settings);
+2. **Navigable UI** — two top-level areas (Courses · Settings; D-034);
    first-run path touches only Courses.
 3. **Shared chassis** — BYU sign-in, Canvas (REST API), courses/sections/roster,
    scheduling, grade push + reconciliation, one results store, one UI shell.
@@ -113,7 +113,8 @@ there's an exception.**
 - Roster: re-sync with one click from the course page (adds and flags, never
   deletes). Consider a quiet check-on-open that only interrupts if something changed.
 - Token expired/revoked: a friendly "Reconnect Canvas" screen, never a generic error.
-- Next term: re-use activities from **Library** into the new course.
+- Next term: re-use activities from the course's **Activities** tab (*From my
+  other courses*); a copy brings its materials along (D-034).
 
 ## 6. Student flow
 

@@ -214,7 +214,7 @@ only an env change.
 | D-008 | First tool on the chassis: Case Chat or Quiz? | Scott | For the gitgrade test build, Study Chat (D-021). Still open for the BYU pilot. |
 | D-011 | How does DAALAA relate to DALAA_v1? Replace, or port its code? | Scott / Nathan | DAALAA's `CLAUDE.md` still says "six tables, a type never adds a table" — reconcile with D-003 before any agent runs there. |
 | D-012 | Does Explain move under Case Chat? | Scott | Scott's view in the meeting: yes. |
-| D-013 | Canvas assignment creation opt-in per activity, or on by default? | Nathan | DAALAA plan says opt-in; simplicity argues for default-on with an off switch. |
+| D-013 | Canvas assignment creation opt-in per activity, or on by default? | Nathan | DAALAA plan says opt-in; simplicity argues for default-on with an off switch. For gitgrade, D-034: an explicit Assign creates it. Still open for BYU. |
 | D-014 | Which attempt is authoritative for a grade push (latest accepted?) | Scott | REVISE complicates "latest". |
 | — | BYU IT: personal tokens OK at multi-instructor scale? Records on Vercel? FERPA? Okta registration? | Nathan | In progress with a BYU Canvas engineer — see `conversations/2026-09-30-byu-canvas-engineer.md`. |
 | — | Production hosting: Vercel + Supabase, or a BYU server? (D-015) Who runs `services.byu.edu`, can it run Postgres, can Nathan deploy? | Nathan / Scott | Decide before real student data. |
@@ -247,3 +247,26 @@ reach production before the code) and those were test attempts anyway.
   each tool only one menu entry, and three tools would mean three keys per school.
 - Instructure UI was considered. The mockup is plain CSS, and the tokens get
   the look without a large dependency, so we're not using it for now.
+
+### D-034 · Creating an activity is a 7-step wizard; activities take several materials; Assign makes the Canvas assignment
+*2026-11-09, Nathan.* Reference: Nathan's "DAALAA Course Tabs Mockup" (D-032).
+- **Wizard order:** 1 Materials · 2 Learning goal · 3 Activity type ·
+  4 Scenario and persona · 5 Chat options · 6 Grading · 7 Review and assign.
+  Materials come first so the AI can **suggest the learning goal** from them,
+  then **suggest the type** from the materials and goal. The teacher's goal is
+  kept word for word; the AI drafts the rest around it.
+- **Several materials per activity:** any number of readings students see with
+  the AI, and any number of notes only the AI sees (`activity_materials`).
+  Students never receive the AI-only notes.
+- **Options in the mockup that don't exist yet are shown, disabled and marked
+  "Coming soon"**, never hidden and never faked (list in `docs/IDEAS.md`).
+- **The Library page is removed.** The rail is **Courses · Settings**;
+  `/library` redirects to `/courses`. Reuse happens on a course's Activities
+  tab: *Assigned*, then *Not assigned* and *From my other courses*, with a copy
+  that brings its materials along.
+- **Assign creates the Canvas assignment** with the teacher's Canvas
+  connection (REST): name, points, due date, group, published or not, as an
+  external-tool assignment that launches the activity, so grades return over
+  AGS. Changing the due date in DALAA updates Canvas. Behind
+  `ASSIGN_TO_CANVAS=1` until Nathan verifies it on gitgrade. This answers D-013
+  for the gitgrade build: on when the flag is on, from an explicit Assign.
