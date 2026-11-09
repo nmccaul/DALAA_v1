@@ -11,7 +11,7 @@ import { addWork, readChat, sendTurn, type ChatModels, type SendResult } from ".
 import { STUDY_CHAT } from "./create";
 import { gradePrompt } from "./grade";
 import { ADD_WORK_FIRST } from "./student-messages";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, mirrorMaterials } from "./test-fixtures";
 
 const usage = {
   inputTokens: { total: 50, noCache: 50, cacheRead: undefined, cacheWrite: undefined },
@@ -81,6 +81,7 @@ describe("students bring their own work", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, 'published', 10, $4, $5) returning id`,
       [course, STUDY_CHAT, JSON.stringify(draft({ studentWork: true })), saved.content.id, prof.userId],
     );
+    await mirrorMaterials(db, activity);
     models = { reply: chatModel(), check: answering({ answered: false, awaitingStudent: false }) };
   });
 
@@ -136,7 +137,7 @@ describe("students bring their own work", () => {
   });
 
   it("gives the grader the work, fenced, as material to grade against", () => {
-    const { prompt } = gradePrompt(draft({ studentWork: true }), [{ message: "Hi", reply: "Hello" }], null, { name: "Essay", body: ESSAY }, null);
+    const { prompt } = gradePrompt(draft({ studentWork: true }), [{ message: "Hi", reply: "Hello" }], [], { name: "Essay", body: ESSAY }, null);
     expect(prompt).toContain(`<material role="student-work">\n${ESSAY}\n</material>`);
   });
 });

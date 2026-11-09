@@ -30,7 +30,9 @@ export async function listCourseMaterials(db: Db, actor: Actor, courseId: string
             coalesce((select json_agg(json_build_object('id', a.id, 'title', a.title) order by a.title)
                         from activities a
                        where a.course_id = m.course_id
-                         and (case m.seen_by when 'students' then a.content_id else a.guide_id end) = m.id), '[]') as "usedIn"
+                         and exists (select 1 from activity_materials am
+                                      where am.activity_id = a.id
+                                        and (case m.seen_by when 'students' then am.content_id else am.guide_id end) = m.id)), '[]') as "usedIn"
        from (select id, course_id, name, source, source_url, created_at, 'students' as seen_by from course_content
              union all
              select id, course_id, name, source, source_url, created_at, 'ai' from course_guides) m

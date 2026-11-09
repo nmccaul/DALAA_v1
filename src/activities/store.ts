@@ -5,7 +5,6 @@
  * Only a course's teachers create, read or publish its activities.
  */
 
-import { getTaughtGuide } from "@/content/guide";
 import { getTaughtCourse } from "@/courses/queries";
 import { and, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -16,9 +15,6 @@ export type NewActivity = {
   settings: Record<string, unknown>;
   /** NULL until the activity has points; publishing needs them. */
   points: number | null;
-  contentId: string | null;
-  /** The AI-only guide (src/content/guide.ts); NULL when there's none. */
-  guideId: string | null;
 };
 
 export type TaughtActivity = {
@@ -29,8 +25,6 @@ export type TaughtActivity = {
   status: "draft" | "published";
   points: number | null;
   settings: Record<string, unknown>;
-  contentId: string | null;
-  guideId: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,12 +54,13 @@ export async function createActivity(
   if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: "That course isn't one you teach." };
 
   // Through text: postgres.js would otherwise send the JSON string as a JSON string.
+  // Materials are attached afterwards with setActivityMaterials (./materials.ts).
   const [inserted] = await db.query<{ id: string }>(
-    `insert into activities (course_id, tool, title, settings, points, content_id, guide_id, creation_key, created_by)
-     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8, $9)
+    `insert into activities (course_id, tool, title, settings, points, creation_key, created_by)
+     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7)
      on conflict (creation_key) do nothing
      returning id`,
-    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, activity.contentId, activity.guideId, creationKey, actor.userId],
+    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, creationKey, actor.userId],
   );
   if (inserted) return { ok: true, id: inserted.id };
 
@@ -85,7 +80,7 @@ export async function getTaughtActivity(db: Db, actor: Actor, activityId: string
   const where = and({ text: "a.id = $1", values: [activityId] }, coursesTaughtBy(actor, "c"));
   const [row] = await db.query<TaughtActivity>(
     `select a.id, a.course_id as "courseId", a.tool, a.title, a.status, a.points::float8 as points,
-            a.settings, a.content_id as "contentId", a.guide_id as "guideId"
+            a.settings
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}`,
@@ -123,25 +118,5 @@ export async function updateActivity(
     "update activities set title = $2, settings = $3::text::jsonb, points = $4, updated_at = now() where id = $1",
     [activity.id, changes.title, JSON.stringify(changes.settings), changes.points],
   );
-  return { ok: true };
-}
-
-/**
- * Attaches an AI-only guide from the same course (src/content/guide.ts), or
- * removes it with NULL. Doing it twice changes nothing. Like other edits it
- * reaches attempts already under way: the guide isn't in their settings copy (D-031).
- */
-export async function setActivityGuide(
-  db: Db,
-  actor: Actor,
-  activityId: string,
-  guideId: string | null,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const activity = await getTaughtActivity(db, actor, activityId);
-  if (!activity) return { ok: false, reason: "That assignment isn't one of yours." };
-  if (guideId !== null && !(await getTaughtGuide(db, actor, activity.courseId, guideId))) {
-    return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
-  }
-  await db.query("update activities set guide_id = $2, updated_at = now() where id = $1", [activity.id, guideId]);
   return { ok: true };
 }

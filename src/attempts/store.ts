@@ -13,6 +13,7 @@
  * activity's current settings.
  */
 
+import { activityReadings } from "@/activities/materials";
 import { canvasBaseUrl } from "@/canvas/institution";
 import { and, coursesTakenBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -37,8 +38,8 @@ export type TakenActivity = {
   title: string;
   /** The student's attempt's copy once they've started (D-031); the activity's current settings before that. */
   settings: Record<string, unknown>;
-  /** What the student studies; NULL when the activity has none. */
-  content: { name: string; body: string } | null;
+  /** What the student studies, in the teacher's order (src/activities/materials.ts); never the AI-only notes. */
+  readings: { name: string; body: string }[];
   /** The course's page in real Canvas, for the student's way back; NULL for a practice or unlinked course. */
   canvasCourseUrl: string | null;
 };
@@ -59,27 +60,22 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
   if (!UUID.test(activityId)) return null;
   const where = and({ text: "a.id = $1 and a.status = 'published'", values: [activityId] }, coursesTakenBy(actor, "c"));
   const [row] = await db.query<
-    Omit<TakenActivity, "content" | "canvasCourseUrl"> & {
-      contentName: string | null;
-      contentBody: string | null;
-      canvasCourseId: string | null;
-    }
+    Omit<TakenActivity, "readings" | "canvasCourseUrl"> & { canvasCourseId: string | null }
   >(
     `select a.id, a.course_id as "courseId", a.tool, a.title, coalesce(t.settings, a.settings) as settings,
-            cc.name as "contentName", cc.body as "contentBody",
             case when c.is_practice then null else c.canvas_course_id end as "canvasCourseId"
        from activities a
        join courses c on c.id = a.course_id
-       left join course_content cc on cc.id = a.content_id
        left join attempts t on t.activity_id = a.id and t.user_id = $${where.values.length + 1}
       where ${where.text}`,
     [...where.values, actor.userId],
   );
   if (!row) return null;
-  const { contentName, contentBody, canvasCourseId, ...activity } = row;
+  const { canvasCourseId, ...activity } = row;
+  const readings = await activityReadings(db, activity.id);
   return {
     ...activity,
-    content: contentName !== null && contentBody !== null ? { name: contentName, body: contentBody } : null,
+    readings: readings.map(({ name, body }) => ({ name, body })),
     canvasCourseUrl: canvasCourseId === null ? null : `${canvasBaseUrl()}/courses/${encodeURIComponent(canvasCourseId)}`,
   };
 }

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
 import { clientFor } from "@/canvas/connection";
 import { saveFromCanvas, type CanvasPick } from "@/canvas/content";
-import { setActivityGuide } from "@/activities/store";
+import { addActivityGuide } from "@/activities/materials";
 import { VaultError } from "@/canvas/vault";
 import { db } from "@/db/client";
 import { afterPick } from "./return-path";
@@ -31,13 +31,13 @@ export async function pickFromCanvasAction(_prev: PickState, form: FormData): Pr
   });
   if (!canvas) return { error: "Connect Canvas again, then pick it.", reconnect: true };
 
-  // A guide only the AI reads (?for=guide); with an activity, it's attached to it straight away.
+  // A guide only the AI reads (?for=guide); with an activity, it's added to its AI-only notes straight away.
   const as = form.get("for") === "guide" ? "guide" : "content";
   const saved = await saveFromCanvas(db(), actor, canvas, courseId, String(form.get("creationKey") ?? ""), pick, as);
   if (!saved.ok) return { error: saved.reason, reconnect: saved.reconnect };
   const activityId = form.get("activity");
   if (as === "guide" && typeof activityId === "string" && activityId) {
-    const attached = await setActivityGuide(db(), actor, activityId, saved.content.id);
+    const attached = await addActivityGuide(db(), actor, activityId, saved.content.id);
     if (!attached.ok) return { error: attached.reason };
   }
   redirect(afterPick(courseId, form.get("next"), saved.content.id, as));

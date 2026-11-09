@@ -4,7 +4,8 @@ import { clientFor } from "@/canvas/connection";
 import { listCourseCanvasContent, type CourseContentProblem } from "@/canvas/content";
 import { VaultError } from "@/canvas/vault";
 import { LocalTime } from "@/components/local-time";
-import { listCourseMaterials, mergeMaterials, SOURCE_LABEL, type Material, type MaterialRow } from "@/content/materials";
+import { SeenByPill } from "@/components/seen-by-pill";
+import { listCourseMaterials, mergeMaterials, SOURCE_LABEL, type Material } from "@/content/materials";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { MaterialsMenu } from "./materials-menu";
@@ -28,13 +29,6 @@ const CANVAS_PROBLEM: Record<CourseContentProblem, string> = {
   "wrong-canvas": "This course is in the other Canvas (practice or real). Switch in Settings to see its Pages and Files.",
   reconnect: "Canvas didn't accept your connection. Reconnect Canvas to see this course's Pages and Files.",
   unavailable: "We couldn't reach Canvas just now, so its Pages and Files aren't shown. Try again in a minute.",
-};
-
-const pill = "rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap";
-const SEEN_BY: Record<MaterialRow["seenBy"], { label: string; className: string }> = {
-  students: { label: "Students + AI", className: `${pill} bg-accent-soft text-accent-text` },
-  ai: { label: "AI only", className: `${pill} bg-warn-soft text-warn-text` },
-  canvas: { label: "In Canvas", className: `${pill} border border-border-strong text-muted` },
 };
 
 /** The course's Materials tab (D-032): readings and AI-only notes, and the Canvas course's Pages and Files. */
@@ -125,7 +119,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
                     </span>
                   </td>
                   <td className="px-3 py-3">
-                    <span className={SEEN_BY[r.seenBy].className}>{SEEN_BY[r.seenBy].label}</span>
+                    <SeenByPill seenBy={r.seenBy} />
                   </td>
                   <td className="px-3 py-3">
                     {r.usedIn.length === 0 ? (

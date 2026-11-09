@@ -8,8 +8,8 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
-import { answering, draft } from "./test-fixtures";
-import { runTrial, trialEnding, TRIAL_BUSY, TRIAL_FAILED, TRIAL_MAX_TURNS, type TrialModels } from "./trial";
+import { answering, draft, mirrorMaterials } from "./test-fixtures";
+import { runTrial, studentPrompt, trialEnding, TRIAL_BUSY, TRIAL_FAILED, TRIAL_MAX_TURNS, type TrialModels } from "./trial";
 
 const GUIDE = "ANSWER KEY: the winter cash squeeze sinks a second store.";
 const READING = "Harbor Bikes sells bikes in a beach town.";
@@ -61,6 +61,7 @@ describe("trying a Study Chat with a sample student", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, $4, $5, $6) returning id`,
       [course, STUDY_CHAT, JSON.stringify(settings), content.content.id, guide.content.id, prof.userId],
     );
+    await mirrorMaterials(db, id);
     return id;
   };
 
@@ -125,6 +126,12 @@ describe("trying a Study Chat with a sample student", () => {
     // The chat model and the grader do get the guide, as for a real student.
     expect(sent(m.reply)).toContain(GUIDE);
     expect(sent(m.grader)).toContain(GUIDE);
+  });
+
+  it("gives the sample student every reading, each under its own name", () => {
+    const prompt = studentPrompt(draft(), "strong", [{ name: "Case", body: READING }, { name: "Cash flow table", body: "Winter sales fall by half." }], null);
+    expect(prompt).toContain(`What you were given to read ("Case"):\n<material role="student-reading">\n${READING}`);
+    expect(prompt).toContain('What you were given to read ("Cash flow table"):\n<material role="student-reading">\nWinter sales fall by half.');
   });
 
   it("has the sample student bring work when the chat asks for it", async () => {

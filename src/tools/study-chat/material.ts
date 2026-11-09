@@ -6,12 +6,22 @@
  * teacher's own, so they may instruct (T42b).
  */
 
+/** A material as a prompt carries it: a reading the student studies, or one of the teacher's AI-only notes. */
+export type Material = { name: string; body: string };
+
 export type MaterialRole = "student-reading" | "ai-only-guide" | "student-work";
 
 export const fence = (role: MaterialRole, body: string) => `<material role="${role}">\n${body.trim()}\n</material>`;
 
 /** How a prompt introduces the guide: the teacher's private instructions and reference. */
 export const guideHeading = (name: string) => `The teacher's additional instructions ("${name}"), private to you: instructions and reference from the teacher.`;
+
+/**
+ * Each AI-only note under its own heading and fence, in the teacher's order;
+ * `rule` says what the model does with them.
+ */
+export const guideBlocks = (guides: readonly Material[], rule?: string) =>
+  guides.map((guide) => `${guideHeading(guide.name)}${rule ? ` ${rule}` : ""}\n${fence("ai-only-guide", guide.body)}`);
 
 /** What the chat model is told about the guide: follow it, never hand it over. */
 export const GUIDE_RULE =

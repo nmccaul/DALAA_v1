@@ -16,17 +16,26 @@ function wrap(conn: Conn): Db {
 
 const migrationsDir = fileURLToPath(new URL("../../db/migrations", import.meta.url));
 
-/** A fresh in-process Postgres with every migration applied. */
-export async function testDb(): Promise<Db & { pg: PGlite }> {
-  const pg = new PGlite();
-  await migrate(
-    {
-      exec: async (sql) => {
-        await pg.exec(sql);
-      },
-      query: async <T>(sql: string) => (await pg.query<T>(sql)).rows,
+function runner(pg: PGlite) {
+  return {
+    exec: async (sql: string) => {
+      await pg.exec(sql);
     },
-    loadMigrations(migrationsDir),
-  );
-  return { pg, ...wrap(pg) };
+    query: async <T>(sql: string) => (await pg.query<T>(sql)).rows,
+  };
+}
+
+/**
+ * A fresh in-process Postgres with every migration applied, or only those
+ * named before `before` (to test a migration's backfill: insert old-shape
+ * rows, then `migrateRest()`).
+ */
+export async function testDb(
+  options: { before?: string } = {},
+): Promise<Db & { pg: PGlite; migrateRest: () => Promise<string[]> }> {
+  const pg = new PGlite();
+  const all = loadMigrations(migrationsDir);
+  const before = options.before;
+  await migrate(runner(pg), before ? all.filter((m) => m.name < before) : all);
+  return { pg, ...wrap(pg), migrateRest: () => migrate(runner(pg), all) };
 }

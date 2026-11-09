@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { countStartedAttempts } from "@/attempts/store";
-import { getTaughtGuide } from "@/content/guide";
+import { activityMaterials } from "@/activities/materials";
+import { SeenByPill } from "@/components/seen-by-pill";
 import { db } from "@/db/client";
 import type { ReviewScreenProps } from "@/tools/screens";
 import { keepPicker } from "@/lti/picker";
@@ -18,14 +19,14 @@ export function startedNote(started: number): string | null {
 }
 
 /** The drafted Study Chat as short summary cards the teacher opens to edit, then Publish. */
-export async function StudyChatReview({ actor, activity, addToCanvas }: ReviewScreenProps) {
+export async function StudyChatReview({ activity, addToCanvas }: ReviewScreenProps) {
   const parsed = StudyChatSettings.safeParse(activity.settings);
   if (!parsed.success) {
     return <p className="text-danger">Some of this chat&apos;s settings don&apos;t fit any more. Create it again.</p>;
   }
   const published = activity.status === "published";
   const note = startedNote(await countStartedAttempts(db(), activity.id));
-  const guide = activity.guideId ? await getTaughtGuide(db(), actor, activity.courseId, activity.guideId) : null;
+  const { readings, guides } = await activityMaterials(db(), activity.id);
   const here = keepPicker(`/courses/${activity.courseId}/activities/${activity.id}`, addToCanvas);
 
   return (
@@ -43,9 +44,29 @@ export async function StudyChatReview({ actor, activity, addToCanvas }: ReviewSc
         </p>
         {note && <p className="text-sm text-muted">{note}</p>}
       </div>
+      <section aria-labelledby="materials-heading" className="flex flex-col gap-2">
+        <h3 id="materials-heading" className="font-display text-lg font-semibold">
+          Materials
+        </h3>
+        <ul className="flex flex-col divide-y divide-border rounded-panel border border-border bg-surface">
+          {readings.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+              <span className="min-w-0 flex-1 break-words font-medium">{r.name}</span>
+              <SeenByPill seenBy="students" />
+            </li>
+          ))}
+          {guides.map((g) => (
+            <li key={g.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+              <span className="min-w-0 flex-1 break-words font-medium">{g.name}</span>
+              <SeenByPill seenBy="ai" />
+              <RemoveGuideForm courseId={activity.courseId} activityId={activity.id} guideId={g.id} addToCanvas={addToCanvas} />
+            </li>
+          ))}
+        </ul>
+      </section>
       <GuidePanel
-        guide={guide}
-        remove={<RemoveGuideForm courseId={activity.courseId} activityId={activity.id} addToCanvas={addToCanvas} />}
+        guide={null}
+        remove={null}
         canvasHref={canvasGuideHref(activity.courseId, here, activity.id)}
         form={<MaterialForm courseId={activity.courseId} creationKey={randomUUID()} addToCanvas={addToCanvas} guideOf={activity.id} />}
       />

@@ -12,18 +12,17 @@
 
 import type { LanguageModel, ModelMessage } from "ai";
 import { generateReply, type AiCallContext } from "@/ai/call";
+import { activityMaterials } from "@/activities/materials";
 import { getTaughtActivity } from "@/activities/store";
 import type { StudentWork } from "@/attempts/work";
-import { getContent } from "@/content/store";
-import { aiGuide } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { GradedResult } from "@/results/store";
 import { questionAnswered } from "./chat";
 import { STUDY_CHAT } from "./create";
 import { gradeTurns } from "./grade";
-import { fence } from "./material";
-import { chatMessages, chatSystemPrompt, type ChatContent, type Exchange } from "./prompt";
+import { fence, type Material } from "./material";
+import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
 import { studentView } from "./student-view";
 
@@ -74,7 +73,7 @@ const LEVEL: Record<TrialLevel, string> = {
 };
 
 /** What the simulated student is told: only what a real student would see. Exported for tests. */
-export function studentPrompt(settings: StudyChatSettings, level: TrialLevel, content: ChatContent, work: StudentWork | null): string {
+export function studentPrompt(settings: StudyChatSettings, level: TrialLevel, readings: readonly Material[], work: StudentWork | null): string {
   const view = studentView(settings);
   const parts = [
     `You're a college student in a class chat assignment called "${view.title}", talking with ${view.persona.name} (${view.persona.role}).`,
@@ -82,7 +81,7 @@ export function studentPrompt(settings: StudyChatSettings, level: TrialLevel, co
     "Write only your own next message, in the first person, as a student would type it: a few sentences at most. Never write the other side.",
   ];
   if (view.limits.question !== null) parts.push(`Your assignment asks you to answer: ${view.limits.question}`);
-  if (content !== null) parts.push(`What you were given to read ("${content.name}"):\n${fence("student-reading", content.body)}`);
+  for (const reading of readings) parts.push(`What you were given to read ("${reading.name}"):\n${fence("student-reading", reading.body)}`);
   if (work !== null) parts.push(`Your own work, which this chat is about ("${work.name}"):\n${fence("student-work", work.body)}`);
   return parts.join("\n\n");
 }
@@ -133,15 +132,13 @@ export async function runTrial(
 
   try {
     const ctx: AiCallContext = { purpose: "trial", userId: actor.userId, courseId: activity.courseId };
-    const saved = activity.contentId ? await getContent(db, actor, activity.courseId, activity.contentId) : null;
-    const content = saved ? { name: saved.name, body: saved.body } : null;
-    // The guide goes to the chat model and the grader only, never to the sample student.
-    const guide = await aiGuide(db, activity.id);
+    // The guides go to the chat model and the grader only, never to the sample student.
+    const { readings, guides } = await activityMaterials(db, activity.id);
     const work: StudentWork | null = settings.studentWork
       ? {
           name: "Sample student's work",
           body: await say(db, models.student, ctx, {
-            system: studentPrompt(settings, level, content, null),
+            system: studentPrompt(settings, level, readings, null),
             prompt: "Before the chat, write the work you'd bring to it (a short draft, a few paragraphs), at your level. Write only the work.",
           }),
         }
@@ -153,11 +150,11 @@ export async function runTrial(
     let endedBy: Trial["endedBy"] = "cap";
     while (turns.length < TRIAL_MAX_TURNS) {
       const message = await say(db, models.student, ctx, {
-        system: studentPrompt(settings, level, content, work),
+        system: studentPrompt(settings, level, readings, work),
         messages: studentMessages(opening, turns),
       });
       const reply = await say(db, models.reply, ctx, {
-        system: chatSystemPrompt(settings, content, guide, work),
+        system: chatSystemPrompt(settings, readings, guides, work),
         messages: chatMessages(turns, message),
       });
       turns.push({ message, reply });
@@ -171,7 +168,7 @@ export async function runTrial(
       }
     }
 
-    const grade = await gradeTurns(db, models.grader, ctx, settings, turns, guide, work, null);
+    const grade = await gradeTurns(db, models.grader, ctx, settings, turns, guides, work, null);
     return { ok: true, trial: { opening, work, turns, endedBy, grade } };
   } catch (error) {
     console.error("trial failed:", error instanceof Error ? error.message : error);

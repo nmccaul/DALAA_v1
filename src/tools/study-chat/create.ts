@@ -5,6 +5,7 @@
  */
 
 import type { LanguageModel } from "ai";
+import { materialsTooLong, setActivityMaterials } from "@/activities/materials";
 import { activityForKey, createActivity, getTaughtActivity, publishActivity, updateActivity } from "@/activities/store";
 import { getTaughtGuide } from "@/content/guide";
 import { getContent } from "@/content/store";
@@ -46,12 +47,14 @@ export async function createStudyChat(
   if (!content) return { ok: false, reason: "We couldn't find that material. Add it again." };
   const guide = request.guideId === null ? null : await getTaughtGuide(db, actor, courseId, request.guideId);
   if (request.guideId !== null && !guide) return { ok: false, reason: "We couldn't find those AI instructions. Add them again." };
+  const tooLong = materialsTooLong([content.body.length, guide?.body.length ?? 0]);
+  if (tooLong) return { ok: false, reason: tooLong };
 
   const draft = await draftSettings(
     db,
     model,
     { userId: actor.userId, courseId },
-    { content: content.body, contentName: content.name, mode: request.mode, guide, studentWork: request.studentWork },
+    { readings: [content], mode: request.mode, guides: guide ? [guide] : [], studentWork: request.studentWork },
   );
   if (!draft.ok) return draft;
   const settings = { ...draft.settings, showProgress: request.showProgress ?? false };
@@ -61,10 +64,13 @@ export async function createStudyChat(
     title: settings.scenarios[0].title,
     settings,
     points: rubricPoints(settings),
-    contentId: content.id,
-    guideId: guide?.id ?? null,
   });
-  return saved.ok ? { ok: true, activityId: saved.id } : saved;
+  if (!saved.ok) return saved;
+  const attached = await setActivityMaterials(db, actor, saved.id, {
+    contentIds: [content.id],
+    guideIds: guide ? [guide.id] : [],
+  });
+  return attached.ok ? { ok: true, activityId: saved.id } : attached;
 }
 
 /** Publishes a Study Chat whose settings still fit the schema. */

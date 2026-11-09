@@ -13,20 +13,17 @@
 
 import { NoObjectGeneratedError, type LanguageModel } from "ai";
 import { generateStructured, type AiCallContext } from "@/ai/call";
-import type { Guide } from "@/content/guide";
 import type { Db } from "@/db/types";
-import { fence, guideHeading } from "./material";
+import { fence, guideBlocks, type Material } from "./material";
 import { MODE_SLUGS, MODES, type ModeSlug } from "./modes";
 import { StudyChatDraftFields, StudyChatSettings } from "./schema";
 
 export type DraftRequest = {
-  /** What students will study, as text (from `course_content.body`). */
-  content: string;
-  /** The content's name, e.g. "Case: Harbor Bikes". */
-  contentName: string;
+  /** What students will study (`course_content`), in the teacher's order, each with its name, e.g. "Case: Harbor Bikes". */
+  readings: readonly Material[];
   mode: ModeSlug | "suggest";
-  /** The teacher's additional AI instructions, if they added any: they shape the touchpoints and rubric. */
-  guide: Guide | null;
+  /** The teacher's additional AI instructions (AI-only notes), if they added any: they shape the touchpoints and rubric. */
+  guides: readonly Material[];
   /** The teacher's switch: each student brings their own paper, code or plan, and the chat is about it. */
   studentWork: boolean;
 };
@@ -76,16 +73,17 @@ function studentWork(mode: ModeSlug | "suggest", asked: boolean): boolean {
 
 /** The prompt for one draft. Exported for tests. */
 export function draftPrompt(request: DraftRequest): { system: string; prompt: string } {
-  const parts = [modeBrief(request.mode, studentWork(request.mode, request.studentWork)), `Material title: ${request.contentName.trim() || "Untitled"}\n${fence("student-reading", request.content)}`];
+  const parts = [
+    modeBrief(request.mode, studentWork(request.mode, request.studentWork)),
+    ...request.readings.map((reading) => `Material title: ${reading.name.trim() || "Untitled"}\n${fence("student-reading", reading.body)}`),
+  ];
   if (studentWork(request.mode, request.studentWork)) {
     parts.push(
       "Each student adds their own work (a paper, code or plan) at the start of the chat, and the chat is about it. " +
         "The AI sees it; you don't. Write the situation, opening, touchpoints and rubric to work for any student's work on this material.",
     );
   }
-  if (request.guide !== null) {
-    parts.push(`${guideHeading(request.guide.name)}\n${fence("ai-only-guide", request.guide.body)}`);
-  }
+  parts.push(...guideBlocks(request.guides));
   return { system: SYSTEM, prompt: parts.join("\n\n") };
 }
 
@@ -96,7 +94,7 @@ export async function draftSettings(
   ctx: Omit<AiCallContext, "purpose">,
   request: DraftRequest,
 ): Promise<DraftResult> {
-  if (request.content.trim() === "") return { ok: false, reason: "Add the material students will study first." };
+  if (request.readings.every((reading) => reading.body.trim() === "")) return { ok: false, reason: "Add the material students will study first." };
 
   const prompt = draftPrompt(request);
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {

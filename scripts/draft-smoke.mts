@@ -23,10 +23,9 @@ const content = await readContent({ kind: "canvas-page", name: page.title, html:
 if (!content.ok) throw new Error(content.reason);
 
 const result = await draftSettings(db(), graderModel(), {}, {
-  content: content.body,
-  contentName: content.name,
+  readings: [content],
   mode: arg as ModeSlug | "suggest",
-  guide: null,
+  guides: [],
   studentWork: false,
 });
 console.log(JSON.stringify(result, null, 2));

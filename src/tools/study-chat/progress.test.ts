@@ -9,7 +9,7 @@ import type { Db } from "@/db/types";
 import { readChat, sendTurn, type ChatModels, type SendResult } from "./chat";
 import { STUDY_CHAT } from "./create";
 import { readProgress, trackProgress } from "./progress";
-import { answering, draft } from "./test-fixtures";
+import { answering, draft, mirrorMaterials } from "./test-fixtures";
 
 const usage = {
   inputTokens: { total: 50, noCache: 50, cacheRead: undefined, cacheWrite: undefined },
@@ -101,6 +101,7 @@ describe("live touchpoint tracking", () => {
        values ($1, $2, 'Second store', $3::text::jsonb, 'published', 10, $4, $5) returning id`,
       [course, STUDY_CHAT, JSON.stringify(settings), saved.content.id, prof],
     );
+    await mirrorMaterials(db, activity);
     state = { track: { touchpoints: [], position: null } };
     models = { reply: chatModel(), check: checkModel(state) };
   });

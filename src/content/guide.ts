@@ -4,7 +4,7 @@
  * (db/migrations/*_activity_guides.sql). The only code that reads
  * `course_guides`.
  *
- * Students' pages never call `aiGuide` (CLAUDE.md: hidden material is not
+ * Students' pages never call `activityGuides` (CLAUDE.md: hidden material is not
  * fetched for student requests). It's for server code that's about to call a
  * model, and what it returns goes into the prompt, never into a response.
  */
@@ -45,12 +45,29 @@ export async function getTaughtGuide(
   return row ?? null;
 }
 
-/** The guide of an activity, for the model about to run or grade it; null when it has none. */
-export async function aiGuide(db: Db, activityId: string): Promise<Guide | null> {
-  if (!UUID.test(activityId)) return null;
-  const [row] = await db.query<Guide>(
-    "select g.name, g.body from activities a join course_guides g on g.id = a.guide_id where a.id = $1",
+/**
+ * Every AI-only note of an activity (db/migrations/*_activity_materials.sql),
+ * in the teacher's order, for the model about to run or grade it, or for the
+ * activity's teacher. Never for a student request.
+ */
+export async function activityGuides(db: Db, activityId: string): Promise<(Guide & { id: string })[]> {
+  if (!UUID.test(activityId)) return [];
+  return db.query<Guide & { id: string }>(
+    `select g.id, g.name, g.body
+       from activity_materials m join course_guides g on g.id = m.guide_id
+      where m.activity_id = $1
+      order by m.position`,
     [activityId],
   );
-  return row ?? null;
+}
+
+/** Which of these ids are guides of this course, each with its length in characters. */
+export async function guidesInCourse(db: Db, courseId: string, guideIds: readonly string[]): Promise<Map<string, number>> {
+  const ids = guideIds.filter((id) => UUID.test(id));
+  if (ids.length === 0) return new Map();
+  const rows = await db.query<{ id: string; chars: number }>(
+    "select id, length(body)::int as chars from course_guides where course_id = $1 and id = any($2::uuid[])",
+    [courseId, ids],
+  );
+  return new Map(rows.map((r) => [r.id, r.chars]));
 }

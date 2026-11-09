@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
+import { setActivityMaterials } from "@/activities/materials";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -44,11 +45,12 @@ describe("listCourseMaterials", () => {
     const note = await saveGuide(db, prof, course, randomUUID(), paste("Teaching note"));
     await saveContent(db, prof, course, randomUUID(), paste("Unused reading"));
     if (!reading.ok || !note.ok) throw new Error("setup");
-    await db.query(
-      `insert into activities (course_id, tool, title, settings, content_id, guide_id, created_by)
-       values ($1, 'study-chat', 'Second store', '{}', $2, $3, $4)`,
-      [course, reading.content.id, note.content.id, prof.userId],
+    const [{ id: activity }] = await db.query<{ id: string }>(
+      `insert into activities (course_id, tool, title, settings, created_by)
+       values ($1, 'study-chat', 'Second store', '{}', $2) returning id`,
+      [course, prof.userId],
     );
+    await setActivityMaterials(db, prof, activity, { contentIds: [reading.content.id], guideIds: [note.content.id] });
 
     const materials = await listCourseMaterials(db, prof, course);
     const byName = Object.fromEntries(materials.map((m) => [m.name, m]));
