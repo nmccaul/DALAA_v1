@@ -4,12 +4,15 @@ import { redirect } from "next/navigation";
 import { addActivityGuide, removeActivityGuide } from "@/activities/materials";
 import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
+import { clientFor } from "@/canvas/connection";
+import { VaultError } from "@/canvas/vault";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
+import { materialsQuery, parsePicks, savePicks } from "./wizard/picks";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
@@ -51,6 +54,34 @@ export async function saveMaterialAction(_prev: FormState, form: FormData): Prom
     ? `content=${encodeURIComponent(String(guideFor))}&guide=${saved.content.id}`
     : `content=${saved.content.id}`;
   redirect(keepPicker(`${newPath(courseId)}?${query}`, pickerRequest(form.get(PICKER_PARAM))));
+}
+
+/**
+ * Wizard step 1: the ticked materials. Canvas items are saved now; the saved
+ * ids go on to the learning goal step in the URL.
+ */
+export type MaterialsPickState = FormState & { reconnect?: string; ticked?: string[] };
+
+export async function wizardMaterialsAction(_prev: MaterialsPickState, form: FormData): Promise<MaterialsPickState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const picker = pickerRequest(form.get(PICKER_PARAM));
+  const ticked = form.getAll("pick").map(String);
+  const picks = parsePicks(ticked);
+  const canvas =
+    picks.canvas.length > 0
+      ? await clientFor(db(), actor).catch((e) => {
+          if (e instanceof VaultError) return null;
+          throw e;
+        })
+      : null;
+  const saved = await savePicks(db(), actor, canvas, courseId, String(form.get("formKey") ?? ""), picks);
+  if (!saved.ok) {
+    const back = keepPicker(`${newPath(courseId)}?step=materials`, picker);
+    // The form resets after the action; `ticked` keeps the teacher's ticks.
+    return { error: saved.reason, reconnect: saved.reconnect ? `/canvas/connect?next=${encodeURIComponent(back)}` : undefined, ticked };
+  }
+  redirect(keepPicker(`${newPath(courseId)}?step=goal&${materialsQuery(saved)}`, picker));
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */

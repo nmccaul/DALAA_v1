@@ -5,7 +5,9 @@
  * course's teachers see it; bodies are never fetched here.
  */
 
-import type { CanvasContentList } from "@/canvas/content";
+import { clientFor } from "@/canvas/connection";
+import { listCourseCanvasContent, type CanvasContentList, type CanvasPick, type CourseContentProblem } from "@/canvas/content";
+import { VaultError } from "@/canvas/vault";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -60,6 +62,10 @@ export type MaterialRow = {
   usedIn: Material["usedIn"];
   date: Date;
   url: string | null;
+  /** The saved material's id (with `seenBy`, which table); null for a Canvas item nothing has saved yet. */
+  savedId: string | null;
+  /** The Canvas Page or File this row lists; null for a material that isn't from the linked Canvas course. */
+  canvas: CanvasPick | null;
 };
 
 /**
@@ -72,12 +78,12 @@ export function mergeMaterials(saved: Material[], canvas: CanvasContentList | nu
   const fromCanvas = new Map<string, MaterialRow>();
   if (canvas) {
     for (const p of canvas.pages) {
-      const row: MaterialRow = { key: `page-${p.page_id}`, name: p.title, source: "canvas-page", seenBy: "canvas", usedIn: [], date: new Date(p.updated_at), url: null };
+      const row: MaterialRow = { key: `page-${p.page_id}`, name: p.title, source: "canvas-page", seenBy: "canvas", usedIn: [], date: new Date(p.updated_at), url: null, savedId: null, canvas: { kind: "page", url: p.url } };
       fromCanvas.set(`canvas-page:${p.title}`, row);
       rows.push(row);
     }
     for (const f of canvas.files) {
-      const row: MaterialRow = { key: `file-${f.id}`, name: f.display_name, source: "canvas-file", seenBy: "canvas", usedIn: [], date: new Date(f.updated_at), url: null };
+      const row: MaterialRow = { key: `file-${f.id}`, name: f.display_name, source: "canvas-file", seenBy: "canvas", usedIn: [], date: new Date(f.updated_at), url: null, savedId: null, canvas: { kind: "file", id: f.id } };
       fromCanvas.set(`canvas-file:${f.display_name}`, row);
       fromCanvas.set(`canvas-file:${f.filename}`, row);
       rows.push(row);
@@ -87,11 +93,45 @@ export function mergeMaterials(saved: Material[], canvas: CanvasContentList | nu
     const match = m.seenBy === "students" ? fromCanvas.get(`${m.source}:${m.name}`) : undefined;
     if (match) {
       match.seenBy = "students";
+      match.savedId ??= m.id;
       match.usedIn = [...match.usedIn, ...m.usedIn.filter((a) => !match.usedIn.some((b) => b.id === a.id))];
     } else {
-      rows.push({ key: `${m.seenBy}-${m.id}`, name: m.name, source: m.source, seenBy: m.seenBy, usedIn: m.usedIn, date: m.createdAt, url: m.url });
+      rows.push({ key: `${m.seenBy}-${m.id}`, name: m.name, source: m.source, seenBy: m.seenBy, usedIn: m.usedIn, date: m.createdAt, url: m.url, savedId: m.id, canvas: null });
     }
   }
   return rows.sort((a, b) => b.date.getTime() - a.date.getTime() || a.name.localeCompare(b.name));
 }
 
+
+/** Why the Canvas course's Pages and Files aren't listed, in a sentence. */
+export const CANVAS_PROBLEM: Record<CourseContentProblem, string> = {
+  "not-yours": "Canvas doesn't list you as a teacher of this course, so its Pages and Files aren't shown.",
+  "not-linked": "This course isn't connected to Canvas, so its Pages and Files aren't shown.",
+  "wrong-canvas": "This course is in the other Canvas (practice or real). Switch in Settings to see its Pages and Files.",
+  reconnect: "Canvas didn't accept your connection. Reconnect Canvas to see this course's Pages and Files.",
+  unavailable: "We couldn't reach Canvas just now, so its Pages and Files aren't shown. Try again in a minute.",
+};
+
+/**
+ * Every row a course's materials list shows: saved materials and, when the
+ * teacher's Canvas connection can reach it, the Canvas course's Pages and
+ * Files. `canvas` says why Canvas items are missing, if they are.
+ */
+export async function loadMaterialRows(
+  db: Db,
+  actor: Actor,
+  courseId: string,
+): Promise<{ rows: MaterialRow[]; canvas: "connected" | "not-connected" | CourseContentProblem }> {
+  const teacherCanvas = await clientFor(db, actor).catch((e) => {
+    if (e instanceof VaultError) return null;
+    throw e;
+  });
+  const [saved, listed] = await Promise.all([
+    listCourseMaterials(db, actor, courseId),
+    teacherCanvas ? listCourseCanvasContent(db, actor, teacherCanvas, courseId) : null,
+  ]);
+  return {
+    rows: mergeMaterials(saved, listed?.ok ? listed.list : null),
+    canvas: !listed ? "not-connected" : listed.ok ? "connected" : listed.reason,
+  };
+}

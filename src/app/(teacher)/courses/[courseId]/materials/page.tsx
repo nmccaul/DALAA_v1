@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { clientFor } from "@/canvas/connection";
-import { listCourseCanvasContent, type CourseContentProblem } from "@/canvas/content";
-import { VaultError } from "@/canvas/vault";
 import { LocalTime } from "@/components/local-time";
 import { SeenByPill } from "@/components/seen-by-pill";
-import { listCourseMaterials, mergeMaterials, SOURCE_LABEL, type Material } from "@/content/materials";
+import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL, type Material } from "@/content/materials";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { MaterialsMenu } from "./materials-menu";
@@ -23,14 +20,6 @@ const FILTERS: { source: Source | null; label: string }[] = [
   { source: "web", label: "Web pages" },
 ];
 
-const CANVAS_PROBLEM: Record<CourseContentProblem, string> = {
-  "not-yours": "Canvas doesn't list you as a teacher of this course, so its Pages and Files aren't shown.",
-  "not-linked": "This course isn't connected to Canvas, so its Pages and Files aren't shown.",
-  "wrong-canvas": "This course is in the other Canvas (practice or real). Switch in Settings to see its Pages and Files.",
-  reconnect: "Canvas didn't accept your connection. Reconnect Canvas to see this course's Pages and Files.",
-  unavailable: "We couldn't reach Canvas just now, so its Pages and Files aren't shown. Try again in a minute.",
-};
-
 /** The course's Materials tab (D-032): readings and AI-only notes, and the Canvas course's Pages and Files. */
 export default async function MaterialsPage({ params, searchParams }: PageProps<"/courses/[courseId]/materials">) {
   const { actor, course } = await loadTaughtCourse((await params).courseId);
@@ -38,15 +27,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
   const base = `/courses/${course.id}/materials`;
   const filter = FILTERS.find((f) => f.source === q.source)?.source ?? null;
 
-  const canvas = await clientFor(db(), actor).catch((e) => {
-    if (e instanceof VaultError) return null;
-    throw e;
-  });
-  const [saved, listed] = await Promise.all([
-    listCourseMaterials(db(), actor, course.id),
-    canvas ? listCourseCanvasContent(db(), actor, canvas, course.id) : null,
-  ]);
-  const all = mergeMaterials(saved, listed?.ok ? listed.list : null);
+  const { rows: all, canvas } = await loadMaterialRows(db(), actor, course.id);
   const rows = filter ? all.filter((r) => r.source === filter) : all;
 
   return (
@@ -75,7 +56,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
           Material added.
         </p>
       )}
-      {!canvas ? (
+      {canvas === "not-connected" ? (
         <p className="text-sm text-muted">
           <Link href={`/canvas/connect?next=${encodeURIComponent(base)}`} className="text-accent-text hover:underline">
             Connect Canvas
@@ -83,7 +64,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
           to list this course&apos;s Pages and Files here.
         </p>
       ) : (
-        listed && !listed.ok && <p className="text-sm text-muted">{CANVAS_PROBLEM[listed.reason]}</p>
+        canvas !== "connected" && <p className="text-sm text-muted">{CANVAS_PROBLEM[canvas]}</p>
       )}
 
       {rows.length === 0 ? (
