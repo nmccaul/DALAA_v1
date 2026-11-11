@@ -47,7 +47,7 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
               also: [`${base}/activities`, `${base}/add-to-canvas`],
             },
             { href: `${base}/materials`, label: "Materials", also: [`${base}/content`] },
-            { href: `${base}/grading`, label: "Grading" },
+            { href: `${base}/grading`, label: "Results" },
             { href: `${base}/dalaa`, label: "DALAA", also: [`${base}/students`, `${base}/canvas`] },
           ]}
         />

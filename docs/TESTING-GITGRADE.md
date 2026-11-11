@@ -78,7 +78,7 @@ reports show up under DALAA **Settings → Feedback reports**.
 7. Leave Student View.
 
 ## 6. Teacher: resolve and send grades
-1. Back in DALAA as teacher, **Grading** tab. The disputed grade is marked
+1. Back in DALAA as teacher, **Results** tab. The disputed grade is marked
    **Disputed**.
 2. Type an answer, change the score if you want, **Resolve**.
 3. **Send grades to Canvas**. In the clean case it sends in one click. A
@@ -130,7 +130,7 @@ edit the one from step 3 (an edit only changes chats students start after it).
    students their progress** (off by default).
    - Check (Student View): under the chat, "Points covered — 1 of 4" and
      "Your position: …" update after each reply. With it off, nothing shows.
-   - Check (teacher, **Grading** tab): "Points covered" and "Positions taken"
+   - Check (teacher, **Results** tab): "Points covered" and "Positions taken"
      for the class ("Cash flow: 1 of 1 students"), and under each student the
      points they covered and their position. The grader still judges from the
      chat itself.

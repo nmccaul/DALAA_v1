@@ -95,7 +95,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
             <b>Materials</b>: the readings and AI-only notes your activities use.
           </li>
           <li>
-            <b>Grading</b>: review scores and send them to Canvas.
+            <b>Results</b>: review scores and send them to Canvas.
           </li>
           <li>
             <b>DALAA</b> (this tab): the{" "}
