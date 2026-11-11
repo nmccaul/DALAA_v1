@@ -55,8 +55,10 @@ reports show up under DALAA **Settings → Feedback reports**.
    **Not assigned** on the Activities tab; clicking it there reopens the wizard.
 
 ## 4. Teacher: add it to Canvas as an assignment
-1. In Canvas: **Assignments → + Assignment**. Submission type **External
-   Tool** → **Find** → **DALAA Study Chat**.
+1. Easiest: in DALAA, **Activities → Not assigned → Assign** (DALAA creates the
+   Canvas assignment). Or start in Canvas: **Assignments → + Assignment**,
+   Submission type **Study Chat** (once the developer key has the Submission
+   Type Selection placement), or **External Tool** → **Find** → **Study Chat**.
 2. The DALAA picker opens in Canvas's dialog. Click **Add to Canvas** next to
    the assignment from step 3.
    (Or try "Create a new assignment" there: after Publish you should land back

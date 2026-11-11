@@ -72,7 +72,15 @@ export function canvasConfig(appUrl: string) {
               placement: "assignment_selection",
               message_type: "LtiDeepLinkingRequest",
               target_link_uri: launch,
-              text: "DALAA Study Chat",
+              text: COURSE_MENU_LABEL,
+            },
+            // Study Chat in a new Canvas assignment's Submission Type dropdown:
+            // the same Deep Linking picker as assignment_selection, one step shorter.
+            {
+              placement: "submission_type_selection",
+              message_type: "LtiDeepLinkingRequest",
+              target_link_uri: launch,
+              text: COURSE_MENU_LABEL,
             },
           ],
         },
