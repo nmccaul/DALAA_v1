@@ -38,7 +38,7 @@ export function appUrlFromHeaders(headers: Headers): string {
 }
 
 /** What Canvas shows for DALAA in a course's menu (and as the tool's name). */
-export const COURSE_MENU_LABEL = "AI Activities";
+export const COURSE_MENU_LABEL = "Study Chat";
 
 export function canvasConfig(appUrl: string) {
   const { base, login, launch, jwks } = ltiUrls(appUrl);

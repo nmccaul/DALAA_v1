@@ -42,7 +42,7 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
           tabs={[
             {
               href: base,
-              label: "Assigned Activities",
+              label: "Activities",
               exact: true,
               also: [`${base}/activities`, `${base}/add-to-canvas`],
             },

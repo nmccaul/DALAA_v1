@@ -47,7 +47,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
       done: activities.some((a) => a.status === "published"),
       title: "Publish it to students",
       detail: "Try it with a sample student first, then publish.",
-      link: activities.length ? { href: base, label: "Assigned Activities" } : null,
+      link: activities.length ? { href: base, label: "Activities" } : null,
     },
   ];
 
@@ -89,7 +89,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
         <h3 className="text-lg font-bold">Where things are</h3>
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>
-            <b>Assigned Activities</b>: create activities, try them as a student, publish them.
+            <b>Activities</b>: create, edit, copy and assign activities, and try them as a student.
           </li>
           <li>
             <b>Materials</b>: the readings and AI-only notes your activities use.

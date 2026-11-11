@@ -28,7 +28,7 @@ export default async function ActivityPage({ params, searchParams }: PageProps<"
     <div className="flex flex-col gap-6">
       <div className="-mb-2 flex flex-wrap items-center justify-between gap-3">
         <Link href={`/courses/${course.id}`} className="text-sm text-accent-text hover:underline">
-          ‹ Assigned Activities
+          ‹ Activities
         </Link>
         {editActivityPath(course.id, activity) !== `/courses/${course.id}/activities/${activity.id}` && (
           <ButtonLink href={editActivityPath(course.id, activity)} variant="secondary" className="text-sm">

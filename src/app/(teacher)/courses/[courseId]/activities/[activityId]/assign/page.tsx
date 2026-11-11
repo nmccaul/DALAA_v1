@@ -68,7 +68,7 @@ export default async function AssignPage({ params }: PageProps<"/courses/[course
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
-        ‹ Assigned Activities
+        ‹ Activities
       </Link>
       <div className="flex max-w-2xl flex-col gap-1">
         <h2 className="font-display text-xl font-semibold">
