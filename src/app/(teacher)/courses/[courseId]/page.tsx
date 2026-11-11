@@ -149,7 +149,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
       <p className="text-sm text-muted">
         {assignOn
           ? "Assign adds an activity to Canvas Assignments, where students open it and where its grade goes."
-          : "Each published activity also appears in Canvas Assignments, where students open it and where its grade goes."}
+          : "Published means students can open it once it's in Canvas. To add it, in Canvas go to Assignments → + Assignment → Submission type: External Tool → Find → AI Activities, and pick it. It moves to Assigned after the first time someone opens it from there."}
       </p>
     </div>
   );
