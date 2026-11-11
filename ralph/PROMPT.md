@@ -54,11 +54,12 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
    never prints the URL). It must end with `migrations up to date`.
 4. Open or reuse a PR from `feat/creation-wizard` to `main` (`gh pr create` /
    `gh pr view`). The body summarizes what's in it. No Claude attribution.
-   Wait for CI with `gh pr checks` (check once first to see the output shape;
-   at most 10 minutes). Green → merge with `gh pr merge --merge` (Nathan's
-   standing authorization, 2026-11-08/09: build, apply migrations, merge on
-   green CI, deploy). Red → fix it in this pass if small, else mark the
-   checkpoint partial with the failing check. Stay on `feat/creation-wizard`
+   Turn on auto-merge with `gh pr merge --auto --merge` (Nathan's standing
+   authorization, 2026-11-08/09: build, apply migrations, merge on green CI,
+   deploy); GitHub merges when the required `ci-ok` check passes. Then wait
+   (at most 10 minutes; check `gh pr view --json state` once first) for the
+   PR to be MERGED. If `ci-ok` fails → fix it in this pass if small, else mark
+   the checkpoint partial with the failing check. Stay on `feat/creation-wizard`
    afterwards and `git pull origin main`.
 5. Wait for the production deployment of the merge: run
    `vercel -Q ~/.vercel-dalaa ls dalaa-v1 --format json` once and read it, then

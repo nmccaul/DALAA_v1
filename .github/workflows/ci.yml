@@ -1,5 +1,12 @@
 # The gate: the same checks you run locally, on a clean machine from the
-# lockfile, so "works on my laptop" can't merge. Require it in branch protection.
+# lockfile, so "works on my laptop" can't merge.
+#
+# Fast by design (2026-11-11, Nathan): the checks run side by side; migrations
+# run only when db/migrations/ changes; docs-only changes skip the code checks.
+# There is no build step: Vercel builds every deploy, and a failed build never
+# replaces the live one. Branch protection on main requires one check, `ci-ok`,
+# which always reports (green when everything that ran passed), so PRs can use
+# GitHub auto-merge.
 
 name: ci
 
@@ -16,25 +23,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  # What changed: code (anything outside docs and ralph notes) and migrations.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    # Real Postgres, so migrations are proven on the engine production uses —
-    # unit tests use PGlite.
-    services:
-      postgres:
-        image: postgres:17
+    timeout-minutes: 2
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+      migrations: ${{ steps.diff.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
         env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dalaa
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # A new branch or an unknown base: treat everything as changed.
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "migrations=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          files=$(git diff --name-only "$BASE" HEAD)
+          echo "$files"
+          code=false; migrations=false
+          echo "$files" | grep -qvE '^(docs/|ralph/)|\.md$' && code=true
+          echo "$files" | grep -qE '^(db/migrations/|src/db/)' && migrations=true
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "migrations=$migrations" >> "$GITHUB_OUTPUT"
 
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dalaa
-
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -44,7 +64,60 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - run: npm test
+
+  # Real Postgres, so migrations are proven on the engine production uses —
+  # unit tests use PGlite.
+  migrate:
+    needs: changes
+    if: needs.changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dalaa
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dalaa
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - run: npm run migrate
       - run: npm run migrate # second run must be a no-op
-      - run: npm run build
+
+  # The one required check: passes when every job that ran passed (skipped is fine).
+  ci-ok:
+    needs: [changes, lint, test, migrate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a check did not pass: $r"; exit 1 ;; esac
+          done
