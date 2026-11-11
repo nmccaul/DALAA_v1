@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Add to Canvas" };
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 /**
- * Where Canvas's "DALAA Study Chat" assignment picker lands (LTI Deep Linking):
+ * Where Canvas's Study Chat assignment picker lands (External Tool or Submission Type) (LTI Deep Linking):
  * pick a published assignment and it goes back to Canvas as the assignment.
  */
 export default async function AddToCanvasPage({ params }: PageProps<"/courses/[courseId]/add-to-canvas/[requestId]">) {

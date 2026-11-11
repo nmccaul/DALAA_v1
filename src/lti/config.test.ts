@@ -21,12 +21,13 @@ describe("canvasConfig", () => {
     });
   });
 
-  it("is public, with course navigation and assignment selection placements", () => {
+  it("is public, with course navigation, assignment selection and submission type placements", () => {
     const ext = config.extensions[0];
     expect(ext.privacy_level).toBe("public");
     expect(ext.settings.placements.map((p) => [p.placement, p.message_type])).toEqual([
       ["course_navigation", "LtiResourceLinkRequest"],
       ["assignment_selection", "LtiDeepLinkingRequest"],
+      ["submission_type_selection", "LtiDeepLinkingRequest"],
     ]);
   });
 
