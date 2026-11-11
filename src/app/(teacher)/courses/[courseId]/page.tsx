@@ -8,6 +8,7 @@ import { loginIdLabel } from "@/auth/login-id";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
+import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
 import { editActivityPath, findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction } from "./actions";
@@ -149,7 +150,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
       <p className="text-sm text-muted">
         {assignOn
           ? "Assign adds an activity to Canvas Assignments, where students open it and where its grade goes."
-          : "Published means students can open it once it's in Canvas. To add it, in Canvas go to Assignments → + Assignment → Submission type: External Tool → Find → AI Activities, and pick it. It moves to Assigned after the first time someone opens it from there."}
+          : `Published means students can open it once it's in Canvas. To add it, in Canvas go to Assignments → + Assignment → Submission type: External Tool → Find → ${COURSE_MENU_LABEL}, and pick it. It moves to Assigned after the first time someone opens it from there.`}
       </p>
     </div>
   );

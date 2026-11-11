@@ -21,7 +21,7 @@ export default async function SetupStepPage({ params, searchParams }: PageProps<
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
-        ‹ Assigned Activities
+        ‹ Activities
       </Link>
       <Setup actor={actor} activity={activity} step={step} addToCanvas={pickerRequest((await searchParams)[PICKER_PARAM])} />
     </div>

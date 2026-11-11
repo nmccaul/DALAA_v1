@@ -10,7 +10,7 @@ reports show up under DALAA **Settings → Feedback reports**.
 
 ## Before you start
 - Production `/api/health` says `"db":"up"`.
-- The course menu entry is named **AI Activities** (`src/lti/config.ts`).
+- The course menu entry is named **Study Chat** (`src/lti/config.ts`).
   Canvas keeps its own copy of the tool config, so after that name changes,
   refresh developer key 10000000000013 (Admin → Developer Keys → edit → re-read
   the JSON from `https://dalaa-v1.vercel.app/api/lti/config` → Save).
@@ -18,9 +18,9 @@ reports show up under DALAA **Settings → Feedback reports**.
   more often than Chrome, so try Chrome first and Safari second.
 
 ## 1. Teacher: open DALAA from the course
-1. In course 42, click **AI Activities** in the course menu.
+1. In course 42, click **Study Chat** in the course menu.
 2. You should land on the course in DALAA, inside the Canvas frame, with the
-   tabs **Assigned Activities · Materials · Grading · DALAA**, and no DALAA
+   tabs **Activities · Materials · Results · DALAA**, and no DALAA
    sidebar (Canvas's menu is the navigation).
 3. If you see **Open DALAA in a new tab** instead, the browser blocked the
    cookie in the frame. Click it; DALAA opens in its own tab on the same page.
@@ -32,7 +32,7 @@ reports show up under DALAA **Settings → Feedback reports**.
    been used at least once) show up. Sync adds and flags; it never removes.
 
 ## 3. Teacher: create a Study Chat from the Harbor Bikes page (the wizard)
-1. **Assigned Activities** tab → **+ Activity** → **Study Chat**. The wizard's
+1. **Activities** tab → **+ Activity** → **Study Chat**. The wizard's
    seven steps show on the left; the DALAA wizard note on the right.
 2. **Step 1, Materials.** Pick the Canvas page `case-harbor-bikes` from the
    list (the first time, it asks you to **Connect Canvas ↗** in a new tab;

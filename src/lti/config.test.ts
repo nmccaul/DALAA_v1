@@ -30,8 +30,8 @@ describe("canvasConfig", () => {
     ]);
   });
 
-  it('names the course menu entry "AI Activities"', () => {
-    expect(COURSE_MENU_LABEL).toBe("AI Activities");
+  it('names the course menu entry "Study Chat"', () => {
+    expect(COURSE_MENU_LABEL).toBe("Study Chat");
     expect(config.title).toBe(COURSE_MENU_LABEL);
     const nav = config.extensions[0].settings.placements.find((p) => p.placement === "course_navigation");
     expect(nav?.text).toBe(COURSE_MENU_LABEL);
