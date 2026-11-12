@@ -28,7 +28,7 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
     },
     { href: `${base}/materials`, label: "Materials", also: [`${base}/content`] },
     { href: `${base}/grading`, label: "Results" },
-    { href: `${base}/dalaa`, label: "DALAA", also: [`${base}/students`, `${base}/canvas`] },
+    { href: `${base}/dalaa`, label: "Setup", also: [`${base}/students`, `${base}/canvas`] },
   ];
   // Inside Canvas, Canvas's own course menu does the switching.
   const others = framed ? [] : switchableCourses(await listTaughtCourses(db(), actor), course.id);

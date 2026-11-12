@@ -5,12 +5,13 @@ import type { ReactNode } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
+import { ActivityMenu } from "@/components/activity-menu";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
-import { editActivityPath, findTool, newActivityPath, teacherActivityPath } from "@/tools/catalog";
+import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction } from "./actions";
 import { activitiesView } from "./view";
 
@@ -30,7 +31,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
     listCourseActivities(db(), actor, course.id),
     listOtherCourseActivities(db(), actor, course.id),
   ]);
-  const create = <ButtonLink href={newActivityPath(course.id)}>+ Activity</ButtonLink>;
+  const create = <ActivityMenu courseId={course.id} />;
 
   if (activities.length === 0 && elsewhere.length === 0) {
     const host = (await headers()).get("host") ?? "";
