@@ -166,6 +166,28 @@ describe("trying a Study Chat with a sample student", () => {
     expect(await db.query("select 1 from chat_turns")).toEqual([]);
   });
 
+  it("asks once more after an empty or failed reply before giving up (feedback 1e337d7f)", async () => {
+    const id = await activity(draft({ completion: completion({ maxTurns: 2 }) }));
+    // An empty student line, then a good one: the run carries on.
+    const outcome = await runTrial(db, { ...models(), student: answering("", "I guess they should wait?") }, prof, id, "struggling");
+    expect(outcome).toMatchObject({ ok: true, trial: { endedBy: "turns" } });
+    expect(outcome.ok && outcome.trial.turns.map((t) => t.message)).toEqual(["I guess they should wait?", "I guess they should wait?"]);
+
+    // A reply that fails once, then answers.
+    let calls = 0;
+    const flaky = new MockLanguageModelV4({
+      modelId: "test/flaky",
+      doGenerate: async (options) => {
+        if (calls++ === 0) throw new Error("gateway hiccup");
+        return answering("Why do you say that?").doGenerate(options);
+      },
+    });
+    expect(await runTrial(db, { ...models(), reply: flaky }, prof, id, "strong")).toMatchObject({ ok: true });
+
+    // Empty every time: it stops with the plain message.
+    expect(await runTrial(db, { ...models(), student: answering("") }, prof, id, "struggling")).toEqual({ ok: false, reason: TRIAL_FAILED });
+  });
+
   it("is for the course's teachers only", async () => {
     const id = await activity(draft());
     expect(await runTrial(db, models(), student, id, "strong")).toEqual({ ok: false, reason: "We couldn't find that activity." });

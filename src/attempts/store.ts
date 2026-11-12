@@ -14,7 +14,7 @@
  */
 
 import { activityReadings } from "@/activities/materials";
-import { canvasBaseUrl } from "@/canvas/institution";
+import { canvasCourseUrl } from "@/canvas/institution";
 import { and, coursesTakenBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 
@@ -76,7 +76,7 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
   return {
     ...activity,
     readings: readings.map(({ name, body }) => ({ name, body })),
-    canvasCourseUrl: canvasCourseId === null ? null : `${canvasBaseUrl()}/courses/${encodeURIComponent(canvasCourseId)}`,
+    canvasCourseUrl: canvasCourseUrl(canvasCourseId),
   };
 }
 

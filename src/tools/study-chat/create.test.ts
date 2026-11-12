@@ -64,6 +64,8 @@ describe("creating a Study Chat", () => {
       status: "draft",
       points: 10,
       settings: draft(),
+      assigned: false,
+      canvasCourseUrl: null,
     });
     expect(await getTaughtActivity(db, other, result.activityId)).toBeNull();
     // Written through the materials list only; the retired columns stay empty.

@@ -77,7 +77,13 @@ export async function StudyChatReview({ activity, addToCanvas }: ReviewScreenPro
         initial={parsed.data}
         addToCanvas={addToCanvas}
       />
-      <TrialPanel activityId={activity.id} persona={parsed.data.persona.name} />
+      <TrialPanel
+          activityId={activity.id}
+          persona={parsed.data.persona.name}
+          title={activity.title}
+          assigned={activity.assigned}
+          canvasCourseUrl={activity.canvasCourseUrl}
+        />
     </div>
   );
 }

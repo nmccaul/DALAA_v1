@@ -8,45 +8,74 @@ import { trialAction, type TrialState } from "./actions";
 import { Bubble } from "./chat-room";
 
 /**
- * "Try it with a sample student" on the review screen: the teacher picks a
- * struggling or a strong student, and sees the conversation next to the grade
- * it would get. It uses the last saved settings; nothing reaches students or Canvas.
+ * "Try it as a student", on the review screen and wizard step 7: two ways side
+ * by side. A practice run, where an AI plays a struggling or a strong student
+ * and the real grader scores the chat (nothing is saved, nothing reaches
+ * Canvas). Or the teacher takes it themselves in Canvas's Student View, which
+ * DALAA can't switch on for them (Canvas only accepts that from its own page),
+ * so it links to the course's Settings, where the Student View button is.
  */
-export function TrialPanel({ activityId, persona }: { activityId: string; persona: string }) {
+export function TrialPanel({
+  activityId,
+  persona,
+  title,
+  assigned,
+  canvasCourseUrl,
+}: {
+  activityId: string;
+  persona: string;
+  title: string;
+  assigned: boolean;
+  canvasCourseUrl: string | null;
+}) {
   const [state, action, pending] = useActionState<TrialState, FormData>(trialAction, {});
   const { trial } = state;
 
   return (
-    <details className="group rounded-panel border border-border bg-surface">
-      <summary className="cursor-pointer list-none px-4 py-3 font-medium select-none">
-        <span className="mr-2 inline-block transition-transform group-open:rotate-90" aria-hidden>
-          ▸
-        </span>
-        Try it with a sample student
-      </summary>
-      <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
-        <p className="max-w-[65ch] text-sm text-muted">
-          An AI plays a student and has the whole chat, then the real grader grades it. It uses your last saved
-          changes. Students never see it, and nothing goes to Canvas.
-        </p>
-        <form action={action} className="flex flex-wrap items-end gap-3">
-          <input type="hidden" name="activityId" value={activityId} />
-          <fieldset className="flex flex-wrap gap-4">
-            <legend className="mb-2 text-sm font-medium">Which student?</legend>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="level" value="struggling" defaultChecked /> Struggling
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="radio" name="level" value="strong" /> Strong
-            </label>
-          </fieldset>
-          <Button variant="secondary" disabled={pending}>
-            {pending ? "Running…" : trial ? "Run another" : "Run it"}
-          </Button>
-        </form>
+    <section aria-labelledby="try-heading" className="flex flex-col gap-4">
+      <h4 id="try-heading" className="font-display text-lg font-semibold">
+        Try it as a student
+      </h4>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-4">
+          <h5 className="font-medium">Practice run with an AI student</h5>
+          <p className="text-sm text-muted">
+            An AI plays a student from start to finish, then the grader scores the chat, so you can see how it goes
+            and how it&apos;s graded. Takes a minute or two. It uses your last saved changes; nothing is saved or sent
+            to Canvas.
+          </p>
+          <form action={action} className="flex flex-col gap-3">
+            <input type="hidden" name="activityId" value={activityId} />
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-1 text-sm font-medium">Which student?</legend>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="level" value="struggling" defaultChecked className="mt-1" />
+                <span>
+                  Struggling <span className="text-sm text-muted">skimmed the reading, short answers, needs prompting</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input type="radio" name="level" value="strong" className="mt-1" />
+                <span>
+                  Strong <span className="text-sm text-muted">read closely, uses the facts, backs things up</span>
+                </span>
+              </label>
+            </fieldset>
+            <div>
+              <Button variant="secondary" disabled={pending}>
+                {pending ? "Running…" : trial ? "Run another" : "Start practice run"}
+              </Button>
+            </div>
+          </form>
+        </div>
+        <div className="flex min-w-0 flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-4">
+          <h5 className="font-medium">Try it yourself</h5>
+          <TryItYourself title={title} assigned={assigned} canvasCourseUrl={canvasCourseUrl} />
+        </div>
+      </div>
         {pending && (
           <p role="status" className="text-sm text-muted">
-            The sample student is chatting, then it&apos;s graded. This takes a minute or two.
+            The AI student is chatting, then the grader scores it. This takes a minute or two.
           </p>
         )}
         {!pending && state.error && (
@@ -93,7 +122,47 @@ export function TrialPanel({ activityId, persona }: { activityId: string; person
             </div>
           </div>
         )}
-      </div>
-    </details>
+    </section>
+  );
+}
+
+/** How to take it in Canvas's Student View, for where the activity is. Exported for tests. */
+export function TryItYourself({ title, assigned, canvasCourseUrl }: { title: string; assigned: boolean; canvasCourseUrl: string | null }) {
+  if (canvasCourseUrl === null) {
+    return (
+      <p className="text-sm text-muted">
+        Taking it yourself uses Canvas&apos;s Student View, and this course isn&apos;t in Canvas. Use a practice run
+        instead.
+      </p>
+    );
+  }
+  if (!assigned) {
+    return (
+      <p className="text-sm text-muted">
+        Assign it first. Once it&apos;s in Canvas Assignments, come back here to open Canvas&apos;s Student View and
+        take it the way your students will.
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="text-sm text-muted">Take it the way your students will, with Canvas&apos;s Student View:</p>
+      <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
+        <li>Open the course&apos;s Settings in Canvas and click <b>Student View</b> on the right.</li>
+        <li>
+          Go to <b>Assignments</b> and open &ldquo;{title}&rdquo;.
+        </li>
+        <li>When you&apos;re done, click <b>Leave Student View</b> at the bottom of Canvas.</li>
+      </ol>
+      <p className="text-sm text-muted">Your attempt counts as Canvas&apos;s Test Student and shows on the Results tab.</p>
+      <a
+        href={`${canvasCourseUrl}/settings`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="self-start font-medium text-accent-text underline"
+      >
+        Open course Settings in Canvas ↗
+      </a>
+    </>
   );
 }

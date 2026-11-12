@@ -5,6 +5,7 @@
  * Only a course's teachers create, read or publish its activities.
  */
 
+import { canvasCourseUrl } from "@/canvas/institution";
 import { getTaughtCourse } from "@/courses/queries";
 import { and, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -25,7 +26,14 @@ export type TaughtActivity = {
   status: "draft" | "published";
   points: number | null;
   settings: Record<string, unknown>;
+  /** In Canvas Assignments: placed through LTI, or assigned by DALAA. */
+  assigned: boolean;
+  /** The course's page in Canvas; NULL for a course not in Canvas or a practice one. */
+  canvasCourseUrl: string | null;
 };
+
+/** SQL for "this activity (alias `a`) is in Canvas Assignments". The one definition. */
+export const ASSIGNED_SQL = "(a.lti_resource_link_id is not null or a.canvas_assignment_id is not null)";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -78,15 +86,18 @@ export async function createActivity(
 export async function getTaughtActivity(db: Db, actor: Actor, activityId: string): Promise<TaughtActivity | null> {
   if (!UUID.test(activityId)) return null;
   const where = and({ text: "a.id = $1", values: [activityId] }, coursesTaughtBy(actor, "c"));
-  const [row] = await db.query<TaughtActivity>(
+  const [row] = await db.query<Omit<TaughtActivity, "canvasCourseUrl"> & { canvasCourseId: string | null }>(
     `select a.id, a.course_id as "courseId", a.tool, a.title, a.status, a.points::float8 as points,
-            a.settings
+            a.settings, ${ASSIGNED_SQL} as assigned,
+            case when c.is_practice then null else c.canvas_course_id end as "canvasCourseId"
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}`,
     where.values,
   );
-  return row ?? null;
+  if (!row) return null;
+  const { canvasCourseId, ...activity } = row;
+  return { ...activity, canvasCourseUrl: canvasCourseUrl(canvasCourseId) };
 }
 
 /** Makes a draft visible to students. Publishing twice is a no-op; an activity without points can't be published. */

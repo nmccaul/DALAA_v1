@@ -52,7 +52,13 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
             </Fragment>
           ))}
         </dl>
-        <TrialPanel activityId={activity.id} persona={parsed.data.persona.name} />
+        <TrialPanel
+          activityId={activity.id}
+          persona={parsed.data.persona.name}
+          title={activity.title}
+          assigned={activity.assigned}
+          canvasCourseUrl={activity.canvasCourseUrl}
+        />
         <section aria-labelledby="assign-heading" className="flex flex-col gap-2">
           <h4 id="assign-heading" className="font-display text-lg font-semibold">
             {assign ? "Assign" : "Publish"}
