@@ -8,8 +8,8 @@ import { db } from "@/db/client";
 import { isLtiCourse } from "@/lti/roster";
 import { listCourseDisputes, type CourseDispute } from "@/results/disputes";
 import { listCourseGrades, type AssignmentGrades, type StudentGrade } from "@/results/grading";
-import { screensFor } from "@/tools/screens";
 import { sendGradesAction } from "./actions";
+import { InsightsView } from "./insights-view";
 import { REFUSAL, readSummary, summaryLines } from "./push-text";
 import { DisputeForm, ScoreForm } from "./score-forms";
 import { resultsView, type ResultsView } from "./view";
@@ -82,74 +82,12 @@ export default async function ResultsPage({ params, searchParams }: PageProps<"/
         ))}
       </nav>
       {view === "insights" ? (
-        <Insights assignments={assignments} base={base} />
+        <InsightsView actor={actor} assignments={assignments} base={base} names={q.names === "1"} />
       ) : view === "grades" ? (
         <Grades assignments={assignments} courseId={course.id} base={base} q={q} openDisputes={open} />
       ) : (
         <Disputes disputes={disputes} courseId={course.id} base={base} q={q} />
       )}
-    </div>
-  );
-}
-
-/** Students who count in a class view: Canvas's Student View user is left out. */
-const classOf = (a: AssignmentGrades) => a.students.filter((s) => !s.studentView);
-
-/** What each tool says about the class, from what happened in the activity. */
-async function Insights({ assignments, base }: { assignments: AssignmentGrades[]; base: string }) {
-  const notes = await Promise.all(
-    assignments.map(
-      (a) =>
-        screensFor(a.tool)?.gradingNotes?.(
-          db(),
-          a.activityId,
-          classOf(a).flatMap((s) => (s.attemptId ? [s.attemptId] : [])),
-        ) ?? null,
-    ),
-  );
-  return (
-    <div className="flex flex-col gap-8">
-      {assignments.map((a, i) => {
-        const students = classOf(a);
-        const started = students.filter((s) => s.status !== "not_started").length;
-        const finished = students.filter((s) => s.status === "graded" || s.status === "submitted").length;
-        const summary = notes[i]?.summary ?? [];
-        return (
-          <section key={a.activityId} className="flex flex-col gap-3" aria-labelledby={`insights-${a.activityId}`}>
-            <div className="flex flex-col gap-0.5">
-              <h2 id={`insights-${a.activityId}`} className="font-display text-xl font-semibold break-words">
-                {a.title}
-              </h2>
-              <p className="text-sm text-muted">
-                {started} of {students.length} {students.length === 1 ? "student" : "students"} started, {finished} finished ·{" "}
-                <Link href={`${base}?view=grades#grades-${a.activityId}`} className="text-accent-text hover:underline">
-                  Grades
-                </Link>
-              </p>
-            </div>
-            {summary.length === 0 ? (
-              <p className="border border-dashed border-border-strong px-6 py-8 text-muted">
-                Nothing to show yet. What the class said shows up here as students finish.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-x-10 gap-y-3 rounded-panel border border-border bg-surface px-5 py-4 text-sm">
-                {summary.map((section) => (
-                  <div key={section.heading} className="flex flex-col gap-1">
-                    <h3 className="font-medium">{section.heading}</h3>
-                    <ul className="flex flex-col gap-0.5 text-muted">
-                      {section.lines.map((line) => (
-                        <li key={line} className="break-words">
-                          {line}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        );
-      })}
     </div>
   );
 }

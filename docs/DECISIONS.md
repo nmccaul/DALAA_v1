@@ -307,6 +307,12 @@ for class from what students said; grading and Canvas come second.
   `/courses/[id]/grading/attempts/[attemptId]`: the grade with its evidence,
   the score or dispute form, and the transcript the tool draws
   (`transcript` in `src/tools/screens.ts`).
+- **Insights read the shared results shape** (`src/results/insights.ts`), so
+  they work for every tool with no tool code: graded attempts only, Canvas's
+  Student View user left out. Positions and points raised are bars that open
+  to what each student said (the grader's quote); the rubric shows the class
+  average per criterion and marks the weakest. The tool's old live-tracking
+  summary (`gradingNotes`) is gone.
 - **Insights, in steps:** positions and points covered with anonymous quotes,
   names revealed on a click (as in Make the Case); class averages per
   criterion; then an AI class-prep brief (confusions, strong ideas, questions
