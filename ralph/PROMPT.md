@@ -1,7 +1,8 @@
 # One pass of the overnight build
 
 You are one pass of an unattended build loop on DALAA_v1
-(`/Users/natesmacbookair/Desktop/volli/DALAA_v1`, branch `feat/creation-wizard`).
+(the repo root, where `ralph/run.sh` started you; branch `<branch>` = the
+branch on the `Branch:` line of `ralph/PLAN.md`).
 Nobody is watching, and nobody will answer questions until morning. Do exactly
 **one task**, leave everything committed and recorded, then stop.
 
@@ -11,7 +12,7 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 2. Read `CLAUDE.md` and `AGENTS.md`. Next 16 differs from what you remember, so
    read the relevant guide in `node_modules/next/dist/docs/` before using a Next
    API you're unsure of.
-3. `git status`: you must be on `feat/creation-wizard`. If the tree is dirty from
+3. `git status`: you must be on `<branch>`. If the tree is dirty from
    a pass that crashed, finish that work if it's clearly the current task,
    otherwise `git stash` it and note that in PROGRESS.
 4. Local database: if nothing listens on 127.0.0.1:54329, start
@@ -37,7 +38,7 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 2. Commit with explicit paths (`git add <paths>`, never `git add -A`). Use a
    plain, descriptive message. **No `Co-Authored-By` trailer and no "Generated
    with Claude" line.**
-3. Push the branch: `git push -u origin feat/creation-wizard`.
+3. Push the branch: `git push -u origin <branch>`.
 4. In `ralph/TASKS.md`, mark the task `[x]` (or update its attempts / BLOCKED).
 5. Append to `ralph/PROGRESS.md`:
    `## <UTC time> · T<nn> <title> · done|partial|blocked`, then 2–6 bullets:
@@ -52,14 +53,14 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 3. Apply them to production first with `scripts/migrate-prod.sh` (it pulls
    production's env to a private temp file, migrates, deletes the file, and
    never prints the URL). It must end with `migrations up to date`.
-4. Open or reuse a PR from `feat/creation-wizard` to `main` (`gh pr create` /
+4. Open or reuse a PR from `<branch>` to `main` (`gh pr create` /
    `gh pr view`). The body summarizes what's in it. No Claude attribution.
    Turn on auto-merge with `gh pr merge --auto --merge` (Nathan's standing
    authorization, 2026-11-08/09: build, apply migrations, merge on green CI,
    deploy); GitHub merges when the required `ci-ok` check passes. Then wait
    (at most 10 minutes; check `gh pr view --json state` once first) for the
    PR to be MERGED. If `ci-ok` fails → fix it in this pass if small, else mark
-   the checkpoint partial with the failing check. Stay on `feat/creation-wizard`
+   the checkpoint partial with the failing check. Stay on `<branch>`
    afterwards and `git pull origin main`.
 5. Wait for the production deployment of the merge: run
    `vercel -Q ~/.vercel-dalaa ls dalaa-v1 --format json` once and read it, then
@@ -87,7 +88,7 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
   `.env.local` except to add a missing **non-secret** var named in PLAN.
 - Don't touch `docs/DALAA-VS-CANVAS.md` (Nathan's uncommitted file), other
   repos (read them only), or the gitgrade instance's other tools and keys.
-- **Don't copy code from `~/Desktop/volli/scholarly`.** Write LTI fresh from
+- **Don't copy code from `../previous_builds/scholarly`.** Write LTI fresh from
   the spec. MakeTheCase and agent-team-kit are references for ideas only.
 - If you need something only Nathan can give (a secret, a decision, a click in
   Canvas), mark the task `BLOCKED: needs Nathan — <what>`, record it, and move on
