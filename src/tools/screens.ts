@@ -11,8 +11,10 @@ import type { ReactNode } from "react";
 import type { TaughtActivity } from "@/activities/store";
 import type { TakenActivity } from "@/attempts/store";
 import type { CourseCard } from "@/courses/queries";
+import type { Db } from "@/db/types";
 import type { Actor } from "@/db/scope";
 import type { TaughtAttempt } from "@/results/attempt";
+import { studyChatConversation } from "./study-chat/conversation";
 import { STUDY_CHAT } from "./study-chat/create";
 import { StudyChatCreate } from "./study-chat/create-screen";
 import { StudyChatReview } from "./study-chat/review-screen";
@@ -35,6 +37,12 @@ export type SetupScreenProps = ReviewScreenProps & { step: string };
 /** A student doing the activity. The screen passes the browser only what the tool's student view allows. */
 export type TakeScreenProps = { actor: Actor; activity: TakenActivity };
 
+/**
+ * An attempt as plain text for an AI to read (the class-prep brief): the
+ * whole exchange, and everything the student wrote, to check quotes against.
+ */
+export type ConversationText = { text: string; studentWords: string };
+
 /** One student's attempt, for their teacher's transcript page on the Results tab. */
 export type TranscriptProps = { attempt: TaughtAttempt };
 
@@ -46,6 +54,8 @@ type ToolScreens = {
   take: (props: TakeScreenProps) => ReactNode | Promise<ReactNode>;
   /** What the student did, as their teacher reads it. */
   transcript?: (props: TranscriptProps) => ReactNode | Promise<ReactNode>;
+  /** The attempt as text, for the class-prep brief. */
+  conversation?: (db: Db, attemptId: string) => Promise<ConversationText>;
 };
 
 const SCREENS: Readonly<Record<string, ToolScreens>> = {
@@ -55,6 +65,7 @@ const SCREENS: Readonly<Record<string, ToolScreens>> = {
     setup: StudyChatSetup,
     take: StudyChatTake,
     transcript: StudyChatTranscript,
+    conversation: studyChatConversation,
   },
 };
 

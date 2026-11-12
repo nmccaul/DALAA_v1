@@ -313,6 +313,17 @@ for class from what students said; grading and Canvas come second.
   to what each student said (the grader's quote); the rubric shows the class
   average per criterion and marks the weakest. The tool's old live-tracking
   summary (`gradingNotes`) is gone.
+- **The class-prep brief** (`src/results/brief.ts`): on "Analyze
+  conversations", one call to the grader model reads every finished
+  conversation (up to 200,000 characters) with the teacher's notes and
+  returns confusions, strong ideas, students' questions and 3–5 questions to
+  raise in class, each with the students it applies to. Students reach the
+  model as S1, S2, …, never by name; quotes the student didn't write and
+  labels the model made up are dropped. Kept in `class_briefs` until the
+  teacher runs it again; the page says when more students have finished
+  since. Ledger purpose `insights`. Tools give the text through
+  `conversation` in `src/tools/screens.ts`; the quote check is shared with
+  the grader (`src/results/quotes.ts`).
 - **Insights, in steps:** positions and points covered with anonymous quotes,
   names revealed on a click (as in Make the Case); class averages per
   criterion; then an AI class-prep brief (confusions, strong ideas, questions

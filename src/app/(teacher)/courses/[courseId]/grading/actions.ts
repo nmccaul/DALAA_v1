@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { db } from "@/db/client";
 import { sendGrades } from "@/lti/grades";
+import { runBrief } from "@/results/brief";
 import { resolveDispute } from "@/results/disputes";
 import { setTeacherScore } from "@/results/grading";
 import { summaryQuery } from "./push-text";
@@ -52,4 +54,14 @@ export async function sendGradesAction(form: FormData): Promise<void> {
   const q = result.ok ? summaryQuery(activityId, result.summary) : new URLSearchParams({ pushed: activityId, pusherror: result.reason });
   q.set("view", "grades");
   redirect(`${grading}?${q}#grades-${activityId}`);
+}
+
+/** "Analyze conversations": makes the activity's class-prep brief, then shows it on Insights. */
+export async function runBriefAction(form: FormData): Promise<void> {
+  const courseId = String(form.get("courseId"));
+  const activityId = String(form.get("activityId"));
+  const result = await runBrief(db(), graderModel(), await requireActor(), activityId);
+  const q = new URLSearchParams({ view: "insights", brief: result, activity: activityId });
+  if (form.get("names") === "1") q.set("names", "1");
+  redirect(`/courses/${courseId}/grading?${q}#brief-${activityId}`);
 }
