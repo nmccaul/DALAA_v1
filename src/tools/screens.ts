@@ -13,11 +13,13 @@ import type { TakenActivity } from "@/attempts/store";
 import type { CourseCard } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import type { TaughtAttempt } from "@/results/attempt";
 import { STUDY_CHAT } from "./study-chat/create";
 import { StudyChatCreate } from "./study-chat/create-screen";
 import { studyChatGradingNotes } from "./study-chat/grading-notes";
 import { StudyChatReview } from "./study-chat/review-screen";
 import { StudyChatTake } from "./study-chat/take-screen";
+import { StudyChatTranscript } from "./study-chat/transcript";
 import { StudyChatSetup } from "./study-chat/wizard/setup-step";
 
 export type CreateScreenProps = {
@@ -35,6 +37,9 @@ export type SetupScreenProps = ReviewScreenProps & { step: string };
 /** A student doing the activity. The screen passes the browser only what the tool's student view allows. */
 export type TakeScreenProps = { actor: Actor; activity: TakenActivity };
 
+/** One student's attempt, for their teacher's transcript page on the Results tab. */
+export type TranscriptProps = { attempt: TaughtAttempt };
+
 /**
  * Plain lines a tool adds to an assignment on the Grading tab: a class
  * summary, and lines under each student keyed by attempt id. The chassis
@@ -51,6 +56,8 @@ type ToolScreens = {
   /** Calls `notFound()` for a step it doesn't have. */
   setup?: (props: SetupScreenProps) => ReactNode | Promise<ReactNode>;
   take: (props: TakeScreenProps) => ReactNode | Promise<ReactNode>;
+  /** What the student did, as their teacher reads it. */
+  transcript?: (props: TranscriptProps) => ReactNode | Promise<ReactNode>;
   /** `attemptIds`: this assignment's attempts the Grading tab already scoped to the teacher. */
   gradingNotes?: (db: Db, activityId: string, attemptIds: readonly string[]) => Promise<GradingNotes | null>;
 };
@@ -61,6 +68,7 @@ const SCREENS: Readonly<Record<string, ToolScreens>> = {
     review: StudyChatReview,
     setup: StudyChatSetup,
     take: StudyChatTake,
+    transcript: StudyChatTranscript,
     gradingNotes: studyChatGradingNotes,
   },
 };

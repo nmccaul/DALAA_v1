@@ -292,3 +292,24 @@ reach production before the code) and those were test attempts anyway.
   AGS. Changing the due date in DALAA updates Canvas. Behind
   `ASSIGN_TO_CANVAS=1` until Nathan verifies it on gitgrade. This answers D-013
   for the gitgrade build: on when the flag is on, from an explicit Assign.
+
+### D-035 · The Results tab is Insights · Grades · Disputes, and a teacher can read every conversation
+*2026-11-12, Nathan.* The Results tab's main job is helping the teacher prepare
+for class from what students said; grading and Canvas come second.
+- **A switch, views first:** Insights · Grades · Disputes (n), each listing
+  every published activity. Insights opens first.
+- **Grades** keeps each student's score, the teacher's change, and Send grades
+  to Canvas. A disputed grade links to Disputes instead of offering a score.
+- **Disputes** lists open disputes oldest first (the longest-waiting student
+  first), each answered with an optional reply and a kept or changed score,
+  then the answered ones.
+- **Every student's conversation** is readable at
+  `/courses/[id]/grading/attempts/[attemptId]`: the grade with its evidence,
+  the score or dispute form, and the transcript the tool draws
+  (`transcript` in `src/tools/screens.ts`).
+- **Insights, in steps:** positions and points covered with anonymous quotes,
+  names revealed on a click (as in Make the Case); class averages per
+  criterion; then an AI class-prep brief (confusions, strong ideas, questions
+  students asked, discussion questions) that runs only when the teacher asks
+  and is kept until they refresh it.
+
