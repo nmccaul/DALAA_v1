@@ -5,6 +5,7 @@
 
 import { and, coursesTakenBy, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import { ASSIGNED_SQL } from "./store";
 
 export type ActivityRow = {
   id: string;
@@ -39,7 +40,7 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
             (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
               where t.activity_id = a.id and r.status = 'graded') as graded,
-            (a.lti_resource_link_id is not null or a.canvas_assignment_id is not null) as assigned,
+            ${ASSIGNED_SQL} as assigned,
             a.canvas_assignment_id as "canvasAssignmentId"
        from activities a
        join courses c on c.id = a.course_id

@@ -9,6 +9,9 @@ import { screensFor } from "@/tools/screens";
 
 export const metadata: Metadata = { title: "Set up activity" };
 
+/** Step 7's practice run has a whole chat, then grades it: the same limit as the review screen (feedback 1e337d7f). */
+export const maxDuration = 300;
+
 /** One step of a drafted activity's setup wizard: the tool's own screen (src/tools/screens.ts). */
 export default async function SetupStepPage({ params, searchParams }: PageProps<"/courses/[courseId]/activities/[activityId]/setup/[step]">) {
   const { courseId, activityId, step } = await params;

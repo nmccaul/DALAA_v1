@@ -11,6 +11,11 @@ export function canvasBaseUrl(): string {
   return process.env.CANVAS_BASE_URL || BYU_CANVAS;
 }
 
+/** A course's page in Canvas; null when the course has no Canvas id (or is a practice one). */
+export function canvasCourseUrl(canvasCourseId: string | null): string | null {
+  return canvasCourseId === null ? null : `${canvasBaseUrl()}/courses/${encodeURIComponent(canvasCourseId)}`;
+}
+
 /** Whether people sign in with a BYU NetID here (rather than another Canvas's login ID). */
 export function usesNetIds(baseUrl = canvasBaseUrl()): boolean {
   return new URL(baseUrl).hostname === new URL(BYU_CANVAS).hostname;

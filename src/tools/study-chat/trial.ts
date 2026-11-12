@@ -65,7 +65,7 @@ export const TRIAL_FAILED = "The sample student couldn't finish: the AI didn't a
 
 const LEVEL: Record<TrialLevel, string> = {
   struggling:
-    "You're a struggling student: you skimmed the reading, mix up some facts, give short answers, and sometimes " +
+    "You're a struggling student: you skimmed the reading, mix up some facts, give short answers (but always answer), and sometimes " +
     "guess instead of reasoning. You try, but you need prompting.",
   strong:
     "You're a strong student: you read carefully, ask sharp questions, use specific facts from the reading, " +
@@ -97,10 +97,23 @@ function studentMessages(opening: string, turns: readonly Exchange[]): ModelMess
   ];
 }
 
+/**
+ * One line of the practice run. A failed or empty reply is asked for once more
+ * before the run gives up: a struggling student's run is the longest, so one
+ * bad call among its ~25 used to end it (feedback 1e337d7f).
+ */
 async function say(db: Db, model: LanguageModel, ctx: AiCallContext, prompt: Parameters<typeof generateReply>[3]) {
-  const text = (await generateReply(db, model, ctx, prompt)).trim();
-  if (text === "") throw new Error("The model sent an empty reply");
-  return text;
+  let failure: unknown;
+  for (let tries = 0; tries < 2; tries++) {
+    try {
+      const text = (await generateReply(db, model, ctx, prompt)).trim();
+      if (text !== "") return text;
+      failure = new Error("The model sent an empty reply");
+    } catch (error) {
+      failure = error;
+    }
+  }
+  throw failure;
 }
 
 /** Claims the teacher's one trial slot; false while another trial runs. */
