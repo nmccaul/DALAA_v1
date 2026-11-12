@@ -2,25 +2,14 @@
 
 import { CaretDown, ClipboardText, File, FileText, Globe, PencilSimple, UploadSimple } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { buttonStyles } from "@/components/ui";
+import { useDismiss } from "@/components/use-dismiss";
 
 /** The "+ Materials" menu (D-032 mockup). Canvas items filter the list: those are already here. */
 export function MaterialsMenu({ base }: { base: string }) {
   const ref = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      const menu = ref.current;
-      if (!menu?.open) return;
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !menu.contains(e.target as Node)) menu.open = false;
-    };
-    document.addEventListener("click", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("click", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, []);
+  useDismiss(ref);
 
   const item = "flex items-start gap-3 px-4 py-2.5 hover:bg-subtle";
   const entries = [

@@ -2,24 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isCurrentTab, type Tab } from "./tab-match";
 
-export type Tab = {
-  href: string;
-  label: string;
-  /** match only this exact path (plus `also`) */
-  exact?: boolean;
-  /** other path prefixes that belong to this tab */
-  also?: string[];
-};
+export type { Tab };
 
 /** Links that show which one you're on. Used for the main areas and inside a course. */
 export function Tabs({ tabs, label }: { tabs: readonly Tab[]; label: string }) {
   const path = usePathname();
   return (
     <nav aria-label={label} className="-mb-px flex items-end gap-1 overflow-x-auto">
-      {tabs.map(({ href, label: text, exact, also = [] }) => {
-        const under = (p: string) => path === p || path.startsWith(`${p}/`);
-        const current = (exact ? path === href : under(href)) || also.some(under);
+      {tabs.map((tab) => {
+        const { href, label: text } = tab;
+        const current = isCurrentTab(tab, path);
         return (
           <Link
             key={href}

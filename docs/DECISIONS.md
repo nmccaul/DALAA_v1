@@ -242,6 +242,12 @@ reach production before the code) and those were test attempts anyway.
 - **Inside Canvas (a frame), Canvas's own menu and breadcrumb are the shell.**
   DALAA shows only its tabs and content (`src/components/embed.ts` reads
   `Sec-Fetch-Dest: iframe`). On its own, DALAA draws a Canvas-like navy rail.
+- **Course switcher, outside Canvas only** (*2026-11-12, Nathan*, from
+  teacher feedback e77d9cdb): the course name in the breadcrumb is a menu of
+  the teacher's other courses. Picking one opens the same tab at its top (a
+  results or material page opens that course's Results or Materials), or
+  Activities from a page on no tab. A teacher with one course sees just the
+  name. Inside Canvas, Canvas's course menu does this.
 - **One course-menu entry, "AI Activities"** (`COURSE_MENU_LABEL`), with tabs
   inside it: Assigned Activities · Materials · Grading · DALAA. Canvas allows
   each tool only one menu entry, and three tools would mean three keys per school.
