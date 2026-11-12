@@ -79,12 +79,12 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 - The whole pass is killed after 40 minutes; split work so a pass finishes well inside that.
 
 ## Hard rules
+- `CLAUDE.md` → *How we ship* is the source of truth for merging, migrations,
+  deploy checks and the never-list. If anything in this prompt disagrees with
+  it, CLAUDE.md wins; note the disagreement in PROGRESS.
 - **Secrets:** never print, echo, log or commit the values in `.env.local` or
   Vercel env. Check a secret by its presence or length only. Don't edit
   `.env.local` except to add a missing **non-secret** var named in PLAN.
-- **Never** push to `main` directly, force-push, rewrite history, `reset --hard`,
-  or delete branches. Never run SQL by hand against production. Never apply a
-  non-additive migration to production.
 - Don't touch `docs/DALAA-VS-CANVAS.md` (Nathan's uncommitted file), other
   repos (read them only), or the gitgrade instance's other tools and keys.
 - **Don't copy code from `~/Desktop/volli/scholarly`.** Write LTI fresh from

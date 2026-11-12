@@ -32,10 +32,9 @@ exactly **one report**, record what you did, then stop.
   all checks green, no migration, nothing under `src/auth/`, `src/lti/`,
   `src/canvas/` or grade sending, no dependency change, under ~200 changed
   lines (`git diff --stat origin/main`). Write which rule failed, if one did.
-  - Small: `gh pr merge --merge`. Wait for the production deployment of the
-    merge (`vercel -Q ~/.vercel-dalaa ls dalaa-v1 --prod`; up to 10 minutes),
-    check `https://dalaa-v1.vercel.app/api/health` reports the database up,
-    then `resolve <short> <merge sha> --prod`. If the deploy fails or health
+  - Small: `gh pr merge --auto --merge`, wait for MERGED, then check the
+    deploy exactly as `CLAUDE.md` → *How we ship* step 4 says, then
+    `resolve <short> <merge sha> --prod`. If the deploy fails or health
     is down, roll back (`vercel -Q ~/.vercel-dalaa rollback`) and `record
     <short> in_progress --pr <url> --note "<what broke>"` instead.
   - Not small: `record <short> in_progress --pr <url> --note "<why it needs
@@ -61,17 +60,15 @@ admin report page: say plainly what you found and did.
 - The whole pass is killed after 40 minutes; split work so a pass finishes well inside that.
 
 ## Hard rules
-- Everything in `ralph/PROMPT.md` "Hard rules" applies: never print secrets
-  or `.env.local`/Vercel values; never push to `main` directly, force-push,
-  rewrite history, `reset --hard` or delete branches; never run SQL by hand
-  against production; never touch the gitgrade instance's other tools or keys.
+- `CLAUDE.md` → *How we ship* applies in full (never-list, secrets, no hand
+  SQL on production, gitgrade keys). If this prompt disagrees, CLAUDE.md wins.
 - Production data is read through `npm run feedback -- … --prod` only. Its
   `list`/`show` are read-only; `claim`/`record`/`resolve` touch only the fix
   row and the report's resolve columns.
 - Only the small-fix rule above lets you merge your own PR.
 - `.bugs/` is never committed (screenshots show student work); delete
   `.bugs/<short>/` before you stop.
-- Don't touch the build loop's checkout or its branch `feat/study-chat-lti`.
+- Don't touch the build loop's checkout (`DALAA_v1/`) or its branch.
 - No `Co-Authored-By` trailer and no "Generated with Claude" line.
 
 End your pass with one line:
