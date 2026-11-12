@@ -32,8 +32,11 @@ says `db: down`): stop and restart `npm run db:local`, data is kept. A page
 that 404s for no reason after switching branches is a stale dev cache:
 stop `npm run dev`, `rm -rf .next/dev`, start it again.
 
-Checks (CI runs the same): `npm run lint`, `npm run typecheck`, `npm test`,
-`npm run build`. Tests need no database — they use PGlite (Postgres in-process).
+Checks (CI runs the same, side by side): `npm run lint`, `npm run typecheck`,
+`npm test`, and `npm run migrate` twice on real Postgres when migrations change.
+Tests need no database — they use PGlite (Postgres in-process). `main` requires
+the `ci-ok` check; open a PR and `gh pr merge --auto --merge` merges it when CI
+passes. Vercel's build is the build check.
 
 **Deploying:** https://dalaa-v1.vercel.app. Vercel project `dalaa-v1` (personal account) deploys `main` to
 production and every PR to a preview. Its database is Supabase, added through
