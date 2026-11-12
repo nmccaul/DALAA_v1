@@ -78,14 +78,12 @@ export function isLive(tool: ToolInfo): boolean {
   return tool.status === "live";
 }
 
-/**
- * Where "+ Activity" goes: straight into the one live tool's first step while
- * there is only one (no choice to make), else the page to pick a type.
- */
-export function newActivityPath(courseId: string, tools: readonly ToolInfo[] = TOOLS): string {
-  const live = tools.filter(isLive);
-  const base = `/courses/${courseId}/activities/new`;
-  return live.length === 1 ? `${base}/${live[0].slug}${live[0].start ?? ""}` : base;
+/** The tools a teacher can start now, in menu order. */
+export const LIVE_TOOLS: readonly ToolInfo[] = TOOLS.filter(isLive);
+
+/** Where creating one of this tool's activities starts: its first step (the "+ Activity" menu). */
+export function newActivityPath(courseId: string, tool: ToolInfo): string {
+  return `/courses/${courseId}/activities/new/${tool.slug}${tool.start ?? ""}`;
 }
 
 /**

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { listCourseActivities } from "@/activities/queries";
+import { ActivityMenu } from "@/components/activity-menu";
 import { Button, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { pendingDeepLink } from "@/lti/deep-link";
-import { keepPicker } from "@/lti/picker";
 import { findTool } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Add to Canvas" };
@@ -29,11 +28,7 @@ export default async function AddToCanvasPage({ params }: PageProps<"/courses/[c
   }
 
   // Publishing the new assignment comes back here (src/lti/picker.ts).
-  const create = (
-    <Link href={keepPicker(`/courses/${course.id}/activities/new`, pending.id)} className="text-sm font-medium underline">
-      Create a new assignment
-    </Link>
-  );
+  const create = <ActivityMenu courseId={course.id} picker={pending.id} align="left" />;
 
   const published = (await listCourseActivities(db(), actor, course.id)).filter((a) => a.status === "published");
   if (published.length === 0) {

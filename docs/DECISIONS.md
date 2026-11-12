@@ -248,6 +248,12 @@ reach production before the code) and those were test attempts anyway.
   results or material page opens that course's Results or Materials), or
   Activities from a page on no tab. A teacher with one course sees just the
   name. Inside Canvas, Canvas's course menu does this.
+- **The DALAA tab is "Setup"; "+ Activity" is a menu** (*2026-11-12, Nathan*,
+  feedback b352f412 and b6714065): the course tabs are Activities · Materials
+  · Results · Setup. "+ Activity" opens a menu of every activity type (live
+  ones start their first step, the rest say Coming soon), replacing the
+  "What kind of activity?" page; old links to it land on Activities or
+  Canvas's picker.
 - **One course-menu entry, "AI Activities"** (`COURSE_MENU_LABEL`), with tabs
   inside it: Assigned Activities · Materials · Grading · DALAA. Canvas allows
   each tool only one menu entry, and three tools would mean three keys per school.

@@ -6,12 +6,12 @@ import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { isLtiCourse } from "@/lti/roster";
-import { newActivityPath } from "@/tools/catalog";
+import { LIVE_TOOLS, newActivityPath } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Course setup" };
 
 /**
- * The course's DALAA tab (D-032): what DALAA is, what's left to get this
+ * The course's Setup tab (D-032; named DALAA until feedback b352f412): what DALAA is, what's left to get this
  * course ready, and the course's setup (class list, Canvas). Every checklist
  * item reads stored state; nothing is assumed.
  */
@@ -41,7 +41,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
       done: activities.length > 0,
       title: "Create an activity",
       detail: "Give it your reading; DALAA drafts the rest for you to edit.",
-      link: { href: newActivityPath(course.id), label: "+ Activity" },
+      link: { href: newActivityPath(course.id, LIVE_TOOLS[0]), label: "+ Activity" },
     },
     {
       done: activities.some((a) => a.status === "published"),
@@ -98,7 +98,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
             <b>Results</b>: review scores and send them to Canvas.
           </li>
           <li>
-            <b>DALAA</b> (this tab): the{" "}
+            <b>Setup</b> (this tab): the{" "}
             <Link href={`${base}/students`} className="text-accent-text hover:underline">
               class list
             </Link>

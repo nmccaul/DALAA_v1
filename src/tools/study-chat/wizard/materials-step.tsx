@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL } from "@/content/materials";
 import { db } from "@/db/client";
-import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
+import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
 import { MaterialsPickForm, type PickRow } from "./materials-form";
 import { pickValue } from "./picks";
@@ -49,7 +49,7 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
         formKey={randomUUID()}
         addToCanvas={addToCanvas}
         rows={picks}
-        back={keepPicker(`/courses/${course.id}/activities/new`, addToCanvas)}
+        back={afterPublishPath(course.id, addToCanvas)}
       />
     </WizardShell>
   );

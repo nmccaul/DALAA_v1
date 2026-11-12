@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editActivityPath, findTool, isLive, newActivityPath, teacherActivityPath, TOOLS } from "./catalog";
+import { editActivityPath, findTool, isLive, LIVE_TOOLS, newActivityPath, teacherActivityPath, TOOLS } from "./catalog";
 
 describe("tool registry", () => {
   it("has unique, URL-safe slugs", () => {
@@ -28,10 +28,10 @@ describe("tool registry", () => {
     }
   });
 
-  it("sends + Activity straight to the only live tool's first step, else to the type picker", () => {
-    expect(newActivityPath("c1")).toBe("/courses/c1/activities/new/study-chat?step=materials");
-    const twoLive = TOOLS.map((t) => ({ ...t, status: "live" as const }));
-    expect(newActivityPath("c1", twoLive)).toBe("/courses/c1/activities/new");
+  it("starts each live tool at its first step, and lists only live tools as startable", () => {
+    expect(LIVE_TOOLS.map((t) => t.slug)).toEqual(["study-chat"]);
+    expect(newActivityPath("c1", LIVE_TOOLS[0])).toBe("/courses/c1/activities/new/study-chat?step=materials");
+    expect(newActivityPath("c1", { ...TOOLS[1], start: undefined })).toBe(`/courses/c1/activities/new/${TOOLS[1].slug}`);
   });
 
   it("opens a draft at its tool's setup steps, and anything else (or a tool without them) at the activity", () => {
