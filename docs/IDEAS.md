@@ -27,7 +27,3 @@ Shown in the wizard as disabled "Coming soon" until built:
 ## From the Help tab (D-032, 2026-11-12)
 
 - **Ask the DALAA wizard**: on the Help tab, a teacher asks the AI how to do something in DALAA and gets an answer for their course. Shown as a Preview until built. *Opinion:* worth it only if it answers from our own help text and the course's real state; a generic chatbot will give wrong directions.
-
-## From Nathan (2026-11-12)
-
-- **Search on Activities and Materials**: a search box at the top left of each tab, across from "+ Activity" / "+ Materials", like Canvas's "Search for Quiz" on its Quizzes page. Typing filters the list as you go, by title. *Opinion:* cheap, since both lists are already on the page, so it can filter in the browser with no new query. It matters once a course has more than a screenful. On Activities it should search the current view (Assigned, Not assigned, Other courses).

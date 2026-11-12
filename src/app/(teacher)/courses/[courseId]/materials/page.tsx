@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { SeenByPill } from "@/components/seen-by-pill";
 import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL, type Material } from "@/content/materials";
@@ -31,8 +32,12 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
   const rows = filter ? all.filter((r) => r.source === filter) : all;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <ListSearch className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SearchBox placeholder="Search for material" />
+        <MaterialsMenu base={base} />
+      </div>
+      <div>
         <nav aria-label="Show" className="flex flex-wrap gap-1 text-sm">
           {FILTERS.map((f) => (
             <Link
@@ -47,8 +52,6 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
             </Link>
           ))}
         </nav>
-        <span className="flex-1" />
-        <MaterialsMenu base={base} />
       </div>
 
       {q.added && (
@@ -72,65 +75,72 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
           {filter ? "Nothing of this kind yet." : "No materials yet. Use + Materials to upload or paste one."}
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[15px]">
-            <thead>
-              <tr className="border-b-2 border-border-strong text-left">
-                <th className="px-3 py-2.5 font-bold">Title</th>
-                <th className="px-3 py-2.5 font-bold whitespace-nowrap">Seen by</th>
-                <th className="px-3 py-2.5 font-bold whitespace-nowrap">Used in</th>
-                <th className="px-3 py-2.5 font-bold whitespace-nowrap">Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.key} className="border-b border-border align-top">
-                  <td className="px-3 py-3">
-                    <span className="font-bold break-words">{r.name}</span>
-                    <span className="block text-[13px] text-muted">
-                      {SOURCE_LABEL[r.source]}
-                      {r.url && (
-                        <>
-                          {" · "}
-                          <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:underline">
-                            Open page
-                          </a>
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <SeenByPill seenBy={r.seenBy} />
-                  </td>
-                  <td className="px-3 py-3">
-                    {r.usedIn.length === 0 ? (
-                      <span className="text-muted">Not used yet</span>
-                    ) : (
-                      <ul className="flex flex-col gap-0.5">
-                        {r.usedIn.map((a) => (
-                          <li key={a.id}>
-                            <Link href={`/courses/${course.id}/activities/${a.id}`} className="text-accent-text hover:underline">
-                              {a.title}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-muted">
-                    <LocalTime value={r.date} style="day" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchGroup texts={rows.map((r) => r.name)}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[15px]">
+                <thead>
+                  <tr className="border-b-2 border-border-strong text-left">
+                    <th className="px-3 py-2.5 font-bold">Title</th>
+                    <th className="px-3 py-2.5 font-bold whitespace-nowrap">Seen by</th>
+                    <th className="px-3 py-2.5 font-bold whitespace-nowrap">Used in</th>
+                    <th className="px-3 py-2.5 font-bold whitespace-nowrap">Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <SearchItem key={r.key} text={r.name}>
+                      <tr className="border-b border-border align-top">
+                        <td className="px-3 py-3">
+                          <span className="font-bold break-words">{r.name}</span>
+                          <span className="block text-[13px] text-muted">
+                            {SOURCE_LABEL[r.source]}
+                            {r.url && (
+                              <>
+                                {" · "}
+                                <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:underline">
+                                  Open page
+                                </a>
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <SeenByPill seenBy={r.seenBy} />
+                        </td>
+                        <td className="px-3 py-3">
+                          {r.usedIn.length === 0 ? (
+                            <span className="text-muted">Not used yet</span>
+                          ) : (
+                            <ul className="flex flex-col gap-0.5">
+                              {r.usedIn.map((a) => (
+                                <li key={a.id}>
+                                  <Link href={`/courses/${course.id}/activities/${a.id}`} className="text-accent-text hover:underline">
+                                    {a.title}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap text-muted">
+                          <LocalTime value={r.date} style="day" />
+                        </td>
+                      </tr>
+                    </SearchItem>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SearchGroup>
+          <NoMatches texts={rows.map((r) => r.name)} noun="materials" />
+        </>
       )}
       <p className="text-sm text-muted">
         This course&apos;s Canvas Pages and Files are listed automatically; edit them in Canvas. Students see a material
         only inside an activity that uses it, and AI-only materials never reach students. Canvas Files are listed when
         DALAA can read them: PDF, Word, PowerPoint, .txt and .md.
       </p>
-    </div>
+    </ListSearch>
   );
 }

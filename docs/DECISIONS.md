@@ -254,6 +254,11 @@ reach production before the code) and those were test attempts anyway.
   ones start their first step, the rest say Coming soon), replacing the
   "What kind of activity?" page; old links to it land on Activities or
   Canvas's picker.
+- **Search on Activities and Materials** (*2026-11-12, Nathan*): a Canvas-style
+  "Search for …" box at the top left, across from "+ Activity" / "+ Materials".
+  It filters the rows already on the page by title, in the browser
+  (`src/components/list-search.tsx`), and keeps its text when the teacher
+  switches views.
 - **A Help tab after Setup** (*2026-11-12, Nathan*): "Ask the DALAA wizard"
   (a Preview until built, docs/IDEAS.md), Give feedback (opens the same panel
   as the Feedback button), and Latest release notes from
