@@ -166,18 +166,19 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
   Design tokens live in `src/app/globals.css`; never hard-code colors.
 - Local setup and deploying: `README.md`.
 - Before committing: `npm run lint && npm run typecheck && npm test`. Check UI
-  changes in a real browser in light, dark and 390px mobile.
+  changes in a real browser at desktop width and 390px mobile (the app is
+  light-only, D-032). Local Node 20 fails the `Array.fromAsync` tests; CI on
+  Node 22 is the gate.
 
 ## Working rules learned the hard way
 
 - **Every PR targets `main`**, even when it builds on an unmerged one (say so in
   the description). Stacked PRs got merged out of order and one never reached
   `main`.
-- **A PR that adds a migration:** apply it to production first
-  (`DATABASE_URL=<POSTGRES_URL_NON_POOLING> npm run migrate`, README), then
-  merge. Only additive migrations can go first; anything else needs a plan.
-  Production and preview deployments share one database and one
-  `CANVAS_TOKEN_KEY`.
+- **A PR that adds a migration:** apply it to production first with
+  `scripts/migrate-prod.sh`, then merge (see *How we ship*). Only additive
+  migrations can go first; anything else needs a plan. Production and preview
+  deployments share one database and one `CANVAS_TOKEN_KEY`.
 - **Every new table gets `enable row level security`.** Supabase's REST API can
   read the public schema otherwise.
 - **Practice Canvas stays obviously fake:** practice NetIDs start `practice.`
@@ -196,4 +197,37 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
 - Any new invariant is a constraint or a test, not a comment.
 - Record product decisions in `docs/DECISIONS.md` (dated, with who decided);
   update `docs/PRD.md` when direction changes. Don't leave decisions only in chat.
-- Small PRs (aim < 400 changed lines). Don't merge your own PR.
+- Small PRs (aim < 400 changed lines).
+
+## How we ship (Nathan's standing authorization, 2026-11-08/09/11)
+
+This is the one place these rules live; `ralph/PROMPT.md`, `ralph/BUG-PROMPT.md`
+and README point here.
+
+1. **Branch from `origin/main`**, commit with explicit paths (`git add <paths>`,
+   never `-A`). No `Co-Authored-By` trailer and no "Generated with Claude" line,
+   in commits or PRs.
+2. **Migration in the change?** Additive only (create table/index, add a
+   nullable column). Apply it to production with `scripts/migrate-prod.sh`
+   before merging; it must end with `migrations up to date`. Never run SQL by
+   hand against production; production feedback data is read and changed only
+   through `npm run feedback -- … --prod`.
+3. **Open a PR to `main` and merge it yourself:** `gh pr merge --auto --merge`.
+   GitHub merges when the required `ci-ok` check passes. No human review is
+   needed. If `ci-ok` fails, fix it; never merge around it.
+4. **Check the deploy:** `vercel -Q ~/.vercel-dalaa ls dalaa-v1 --format json`,
+   wait (8 minutes at most) for the production entry whose
+   `meta.githubCommitSha` is the merged `main` HEAD to be `READY`. Then
+   `https://dalaa-v1.vercel.app/api/health` must report the database up. If
+   it fails: `vercel -Q ~/.vercel-dalaa rollback` and say why.
+5. **Never:** push to `main` directly, force-push, rewrite history,
+   `reset --hard`, delete branches by hand, print secrets (check them by
+   presence or length), or touch the gitgrade instance's other tools and keys.
+   Keep `dalaa-v1.vercel.app` unredirected; Canvas LTI and sign-in use it.
+
+**Time limits:** nothing runs open-ended. Run a check once and read the real
+output before polling on it; cap every wait at 10 minutes; the same step
+failing twice the same way means stop and report the exact error.
+
+**Sessions start in this folder** (`cd DALAA_v1 && claude`), so this file
+loads. `volli/CLAUDE.md` only points here.
