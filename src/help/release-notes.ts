@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-12",
     changes: [
+      "Search box on the Activities and Materials tabs: type part of a title to filter the list.",
       "New Help tab: give feedback and see what's new.",
       "The DALAA tab is now called Setup.",
       "+ Activity opens a menu of activity types, and copying one from another course is in the same menu.",
