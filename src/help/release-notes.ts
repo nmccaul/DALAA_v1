@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-12",
     changes: [
+      "Insights shows which positions the class took and which points it raised, with what students said (names hidden until you click Show names), and the class average on each rubric criterion.",
       "Results has three views: Insights, Grades and Disputes. Click a student's name to read their whole conversation and grade.",
       "Disputes get their own list, oldest first, with your reply and the score in one step.",
       "Search box on the Activities and Materials tabs: type part of a title to filter the list.",
