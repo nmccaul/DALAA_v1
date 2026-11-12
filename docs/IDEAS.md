@@ -23,3 +23,7 @@ Shown in the wizard as disabled "Coming soon" until built:
 - **Saved rubrics / "Use a saved rubric"**.
 - **"Redraft with AI"** on the grading step.
 - **Case Writer**: write a new case with the AI as a material.
+
+## From the Help tab (D-032, 2026-11-12)
+
+- **Ask the DALAA wizard**: on the Help tab, a teacher asks the AI how to do something in DALAA and gets an answer for their course. Shown as a Preview until built. *Opinion:* worth it only if it answers from our own help text and the course's real state; a generic chatbot will give wrong directions.

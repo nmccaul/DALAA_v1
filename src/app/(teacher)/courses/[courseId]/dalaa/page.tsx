@@ -104,6 +104,9 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
             </Link>
             {connected ? " and its sync with Canvas" : null}, and setup for this course.
           </li>
+          <li>
+            <b>Help</b>: give feedback and see what&apos;s new.
+          </li>
         </ul>
       </section>
 

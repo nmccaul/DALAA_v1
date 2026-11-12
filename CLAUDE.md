@@ -198,6 +198,8 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
 - Record product decisions in `docs/DECISIONS.md` (dated, with who decided);
   update `docs/PRD.md` when direction changes. Don't leave decisions only in chat.
 - Small PRs (aim < 400 changed lines).
+- A change a teacher would notice adds a plain-language line to
+  `src/help/release-notes.ts` (the Help tab's release notes) in the same PR.
 
 ## How we ship (Nathan's standing authorization, 2026-11-08/09/11)
 

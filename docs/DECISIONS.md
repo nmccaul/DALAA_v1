@@ -254,6 +254,11 @@ reach production before the code) and those were test attempts anyway.
   ones start their first step, the rest say Coming soon), replacing the
   "What kind of activity?" page; old links to it land on Activities or
   Canvas's picker.
+- **A Help tab after Setup** (*2026-11-12, Nathan*): "Ask the DALAA wizard"
+  (a Preview until built, docs/IDEAS.md), Give feedback (opens the same panel
+  as the Feedback button), and Latest release notes from
+  `src/help/release-notes.ts`, written for teachers. A PR a teacher would
+  notice adds its line there.
 - **One course-menu entry, "AI Activities"** (`COURSE_MENU_LABEL`), with tabs
   inside it: Assigned Activities · Materials · Grading · DALAA. Canvas allows
   each tool only one menu entry, and three tools would mean three keys per school.
