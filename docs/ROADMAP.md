@@ -79,7 +79,7 @@ Pulled forward 2026-10-29 so the whole loop can be tested inside a real Canvas
 | **AI layer** | AI Gateway, approved model(s), fallback, retries, limits, structured-output validation; versioned prompt files; prompt + model recorded per attempt | #38 |
 | **Cost** | Per-call ledger with course/activity/student/model attribution | #39 |
 | **Assessment** | Shared results shape with evidence excerpts; instructor override is the final decision; AI never decides misconduct | #45 |
-| **Insight** | Class results view (positions, themes, criteria, drill-down); student status + time spent | #46, #47 |
+| **Insight** | Class results view (positions, themes, criteria, drill-down); student status + time spent. Results tab Insights · Grades · Disputes and per-student transcripts built 2026-11-12 (D-035) | #46, #47 |
 | **Accommodations** | Per-student due-date extension | #48 |
 | **Privacy & data** | Encryption, course separation, no-training provider settings, data minimization, written retention/deletion and incident-response procedures | #41 |
 | **Backup** | Managed DB backups; CSV export of grades and results | #42 |

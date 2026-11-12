@@ -11,6 +11,8 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-12",
     changes: [
+      "Results has three views: Insights, Grades and Disputes. Click a student's name to read their whole conversation and grade.",
+      "Disputes get their own list, oldest first, with your reply and the score in one step.",
       "Search box on the Activities and Materials tabs: type part of a title to filter the list.",
       "New Help tab: give feedback and see what's new.",
       "The DALAA tab is now called Setup.",

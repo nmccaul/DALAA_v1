@@ -3,7 +3,8 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import { listStudentAssignments } from "@/activities/queries";
 import { getResult } from "./store";
-import { latestDispute, openDispute, resolveDispute } from "./disputes";
+import { getTaughtAttempt } from "./attempt";
+import { latestDispute, listCourseDisputes, openDispute, resolveDispute } from "./disputes";
 import { listCourseGrades, setTeacherScore } from "./grading";
 
 async function setup() {
@@ -239,5 +240,52 @@ describe("disputes", () => {
     await expect(
       db.query("insert into disputes (attempt_id, client_key, reason) values ($1, $2, 'Two')", [graded, key()]),
     ).rejects.toThrow();
+  });
+
+  it("lists a course's disputes for its teacher: open ones oldest first, then resolved ones", async () => {
+    const { db, prof, other, course, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const ana = await student("ana", "Ana");
+    const ben = await student("ben", "Ben");
+    const cat = await student("cat", "Cat");
+    const [ta, tb, tc] = [await attempt(a, ana, true), await attempt(a, ben, true), await attempt(a, cat, true)];
+    for (const t of [ta, tb, tc]) await grade(t, 6);
+    await openDispute(db, ana, ta, "First", key());
+    await openDispute(db, ben, tb, "Second", key());
+    await openDispute(db, cat, tc, "Third", key());
+    await db.query("update disputes set opened_at = now() - interval '1 day' where reason = 'Second'");
+    await resolveDispute(db, prof, (await latestDispute(db, tc))!.id, 8, "Fair point.");
+
+    const list = await listCourseDisputes(db, prof, course);
+    expect(list.map((d) => [d.reason, d.status, d.studentName])).toEqual([
+      ["Second", "open", "Ben"],
+      ["First", "open", "Ana"],
+      ["Third", "resolved", "Cat"],
+    ]);
+    expect(list[2]).toMatchObject({ activityTitle: "Case 1", aiScore: 6, teacherScore: 8, maxScore: 10, response: "Fair point." });
+    expect(await listCourseDisputes(db, other, course)).toEqual([]);
+    expect(await listCourseDisputes(db, prof, "not-a-uuid")).toEqual([]);
+  });
+});
+
+describe("getTaughtAttempt", () => {
+  it("shows an attempt to its course's teacher only", async () => {
+    const { db, prof, other, course, activity, student, attempt } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const ana = await student("ana", "Ana");
+    const id = await attempt(a, ana, true);
+    expect(await getTaughtAttempt(db, prof, id)).toMatchObject({
+      id,
+      activityId: a,
+      courseId: course,
+      activityTitle: "Case 1",
+      studentName: "Ana",
+      loginId: "ana",
+      status: "completed",
+      endedBy: "student",
+    });
+    expect(await getTaughtAttempt(db, other, id)).toBeNull();
+    expect(await getTaughtAttempt(db, ana, id)).toBeNull();
+    expect(await getTaughtAttempt(db, prof, "nope")).toBeNull();
   });
 });

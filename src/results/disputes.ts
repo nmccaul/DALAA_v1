@@ -109,3 +109,39 @@ export async function resolveDispute(
     return "resolved";
   });
 }
+
+export type CourseDispute = Dispute & {
+  attemptId: string;
+  activityTitle: string;
+  studentName: string;
+  loginId: string;
+  /** The grader's score, the teacher's (NULL when unchanged), and what it's out of. */
+  aiScore: number;
+  teacherScore: number | null;
+  maxScore: number;
+};
+
+/**
+ * Every dispute in a course the actor teaches: open ones first, oldest
+ * first, so the longest-waiting student is answered first; then resolved
+ * ones, newest first.
+ */
+export async function listCourseDisputes(db: Db, actor: Actor, courseId: string): Promise<CourseDispute[]> {
+  if (!UUID.test(courseId)) return [];
+  const where = and({ text: "a.course_id = $1 and r.status = 'graded'", values: [courseId] }, coursesTaughtBy(actor, "c"));
+  return db.query<CourseDispute>(
+    `select d.id, d.status, d.reason, d.opened_at as "openedAt", d.response, d.resolved_at as "resolvedAt",
+            d.attempt_id as "attemptId", a.title as "activityTitle", u.display_name as "studentName",
+            u.external_id as "loginId", r.score::float8 as "aiScore", r.teacher_score::float8 as "teacherScore",
+            r.max_score::float8 as "maxScore"
+       from disputes d
+       join results r on r.attempt_id = d.attempt_id
+       join attempts t on t.id = d.attempt_id
+       join activities a on a.id = t.activity_id
+       join courses c on c.id = a.course_id
+       join users u on u.id = t.user_id
+      where ${where.text}
+      order by d.status = 'resolved', case when d.status = 'open' then d.opened_at end asc, d.resolved_at desc, d.id`,
+    where.values,
+  );
+}
