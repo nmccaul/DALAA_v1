@@ -21,6 +21,7 @@ import { getStudentWork, type StudentWork } from "@/attempts/work";
 import { activityGuides } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import { plain, quoted } from "@/results/quotes";
 import { claimGrading, failGrading, getResult, saveGrade, type GradedResult, type Result } from "@/results/store";
 import { doneTurns } from "./chat";
 import { STUDY_CHAT } from "./create";
@@ -121,21 +122,6 @@ export function gradePrompt(
   ].join("\n\n");
   parts.push(`<transcript>\n${transcript}\n</transcript>`);
   return { system, prompt: parts.join("\n\n") };
-}
-
-/** Lowercased, with quote marks and runs of spaces evened out, so a faithful quote matches. */
-const plain = (text: string) =>
-  text
-    .toLowerCase()
-    .replace(/[“”«»]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/\s+/g, " ")
-    .replace(/^["'\s]+|["'\s.…]+$/g, "");
-
-/** The quote if the student wrote it, else NULL. Stored without the quote marks the grader wraps it in; the page adds its own. */
-function quoted(evidence: string, studentWords: string): string | null {
-  const quote = evidence.trim().replace(/^["“'‘]([^]*)["”'’]$/, "$1").trim();
-  return quote !== "" && plain(quote) !== "" && studentWords.includes(plain(quote)) ? quote : null;
 }
 
 /** Turns the grader's answer into a result for this chat, or throws `UnfitGrade`. Exported for tests. */

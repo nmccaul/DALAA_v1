@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-12",
     changes: [
+      "Class prep brief on Insights: the AI reads every finished conversation and tells you what the class found confusing, what it did well, the questions it asked, and questions to raise in class.",
       "Insights shows which positions the class took and which points it raised, with what students said (names hidden until you click Show names), and the class average on each rubric criterion.",
       "Results has three views: Insights, Grades and Disputes. Click a student's name to read their whole conversation and grade.",
       "Disputes get their own list, oldest first, with your reply and the score in one step.",
