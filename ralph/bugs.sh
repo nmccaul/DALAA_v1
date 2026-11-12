@@ -67,6 +67,13 @@ waiting() {
   print -r -- "$out" | grep -v '^No open reports\.$' | grep -cv $'\tin_progress$'
 }
 
+# A moved project folder leaves the worktree's links pointing at the old path
+# (2026-11-11): repair them, and re-point .env.local, before anything else.
+if [[ -d $TREE ]] && ! git -C "$TREE" rev-parse -q --git-dir >/dev/null 2>&1; then
+  git worktree repair "$TREE" || exit 1
+fi
+[[ -d $TREE ]] && ln -sfn "$REPO/.env.local" "$TREE/.env.local"
+
 if [[ ! -d $TREE ]]; then
   git fetch -q origin && git worktree add --detach "$TREE" "$REF" || exit 1
   ln -s "$REPO/.env.local" "$TREE/.env.local"
