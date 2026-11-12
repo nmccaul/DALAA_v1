@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npm ci)",
+      "Bash(npm install)",
+      "Bash(npx tsc *)",
+      "Bash(npx vitest *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git stash*)",
+      "Bash(git push -u origin *)",
+      "Bash(git push origin *)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)",
+      "Bash(gh api repos/nmccaul/DALAA_v1/*)",
+      "Bash(vercel -Q ~/.vercel-dalaa ls *)",
+      "Bash(vercel -Q ~/.vercel-dalaa inspect *)",
+      "Bash(scripts/migrate-prod.sh)",
+      "Bash(./scripts/migrate-prod.sh)",
+      "Bash(curl -s https://dalaa-v1.vercel.app/*)",
+      "Bash(curl -sS https://dalaa-v1.vercel.app/*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin HEAD:main*)",
+      "Bash(git reset --hard*)",
+      "Bash(git branch -D*)",
+      "Bash(git push origin --delete*)",
+      "Bash(cat .env*)",
+      "Bash(vercel env pull*)",
+      "Bash(vercel -Q ~/.vercel-dalaa env pull*)",
+      "Read(./.env.local)"
+    ]
+  }
+}
