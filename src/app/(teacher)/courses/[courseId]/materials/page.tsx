@@ -3,30 +3,20 @@ import Link from "next/link";
 import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { SeenByPill } from "@/components/seen-by-pill";
-import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL, type Material } from "@/content/materials";
+import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL } from "@/content/materials";
+import { SOURCE_FILTERS } from "@/content/material-sources";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { MaterialsMenu } from "./materials-menu";
 
 export const metadata: Metadata = { title: "Materials" };
 
-type Source = Material["source"];
-
-const FILTERS: { source: Source | null; label: string }[] = [
-  { source: null, label: "All" },
-  { source: "canvas-page", label: "Canvas Pages" },
-  { source: "canvas-file", label: "Canvas Files" },
-  { source: "upload", label: "Uploaded" },
-  { source: "paste", label: "Pasted" },
-  { source: "web", label: "Web pages" },
-];
-
 /** The course's Materials tab (D-032): readings and AI-only notes, and the Canvas course's Pages and Files. */
 export default async function MaterialsPage({ params, searchParams }: PageProps<"/courses/[courseId]/materials">) {
   const { actor, course } = await loadTaughtCourse((await params).courseId);
   const q = await searchParams;
   const base = `/courses/${course.id}/materials`;
-  const filter = FILTERS.find((f) => f.source === q.source)?.source ?? null;
+  const filter = SOURCE_FILTERS.find((f) => f.source === q.source)?.source ?? null;
 
   const { rows: all, canvas } = await loadMaterialRows(db(), actor, course.id);
   const rows = filter ? all.filter((r) => r.source === filter) : all;
@@ -39,7 +29,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
       </div>
       <div>
         <nav aria-label="Show" className="flex flex-wrap gap-1 text-sm">
-          {FILTERS.map((f) => (
+          {SOURCE_FILTERS.map((f) => (
             <Link
               key={f.label}
               href={f.source ? `${base}?source=${f.source}` : base}
