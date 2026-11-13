@@ -15,7 +15,7 @@ import { StudyChatSettings } from "../schema";
 import { TrialPanel } from "../trial-panel";
 import { reviewSummary, SETUP_CARDS, setupNote } from "./setup-cards";
 import { WizardShell } from "./shell";
-import { isSetupStep, previousSetupStep, setupPath, WIZARD_STEPS } from "./steps";
+import { isSetupStep, previousSetupStep, SETUP_STEPS, setupPath, WIZARD_STEPS, type SetupStep } from "./steps";
 
 /**
  * Wizard steps 4–7 on the drafted activity: each editing step shows its own
@@ -36,6 +36,8 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
   }
   const path = (s: Parameters<typeof setupPath>[2]) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
   const previous = previousSetupStep(step);
+  // Every setup step works on the saved draft, so any can be opened from the list; from an editing step, saving first.
+  const go = (save: boolean) => Object.fromEntries(SETUP_STEPS.map((s) => [s, { href: path(s), save }])) as Record<SetupStep, { href: string; save: boolean }>;
 
   if (step === "review") {
     const { readings, guides } = await activityMaterials(db(), activity.id);
@@ -43,7 +45,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
     // From Canvas's "Add to Canvas" picker, Publish goes back to the picker; Canvas makes the assignment there.
     const assign = assignToCanvasOn() && !addToCanvas;
     return (
-      <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>}>
+      <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} go={go(false)}>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-panel border border-border bg-surface px-4 py-3">
           {reviewSummary(parsed.data, activity.title, readings.length + guides.length, activity.points).map((row) => (
             <Fragment key={row.label}>
@@ -98,7 +100,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
   // Edit can open an activity students have started: say changes reach new attempts only (D-031).
   const started = startedNote(await countStartedAttempts(db(), activity.id));
   return (
-    <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} comingSoon={["Ask the wizard for changes"]}>
+    <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} comingSoon={["Ask the wizard for changes"]} go={go(true)}>
       {started && (
         <p role="status" className="mb-4 rounded-control border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
           {started}
@@ -113,7 +115,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
         initial={parsed.data}
         addToCanvas={addToCanvas}
         cards={SETUP_CARDS[step]}
-        wizard={{ step, back: previous && path(previous) }}
+        wizard={{ step, previous }}
       />
     </WizardShell>
   );

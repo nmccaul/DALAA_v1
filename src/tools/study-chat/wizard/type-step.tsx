@@ -60,6 +60,10 @@ export async function TypeStep({ actor, course, searchParams }: CreateScreenProp
 
   return (
     <WizardShell
+      go={{
+        materials: { href: materialsStepPath(course.id, ids, addToCanvas) },
+        goal: { href: goalStepPath(course.id, ids, answers, addToCanvas) },
+      }}
       step="type"
       title={title}
       note={

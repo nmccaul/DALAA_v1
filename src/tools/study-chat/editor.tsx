@@ -1,16 +1,16 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
-import Link from "next/link";
 import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
+import { WIZARD_FORM_ID } from "./wizard/steps";
 
 type S = StudyChatSettings;
 type Item = { label: string; description: string };
@@ -107,9 +107,10 @@ function ItemsEditor({ path, items, max, onChange }: { path: string[]; items: It
 
 /**
  * In the wizard: which step this is (the server works out where Next goes)
- * and where Back goes. The step's cards start open, with no search box and no Publish.
+ * and the step Back goes to. Back, like Next and the step list, saves first.
+ * The step's cards start open, with no search box and no Publish.
  */
-export type WizardEditing = { step: string; back: string | null };
+export type WizardEditing = { step: string; previous: string | null };
 
 /**
  * The review screen's body: one short summary card per part of the chat, each
@@ -145,6 +146,12 @@ export function StudyChatEditor({
     }),
     {},
   );
+
+  // A refused save (from Next, Back or the step list) brings its reasons into view.
+  const refused = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.error || state.problems) refused.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [state]);
 
   const json = JSON.stringify(s);
   const savedJson = state.savedAt ? state.snapshot : JSON.stringify(initial);
@@ -236,6 +243,7 @@ export function StudyChatEditor({
   const scenario = s.scenarios[0];
   return (
     <form
+      id={wizard ? WIZARD_FORM_ID : undefined}
       action={action}
       // Enter in a one-line field must not publish.
       onKeyDown={(e) => e.key === "Enter" && e.target instanceof HTMLInputElement && e.preventDefault()}
@@ -474,7 +482,7 @@ export function StudyChatEditor({
       </div>
 
       {(state.error || state.problems) && (
-        <div role="alert" className="flex flex-col gap-1 text-sm text-danger">
+        <div ref={refused} role="alert" className="flex flex-col gap-1 text-sm text-danger">
           {state.error && <p>{state.error}</p>}
           {state.problems && (
             <ul className="list-disc pl-5">
@@ -494,10 +502,10 @@ export function StudyChatEditor({
             <Button variant="secondary" name="intent" value="save" disabled={pending}>
               Save as draft
             </Button>
-            {wizard.back && (
-              <Link href={wizard.back} className="text-sm text-muted hover:text-text">
+            {wizard.previous && (
+              <button type="submit" name="intent" value={`goto:${wizard.previous}`} disabled={pending} className="text-sm text-muted hover:text-text">
                 ← Back
-              </Link>
+              </button>
             )}
           </>
         ) : published ? (
