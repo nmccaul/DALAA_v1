@@ -112,8 +112,9 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
 
 /**
  * What the student is here to do, in one place (feedback abf69c71): the goal,
- * the question, who they talk with and when it ends, and what the grade is
- * made of (criterion names and points only).
+ * who they talk with and when it ends, and what the grade is made of
+ * (criterion names and points only). The chat's question isn't here: the
+ * character asks it, and it stays in sight above the chat.
  */
 function TaskCard({ view, hasContent, hasWork }: { view: ReturnType<typeof studentView>; hasContent: boolean; hasWork: boolean }) {
   const { maxTurns, timeLimitMinutes, question, studentCanFinish } = view.limits;
@@ -121,7 +122,8 @@ function TaskCard({ view, hasContent, hasWork }: { view: ReturnType<typeof stude
     maxTurns !== null && `after ${maxTurns} ${maxTurns === 1 ? "message" : "messages"} from you`,
     timeLimitMinutes !== null &&
       `after ${timeLimitMinutes} minutes, counted from ${view.bringsWork ? "when you add your work" : "your first message"}`,
-    question !== null && "once you've answered the question",
+    // The question is the character's to ask in the chat, often in their voice (Nathan, 2026-11-13).
+    question !== null && `once you've answered ${view.persona.name}'s question`,
     studentCanFinish && "when you click Finish",
   ].filter((e): e is string => typeof e === "string");
   const total = view.criteria.reduce((sum, c) => sum + c.points, 0);
@@ -134,12 +136,6 @@ function TaskCard({ view, hasContent, hasWork }: { view: ReturnType<typeof stude
         <h2 className="text-xs font-bold tracking-wide text-accent-text uppercase">Your goal</h2>
         <p className="font-medium">By the end, you should be able to: {view.goal}</p>
       </div>
-      {question !== null && (
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xs font-bold tracking-wide text-accent-text uppercase">Question to answer</h2>
-          <p>{question}</p>
-        </div>
-      )}
       </div>
       <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1 text-sm">
