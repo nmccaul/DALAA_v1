@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import { createCourse } from "./create";
-import { getTaughtCourse, listRoster, listTakenCourses, listTaughtCourses } from "./queries";
+import { getTaughtCourse, listRoster, listTakenCourses, listTaughtCourses, notTeachingReason } from "./queries";
 
 describe("listTaughtCourses", () => {
   it("lists only the teacher's courses, counting active students", async () => {
@@ -134,5 +134,20 @@ describe("listRoster order", () => {
       "update course_members set status = 'flagged' where user_id = (select id from users where external_id = 'aaa')",
     );
     expect((await listRoster(db, prof, courseId)).map((r) => r.netId)).toEqual(["zzz", "aaa"]);
+  });
+});
+
+describe("notTeachingReason", () => {
+  const actor = (isStaff: boolean): Actor => ({ userId: randomUUID(), institutionId: randomUUID(), netId: "x", displayName: "Test Student", isStaff, isAdmin: false });
+
+  it("tells a teacher signed in as Canvas's Test Student who they are and how to get back (feedback fe1ad0a0)", () => {
+    const reason = notTeachingReason(actor(false));
+    expect(reason).toContain("signed in as Test Student");
+    expect(reason).toContain("Student View");
+    expect(reason).toContain("Sign out");
+  });
+
+  it("keeps the plain refusal for staff who don't teach the course", () => {
+    expect(notTeachingReason(actor(true))).toBe("That course isn't one you teach.");
   });
 });

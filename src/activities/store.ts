@@ -6,7 +6,7 @@
  */
 
 import { canvasCourseUrl } from "@/canvas/institution";
-import { getTaughtCourse } from "@/courses/queries";
+import { getTaughtCourse, notTeachingReason } from "@/courses/queries";
 import { and, coursesTaughtBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 
@@ -59,7 +59,7 @@ export async function createActivity(
   activity: NewActivity,
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
   if (!UUID.test(creationKey)) throw new Error("Activity creation key must be a UUID");
-  if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: "That course isn't one you teach." };
+  if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: notTeachingReason(actor) };
 
   // Through text: postgres.js would otherwise send the JSON string as a JSON string.
   // Materials are attached afterwards with setActivityMaterials (./materials.ts).

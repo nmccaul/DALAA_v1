@@ -46,6 +46,17 @@ export async function listTakenCourses(db: Db, actor: Actor): Promise<StudentCou
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Why a write to a course the actor doesn't teach was refused. A student
+ * account here is almost always a teacher whose session was replaced: opening
+ * Student View in Canvas launches DALAA as Canvas's Test Student, in the same
+ * browser (feedback fe1ad0a0), so say who they're signed in as.
+ */
+export function notTeachingReason(actor: Actor): string {
+  if (actor.isStaff) return "That course isn't one you teach.";
+  return `You're signed in as ${actor.displayName}, a student account, not as this course's teacher. Opening Student View in Canvas does that. Sign out, sign back in as yourself, and try again.`;
+}
+
 /** One course the actor teaches, or null (not theirs, or no such course). */
 export async function getTaughtCourse(db: Db, actor: Actor, courseId: string): Promise<CourseCard | null> {
   if (!UUID.test(courseId)) return null;

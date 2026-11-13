@@ -12,7 +12,7 @@ import { materialsTooLong } from "@/activities/materials";
 import { getTaughtGuide, type Guide } from "@/content/guide";
 import type { MaterialRow } from "@/content/materials";
 import { getContent, type SavedContent } from "@/content/store";
-import { getTaughtCourse } from "@/courses/queries";
+import { getTaughtCourse, notTeachingReason } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { MaterialIds } from "./query";
@@ -77,7 +77,7 @@ export async function savePicks(
   }
   if (!UUID.test(formKey)) return refuse("Something went wrong with this page. Reload it and try again.");
 
-  if (!(await getTaughtCourse(db, actor, courseId))) return refuse("That course isn't one you teach.");
+  if (!(await getTaughtCourse(db, actor, courseId))) return refuse(notTeachingReason(actor));
 
   const [{ found }] = await db.query<{ found: number }>(
     `select (select count(*) from course_content where course_id = $1 and id = any($2::uuid[]))::int
