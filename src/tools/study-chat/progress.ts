@@ -22,6 +22,14 @@ export type Tracked = { key: string; label: string };
 
 export type ChatProgress = { touchpoints: Tracked[]; position: Tracked | null };
 
+/**
+ * How long a check after a reply may take (this tracking, and whether the
+ * question is answered, chat.ts). The student waits for both before they can
+ * send again, and a check that gives up costs them nothing; a slow one used to
+ * leave the chat stuck on "Waiting for the reply" (feedback ed9b0fac).
+ */
+export const CHECK_TIMEOUT_MS = 20_000;
+
 /** Touchpoints and positions are matched by name, ignoring case and spacing. */
 export const itemKey = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -65,6 +73,7 @@ export async function trackProgress(
           positions.length > 0 ? `Positions:\n${list(positions)}` : "Positions: none. Answer null.",
           `<transcript>\n${transcript}\n</transcript>`,
         ].join("\n\n"),
+        abortSignal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
       },
     );
     const named = (items: readonly { label: string }[], name: string | null) =>

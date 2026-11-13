@@ -159,6 +159,14 @@ describe("live touchpoint tracking", () => {
     expect((await trackCalls()).map((c) => c.ok)).toEqual([false, true]);
   });
 
+  it("gives both checks after a reply a time limit, so a slow one can't hold the student up (feedback ed9b0fac)", async () => {
+    await db.query("update activities set settings = jsonb_set(settings, '{completion,question}', '\"Should Maya open it?\"') where id = $1", [activity]);
+    expect(await send("Cash is tight.")).toMatchObject({ ok: true });
+    const calls = (models.check as MockLanguageModelV4).doGenerateCalls;
+    expect(calls).toHaveLength(2);
+    for (const call of calls) expect(call.abortSignal).toBeInstanceOf(AbortSignal);
+  });
+
   it("still tracks the turn that ends the chat", async () => {
     await db.query("update activities set settings = $2::text::jsonb where id = $1", [
       activity,

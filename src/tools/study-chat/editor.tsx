@@ -293,6 +293,9 @@ export function StudyChatEditor({
           <>
             <p className="font-medium">{scenario.title}</p>
             <p>{scenario.situation}</p>
+            <p>
+              <span className="text-muted">Opens with:</span> &ldquo;{scenario.opening}&rdquo;
+            </p>
             {s.studentWork && <p className="text-muted">Each student adds their own work before the chat.</p>}
           </>,
           <>
@@ -300,9 +303,10 @@ export function StudyChatEditor({
             <Field path={["scenarios", "situation"]}>
               {text(scenario.situation, (v) => change((d) => void (d.scenarios[0].situation = v)), 6)}
             </Field>
+            {/* The first thing a student sees, so never under "More options" (feedback 2038e05e). */}
+            <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>
             {inCard(switches.studentWork)}
           </>,
-          <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>,
         )}
         {card(
           "positions",

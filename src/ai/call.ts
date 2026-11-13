@@ -19,7 +19,8 @@ export type AiCallContext = {
   courseId?: string | null;
 };
 
-type Prompt = { system?: string } & ({ prompt: string } | { messages: ModelMessage[] });
+/** `abortSignal`: give up on the call when it fires (a check that mustn't hold the student up). */
+type Prompt = { system?: string; abortSignal?: AbortSignal } & ({ prompt: string } | { messages: ModelMessage[] });
 
 /**
  * The AI Gateway reports what it charged as `providerMetadata.gateway.cost`

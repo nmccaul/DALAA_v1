@@ -100,19 +100,31 @@ export function ChatRoom({
       return;
     }
     let reply = "";
-    for await (const event of readTurnEvents(res.body)) {
-      if (event.type === "text") {
-        reply += event.text;
-        setPending({ key, message, reply, failed: null });
-      } else if (event.type === "reply") {
-        setTurns((t) => [...t, { message, reply: event.reply }]);
-        setPending(null);
-        if (event.progress) setProgress(event.progress);
-        if (event.ended) setEnded(event.ended);
-      } else {
-        setPending({ key, message, reply: "", failed: event.reason });
+    let settled = false;
+    try {
+      for await (const event of readTurnEvents(res.body)) {
+        if (event.type === "text") {
+          reply += event.text;
+          setPending({ key, message, reply, failed: null });
+        } else if (event.type === "reply") {
+          settled = true;
+          setTurns((t) => [...t, { message, reply: event.reply }]);
+          setPending(null);
+          if (event.progress) setProgress(event.progress);
+          if (event.ended) setEnded(event.ended);
+        } else {
+          settled = true;
+          setPending({ key, message, reply: "", failed: event.reason });
+        }
       }
+    } catch {
+      // The connection dropped mid-reply; handled below.
     }
+    // The answer never came (the connection dropped, or the server stopped):
+    // offer to send again rather than wait forever (feedback ed9b0fac). Sending
+    // again uses the same key, so a reply that was saved comes back without
+    // counting twice.
+    if (!settled) setPending({ key, message, reply: "", failed: REPLY_FAILED });
   }
 
   function submit() {
