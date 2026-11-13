@@ -195,6 +195,7 @@ export function StudyChatEditor({
             <h3 className="font-display text-lg font-semibold">{key === "rubric" ? `${settingTitle([key])}: ${rubricPoints(s)} points` : settingTitle([key])}</h3>
             <span className="shrink-0 text-sm text-accent-text underline">{open.has(key) ? "Close" : "Edit"}</span>
           </span>
+          {settingHelp([key]) && <span className="-mt-1 text-[13px] text-muted">{settingHelp([key])}</span>}
           <span className="flex flex-col gap-2 text-sm">{summary}</span>
         </summary>
         <div className="flex flex-col gap-4 border-t border-border p-5">
@@ -535,6 +536,12 @@ export function StudyChatEditor({
         <span className="text-sm text-muted" role="status">
           {json === savedJson ? (state.savedAt ? "Saved." : "") : "You have changes that aren't saved yet."}
         </span>
+        {/* After the draft, a teacher who trusts it can go straight to Review (Nathan, 2026-11-13). */}
+        {wizard?.step === "scenario" && (
+          <button type="submit" name="intent" value="goto:review" disabled={pending} className="text-sm text-accent-text underline hover:text-text">
+            Skip to review
+          </button>
+        )}
         {wizard && (
           <Button name="intent" value="next" disabled={pending}>
             {pending ? "Saving…" : "Next"}

@@ -3,7 +3,7 @@ import { CARD_KEYS, shownCards } from "../fields";
 import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
 import { STUDY_CHAT } from "../create";
-import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
+import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupCards, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
 import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
 
 describe("shownCards", () => {
@@ -20,18 +20,28 @@ describe("shownCards", () => {
   });
 });
 
+describe("setupCards", () => {
+  it("shows Positions on Grading only when the chat has some or students take a side", () => {
+    expect(setupCards("grading", draft({ mode: "explain", positions: [] }))).toEqual(["touchpoints", "rubric"]);
+    expect(setupCards("grading", draft({ mode: "debate", positions: [] }))).toEqual(["touchpoints", "positions", "rubric"]);
+    expect(setupCards("grading", draft({ mode: "explain" }))).toContain("positions");
+    expect(setupCards("scenario", draft())).toEqual(["scenarios", "persona"]);
+  });
+});
+
 describe("setup steps", () => {
-  it("goes scenario → options → grading → review, with no step before scenario or after review", () => {
-    expect(nextSetupStep("scenario")).toBe("options");
-    expect(nextSetupStep("grading")).toBe("review");
+  it("goes scenario → grading → options → review, with no step before scenario or after review", () => {
+    expect(nextSetupStep("scenario")).toBe("grading");
+    expect(nextSetupStep("grading")).toBe("options");
+    expect(nextSetupStep("options")).toBe("review");
     expect(nextSetupStep("review")).toBeNull();
-    expect(previousSetupStep("options")).toBe("scenario");
+    expect(previousSetupStep("grading")).toBe("scenario");
     expect(previousSetupStep("scenario")).toBeNull();
     expect(setupPath("c1", "a1", "grading")).toBe("/courses/c1/activities/a1/setup/grading");
   });
 
   it("after a save, Next goes on, a step-list click or Back goes to that step, and Save as draft stays (feedback a142d729, d6010bfd)", () => {
-    expect(savedStepTarget("scenario", "next")).toBe("options");
+    expect(savedStepTarget("scenario", "next")).toBe("grading");
     expect(savedStepTarget("grading", "goto:scenario")).toBe("scenario");
     expect(savedStepTarget("options", "goto:review")).toBe("review");
     expect(savedStepTarget("options", "save")).toBeNull();
@@ -43,7 +53,7 @@ describe("setup steps", () => {
     expect(finishLaterPath("c1")).toBe("/courses/c1?show=unassigned");
   });
 
-  it("goes nowhere it shouldn't from a save: not before step 4, not off the wizard", () => {
+  it("goes nowhere it shouldn't from a save: not before step 3, not off the wizard", () => {
     expect(savedStepTarget("options", "goto:type")).toBeNull();
     expect(savedStepTarget("options", "goto:../../settings")).toBeNull();
     expect(savedStepTarget("type", "next")).toBeNull();
@@ -72,15 +82,13 @@ describe("wizard steps 4–6 extras", () => {
 });
 
 describe("setupNote", () => {
-  it("counts what was drafted, from the stored settings", () => {
+  it("names the kind of activity and the character, and counts what grading holds, from the stored settings", () => {
     expect(setupNote("scenario", draft())).toBe(
-      "I drafted this chat as Case Chat, with 2 positions and 1 touchpoint, and Maya Ortiz to lead it. Change anything that doesn't fit your class.",
+      "I drafted this chat as Apply, with Maya Ortiz to lead it. The opening message is the first thing students read. Change anything that doesn't fit your class.",
     );
-    expect(setupNote("grading", draft())).toBe("I drafted 2 criteria worth 10 points. The activity is worth the total.");
-  });
-
-  it("leaves positions out when there are none", () => {
-    expect(setupNote("scenario", draft({ positions: [] }))).toMatch(/^I drafted this chat as Case Chat, with 1 touchpoint, and/);
+    expect(setupNote("grading", draft())).toBe(
+      "I drafted 1 key point to listen for and 2 criteria worth 10 points. Key points are a checklist; only the criteria score. The activity is worth the total.",
+    );
   });
 });
 
@@ -90,7 +98,7 @@ describe("reviewSummary", () => {
     const rows = Object.fromEntries(reviewSummary(s, "Harbor Bikes", 2, 10).map((r) => [r.label, r.value]));
     expect(rows.Title).toBe("Harbor Bikes");
     expect(rows.Materials).toBe("2 materials");
-    expect(rows.Touchpoints).toBe(`${s.touchpoints.length} touchpoint${s.touchpoints.length === 1 ? "" : "s"}`);
+    expect(rows["Key points"]).toBe(`${s.touchpoints.length} key point${s.touchpoints.length === 1 ? "" : "s"}`);
     expect(rows.Points).toBe("10");
   });
 

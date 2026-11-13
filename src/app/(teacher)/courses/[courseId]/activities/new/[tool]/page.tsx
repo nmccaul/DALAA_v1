@@ -24,7 +24,7 @@ export default async function NewToolActivityPage({ params, searchParams }: Page
   return (
     <div className="flex flex-col gap-6">
       <Link href={keepPicker(`/courses/${course.id}/activities/new`, pickerRequest(query[PICKER_PARAM]))} className="-mb-2 text-sm text-muted hover:text-text">
-        ← All types
+        ← Activities
       </Link>
       <div className="flex items-center gap-3">
         <span style={{ color: tool.accent }}>

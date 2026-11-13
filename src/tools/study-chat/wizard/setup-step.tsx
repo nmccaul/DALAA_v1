@@ -13,7 +13,7 @@ import { PublishForm } from "../forms";
 import { startedNote } from "../review-screen";
 import { StudyChatSettings } from "../schema";
 import { TrialPanel } from "../trial-panel";
-import { reviewSummary, SETUP_CARDS, setupNote } from "./setup-cards";
+import { reviewSummary, setupCards, setupNote } from "./setup-cards";
 import { WizardShell } from "./shell";
 import { finishLaterPath, isSetupStep, previousSetupStep, SETUP_STEPS, setupPath, WIZARD_STEPS, type SetupStep } from "./steps";
 
@@ -26,7 +26,7 @@ import { finishLaterPath, isSetupStep, previousSetupStep, SETUP_STEPS, setupPath
  */
 export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScreenProps) {
   if (!isSetupStep(step)) notFound();
-  const title = WIZARD_STEPS.find((s) => s.slug === step)!.label;
+  const title = WIZARD_STEPS.find((s) => s.slug === step)!.question;
   const parsed = StudyChatSettings.safeParse(activity.settings);
   if (!parsed.success) {
     return (
@@ -111,7 +111,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
         published={activity.status === "published"}
         initial={parsed.data}
         addToCanvas={addToCanvas}
-        cards={SETUP_CARDS[step]}
+        cards={setupCards(step, parsed.data)}
         wizard={{ step, previous }}
       />
     </WizardShell>
