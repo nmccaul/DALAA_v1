@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { stepIndex, WIZARD_FORM_ID, WIZARD_STEPS, type WizardStep } from "./steps";
 
+const LATER_STYLE = "shrink-0 text-sm whitespace-nowrap text-accent-text underline hover:text-text";
+
 /** A step the list can take the teacher to: a plain link, or (`save`) a button that saves this step's form first. */
 export type StepLink = { href: string; save?: boolean };
 
@@ -12,6 +14,7 @@ export type StepLink = { href: string; save?: boolean };
  * the "DALAA wizard" panel on the right with a note about this step and what's
  * coming soon. The panel has no input box yet (ralph/PLAN.md). Steps in `go`
  * can be clicked to go straight there (feedback a142d729, d6010bfd).
+ * `later` puts "Save and finish later" at the top right, away from Next.
  */
 export function WizardShell({
   step,
@@ -19,6 +22,7 @@ export function WizardShell({
   note,
   comingSoon = [],
   go = {},
+  later,
   children,
 }: {
   step: WizardStep;
@@ -26,6 +30,8 @@ export function WizardShell({
   note: ReactNode;
   comingSoon?: string[];
   go?: Partial<Record<WizardStep, StepLink>>;
+  /** "Save and finish later", top right, away from Next (feedback deea6853). */
+  later?: StepLink;
   children: ReactNode;
 }) {
   const current = stepIndex(step);
@@ -71,11 +77,23 @@ export function WizardShell({
       </nav>
 
       <section className="flex min-w-0 flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm text-muted">
-            Step {current + 1} of {WIZARD_STEPS.length}
-          </p>
-          <h3 className="font-display text-xl font-semibold">{title}</h3>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-muted">
+              Step {current + 1} of {WIZARD_STEPS.length}
+            </p>
+            <h3 className="font-display text-xl font-semibold">{title}</h3>
+          </div>
+          {later &&
+            (later.save ? (
+              <button type="submit" form={WIZARD_FORM_ID} name="intent" value="later" className={LATER_STYLE}>
+                Save and finish later
+              </button>
+            ) : (
+              <Link href={later.href} className={LATER_STYLE}>
+                Save and finish later
+              </Link>
+            ))}
         </div>
         {children}
       </section>

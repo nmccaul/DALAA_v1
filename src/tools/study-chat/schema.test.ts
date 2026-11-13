@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MODE_SLUGS, MODES } from "./modes";
 import { cardOf, FIELDS } from "./fields";
-import { rubricPoints, settingProblems, settingTitle, StudyChatSettings } from "./schema";
+import { rubricPoints, settingHelp, settingProblems, settingTitle, StudyChatSettings } from "./schema";
 
 const valid = (): StudyChatSettings => ({
   mode: "case-chat",
@@ -141,6 +141,21 @@ describe("setting labels", () => {
     expect(settingTitle(["rubric", "criteria", 2, "points"])).toBe("Points");
     expect(settingTitle(["completion", "maxTurns"])).toBe("Most student messages");
     expect(() => settingTitle(["nope"])).toThrow();
+  });
+
+  it("explain the settings teachers found unclear, in plain words (feedback 129e1546, 195ae1c0)", () => {
+    expect(settingTitle(["completion", "question"])).toBe("Question that ends the chat");
+    expect(settingHelp(["completion", "question"])).toMatch(/ends once the student has answered/);
+    expect(settingHelp(["studentWork"])).toMatch(/uploads or pastes their own paper/);
+    expect(settingHelp(["showProgress"])).not.toBeNull();
+    // A title that says enough has no help line, and no help text names schema terms.
+    expect(settingHelp(["goal"])).toBeNull();
+    // The editor names list positions as strings ("0"); they're skipped like numbers.
+    expect(settingHelp(["rubric", "criteria", "0", "label"])).toBeNull();
+    expect(settingTitle(["rubric", "criteria", "0", "points"])).toBe("Points");
+    for (const path of [["completion", "question"], ["studentWork"], ["showProgress"]]) {
+      expect(settingHelp(path)).not.toMatch(/NULL|schema|variant|offering|scope/);
+    }
   });
 
   it("exist for every setting the review screen can search", () => {

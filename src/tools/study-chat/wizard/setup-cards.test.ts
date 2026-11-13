@@ -4,7 +4,7 @@ import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
 import { STUDY_CHAT } from "../create";
 import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
-import { isSetupStep, nextSetupStep, previousSetupStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
+import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
 
 describe("shownCards", () => {
   it("shows every card without a filter, and only the asked-for ones in screen order with one", () => {
@@ -36,6 +36,11 @@ describe("setup steps", () => {
     expect(savedStepTarget("options", "goto:review")).toBe("review");
     expect(savedStepTarget("options", "save")).toBeNull();
     expect(savedStepTarget("options", null)).toBeNull();
+  });
+
+  it("\"Save and finish later\" is not a step: it goes to the course's drafts (feedback deea6853)", () => {
+    expect(savedStepTarget("options", "later")).toBeNull();
+    expect(finishLaterPath("c1")).toBe("/courses/c1?show=unassigned");
   });
 
   it("goes nowhere it shouldn't from a save: not before step 4, not off the wizard", () => {

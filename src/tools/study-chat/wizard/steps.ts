@@ -37,6 +37,12 @@ export function isSetupStep(value: unknown): value is SetupStep {
 export const setupPath = (courseId: string, activityId: string, step: SetupStep) =>
   `/courses/${courseId}/activities/${activityId}/setup/${step}`;
 
+/**
+ * "Save and finish later" (PRD: one meaning everywhere): save, then the
+ * course's activities with drafts shown, where the teacher picks it up again.
+ */
+export const finishLaterPath = (courseId: string) => `/courses/${courseId}?show=unassigned`;
+
 /** Where a setup step's form goes after saving: Next's step, a `goto:<step>` step, or null to stay. */
 export function savedStepTarget(step: unknown, intent: unknown): SetupStep | null {
   if (!isSetupStep(step)) return null;
