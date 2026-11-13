@@ -149,7 +149,13 @@ export function ChatRoom({
   return (
     <section aria-label="Chat" className="flex flex-col gap-4">
       {/* How far along the student is, each meter naming what it counts (feedback abf69c71). */}
-      <div className="z-10 flex flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-3 text-sm shadow-sm lg:sticky lg:top-4">
+      <div className="z-10 flex flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-3 text-sm shadow-sm sm:sticky sm:top-2">
+        {/* The question stays in sight while they chat, so they needn't go back to "Your task" for it. */}
+        {view.limits.question !== null && (
+          <p>
+            <span className="font-bold text-accent-text">Question:</span> {view.limits.question}
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           {maxTurns !== null && <Meter label="Messages sent" value={Math.min(sent, maxTurns)} of={maxTurns} />}
           {progress?.points && <Meter label="Points covered" value={progress.points.covered} of={progress.points.total} />}
