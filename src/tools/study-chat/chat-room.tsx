@@ -150,15 +150,12 @@ export function ChatRoom({
     <section aria-label="Chat" className="flex flex-col gap-4">
       {/* How far along the student is, each meter naming what it counts (feedback abf69c71). */}
       <div className="z-10 flex flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-3 text-sm shadow-sm sm:sticky sm:top-2">
-        {/* The character's question stays in sight while they chat; answering it ends the chat. */}
-        {view.limits.question !== null && (
-          <p>
-            <span className="font-bold text-accent-text">{view.persona.name}&apos;s question:</span> {view.limits.question}
-          </p>
-        )}
         <div className="grid gap-3 sm:grid-cols-2">
-          {maxTurns !== null && <Meter label="Messages sent" value={Math.min(sent, maxTurns)} of={maxTurns} />}
-          {progress?.points && <Meter label="Points covered" value={progress.points.covered} of={progress.points.total} />}
+          {/* The message limit is a maximum, so it counts down to the end of the chat (Nathan, 2026-11-13). */}
+          {maxTurns !== null && (
+            <Meter label="Messages left before the chat ends" value={Math.max(0, maxTurns - sent)} of={maxTurns} />
+          )}
+          {progress?.points && <Meter label="Key points you've made" value={progress.points.covered} of={progress.points.total} />}
         </div>
         {timeLimitMinutes !== null && !over && (
           <p className="text-muted">
@@ -168,7 +165,7 @@ export function ChatRoom({
           </p>
         )}
         {progress?.points && progress.points.names.length > 0 && (
-          <ul aria-label="Points you've covered" className="flex flex-wrap gap-1.5">
+          <ul aria-label="Key points you've made" className="flex flex-wrap gap-1.5">
             {progress.points.names.map((name) => (
               <li key={name} className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[13px] text-accent-text">
                 ✓ {name}
@@ -265,7 +262,7 @@ export function ChatRoom({
   );
 }
 
-/** A labelled bar: "Messages sent 2 of 6". */
+/** A labelled bar: "Messages left before the chat ends — 4 of 6". */
 function Meter({ label, value, of }: { label: string; value: number; of: number }) {
   const percent = of === 0 ? 0 : Math.round((value / of) * 100);
   return (

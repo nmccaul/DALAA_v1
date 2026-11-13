@@ -346,7 +346,8 @@ for class from what students said; grading and Canvas come second.
   bar shows where the student is and goes back to any step; every step stays
   mounted, so rereading mid-chat keeps the chat and a half-typed message. A
   student who has started opens on Chat. The chat's question is the
-  character's (often written in their voice), so it isn't on Your task; it
-  stays in sight above the chat as "<name>'s question". One column, so it fits inside Canvas. (This replaced a two-column
+  character's (often written in their voice) and they ask it in the chat, so
+  it appears nowhere else. Above the chat: "Messages left before the chat
+  ends" counting down (the limit is a maximum) and "Key points you've made". One column, so it fits inside Canvas. (This replaced a two-column
   version shipped earlier that day.)
 
