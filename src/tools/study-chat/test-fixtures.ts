@@ -33,7 +33,7 @@ export const draft = (over: Partial<StudyChatSettings> = {}): StudyChatSettings 
     tone: "Warm but busy",
     helpfulness: "balanced",
   },
-  completion: { maxTurns: 12, timeLimitMinutes: null, question: null, studentCanFinish: true },
+  completion: { maxTurns: 12, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: true },
   rubric: {
     criteria: [
       { label: "Questions", description: "Asks questions that uncover the key facts.", points: 4 },
@@ -48,7 +48,10 @@ export const draft = (over: Partial<StudyChatSettings> = {}): StudyChatSettings 
 export function drafted(over: Partial<StudyChatSettings> = {}) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { studentWork, showProgress, ...answer } = draft(over);
-  return answer;
+  // The model never fills the minimum (schema.ts DraftCompletion).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { minTurns, ...completion } = answer.completion;
+  return { ...answer, completion };
 }
 
 /** A model that gives each answer in turn (as JSON text), then repeats the last. */

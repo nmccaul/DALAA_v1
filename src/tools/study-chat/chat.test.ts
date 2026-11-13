@@ -147,7 +147,7 @@ describe("a student's Study Chat", () => {
   });
 
   it("ends after the most messages, and refuses more", async () => {
-    await setSettings(draft({ completion: { maxTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: false } }));
+    await setSettings(draft({ completion: { maxTurns: 2, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } }));
     expect(await send("One")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
     expect(await send("Two")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "turns" } });
     expect(await send("Three")).toEqual({ kind: "refused", reason: "This chat has ended: you've used all your messages." });
@@ -155,7 +155,7 @@ describe("a student's Study Chat", () => {
   });
 
   it("ends when time is up", async () => {
-    await setSettings(draft({ completion: { maxTurns: null, timeLimitMinutes: 10, question: null, studentCanFinish: false } }));
+    await setSettings(draft({ completion: { maxTurns: null, minTurns: null, timeLimitMinutes: 10, question: null, studentCanFinish: false } }));
     await send("One");
     await db.query("update attempts set started_at = now() - interval '11 minutes'");
     expect(await send("Two")).toEqual({ kind: "refused", reason: "This chat has ended: time's up." });
@@ -163,7 +163,7 @@ describe("a student's Study Chat", () => {
   });
 
   it("ends once the check says the question is answered and the AI isn't waiting on the student, and a failed check ends nothing", async () => {
-    await setSettings(draft({ completion: { maxTurns: null, timeLimitMinutes: null, question: "Open or wait?", studentCanFinish: false } }));
+    await setSettings(draft({ completion: { maxTurns: null, minTurns: null, timeLimitMinutes: null, question: "Open or wait?", studentCanFinish: false } }));
     models.check = answering("not json");
     expect(await send("Maybe")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
 
@@ -182,16 +182,34 @@ describe("a student's Study Chat", () => {
     expect(await send("Two")).toEqual({ kind: "refused", reason: "You've finished this chat." });
 
     await db.query("delete from attempts");
-    await setSettings(draft({ completion: { maxTurns: 5, timeLimitMinutes: null, question: null, studentCanFinish: false } }));
+    await setSettings(draft({ completion: { maxTurns: 5, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } }));
     await send("One");
     expect(await finishChat(db, student, activity)).toEqual({ ok: false, reason: "This chat ends on its own." });
+  });
+
+  it("doesn't end on the question or let the student finish before the fewest messages; the message limit still ends it", async () => {
+    await setSettings(draft({ completion: { maxTurns: 5, minTurns: 3, timeLimitMinutes: null, question: "Open or wait?", studentCanFinish: true } }));
+    models.check = answering({ answered: true, awaitingStudent: false });
+    expect(await send("Wait.")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
+    expect(await finishChat(db, student, activity)).toEqual({ ok: false, reason: "Send at least 3 messages before you finish." });
+    expect(await send("Cash flow first.")).toMatchObject({ ok: true, attempt: { status: "in_progress" } });
+    // The question check isn't even asked before the minimum (tracking still runs).
+    const questionChecks = () =>
+      (models.check as MockLanguageModelV4).doGenerateCalls.filter((c) => JSON.stringify(c.prompt).includes("has the student given a real answer"));
+    expect(questionChecks()).toHaveLength(0);
+    expect(await send("So: wait a year.")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "question" } });
+
+    await db.query("delete from attempts");
+    await setSettings(draft({ completion: { maxTurns: 2, minTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
+    await send("One");
+    expect(await send("Two")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "turns" } });
   });
 
   it("keeps chatting under the settings it started with after the teacher edits; a new attempt gets the edit (D-031)", async () => {
     expect(await send("One")).toMatchObject({ ok: true });
     const edited = draft({
       persona: { ...draft().persona, name: "Sam Lee" },
-      completion: { maxTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: false },
+      completion: { maxTurns: 2, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false },
     });
     await setSettings(edited);
 
@@ -215,7 +233,7 @@ describe("a student's Study Chat", () => {
   it("reads the activity's current settings for an attempt from before settings were copied", async () => {
     await send("One");
     await db.query("update attempts set settings = null");
-    const edited = draft({ completion: { maxTurns: 2, timeLimitMinutes: null, question: null, studentCanFinish: false } });
+    const edited = draft({ completion: { maxTurns: 2, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } });
     await setSettings(edited);
     expect(await send("Two")).toMatchObject({ ok: true, attempt: { status: "completed", endedBy: "turns" } });
   });

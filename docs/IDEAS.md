@@ -15,7 +15,6 @@ Shown in the wizard as disabled "Coming soon" until built:
 - **Wizard chat panel and one-click edits**: the "DALAA wizard" side panel takes typed requests ("make the persona tougher") and offers one-click edits to the current step. This run shows only notes built from stored data.
 - **Hints**: students can ask for a hint during the chat.
 - **Reading beside the chat**: the reading stays open next to the conversation.
-- **Minimum exchanges**: a floor on student turns before the activity can finish.
 - **Criterion-by-criterion feedback**: feedback shown per rubric criterion, not only overall.
 - **Allowed attempts** and **score to keep** (best, latest, average).
 - **Activity group**: group activities inside a course.

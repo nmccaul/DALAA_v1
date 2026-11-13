@@ -23,6 +23,7 @@ type EditorState = FormState & { snapshot?: string };
 function endings(c: S["completion"]): string[] {
   return [
     c.maxTurns !== null && `After ${c.maxTurns} student ${c.maxTurns === 1 ? "message" : "messages"}`,
+    c.minTurns !== null && `Not before ${c.minTurns} student ${c.minTurns === 1 ? "message" : "messages"} (except by the message or time limit)`,
     c.timeLimitMinutes !== null && `After ${c.timeLimitMinutes} minutes`,
     c.question !== null && `Once the student answers: “${c.question}”`,
     c.studentCanFinish && "When the student chooses to end it",
@@ -382,6 +383,7 @@ export function StudyChatEditor({
           </ul>,
           <>
             <Field path={["completion", "maxTurns"]}>{limit(s.completion.maxTurns, (v) => change((d) => void (d.completion.maxTurns = v)))}</Field>
+            <Field path={["completion", "minTurns"]}>{limit(s.completion.minTurns, (v) => change((d) => void (d.completion.minTurns = v)))}</Field>
             <Field path={["completion", "timeLimitMinutes"]}>
               {limit(s.completion.timeLimitMinutes, (v) => change((d) => void (d.completion.timeLimitMinutes = v)))}
             </Field>

@@ -63,6 +63,11 @@ export async function doneTurns(db: Db, attemptId: string): Promise<Exchange[]> 
   );
 }
 
+/** Whether `sent` student messages meet the chat's minimum (always, when it has none). */
+export function reachedMinimum(settings: StudyChatSettings, sent: number): boolean {
+  return settings.completion.minTurns === null || sent >= settings.completion.minTurns;
+}
+
 function timeIsUp(settings: StudyChatSettings, attempt: Attempt): boolean {
   const minutes = settings.completion.timeLimitMinutes;
   return minutes !== null && Date.now() >= attempt.startedAt.getTime() + minutes * 60_000;
@@ -128,7 +133,11 @@ async function finishTurn(
   let ended: Attempt["endedBy"] = null;
   if (maxTurns !== null && turns.length >= maxTurns) ended = "turns";
   else if (timeIsUp(chat.settings, attempt)) ended = "time";
-  else if (await questionAnswered(db, models.check, { ...ctx, purpose: "chat.check" }, chat.settings.completion.question, turns)) {
+  // Answering the question ends the chat only once the student has sent the minimum.
+  else if (
+    reachedMinimum(chat.settings, turns.length) &&
+    (await questionAnswered(db, models.check, { ...ctx, purpose: "chat.check" }, chat.settings.completion.question, turns))
+  ) {
     ended = "question";
   }
   await tracked;
@@ -261,6 +270,10 @@ export async function finishChat(
   );
   if (counts.pending > 0) return { ok: false, reason: "Wait for the reply to your last message." };
   if (counts.done === 0) return { ok: false, reason: "Send a message before you finish." };
+  if (!reachedMinimum(chat.settings, counts.done)) {
+    const min = chat.settings.completion.minTurns!;
+    return { ok: false, reason: `Send at least ${min} ${min === 1 ? "message" : "messages"} before you finish.` };
+  }
   return { ok: true, attempt: await completeAttempt(db, attempt.id, "student") };
 }
 

@@ -72,7 +72,7 @@ describe("wizard steps 4–6 extras", () => {
   it("puts the student switches on an editing step, and Coming soon rows only on editing steps", () => {
     expect(Object.keys(SETUP_CARDS)).toContain(STUDENT_SWITCHES_STEP);
     for (const step of Object.keys(SETUP_COMING_SOON)) expect(Object.keys(SETUP_CARDS)).toContain(step);
-    expect(SETUP_COMING_SOON.options).toContain("Minimum exchanges");
+    expect(SETUP_COMING_SOON.options).toContain("Voice chat");
     expect(SETUP_COMING_SOON.grading).toContain("Use a saved rubric");
   });
 

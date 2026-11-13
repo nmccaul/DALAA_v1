@@ -56,6 +56,9 @@ export function chatSystemPrompt(
   if (completion.question !== null) {
     parts.push(`Make sure the conversation reaches this question, and ask it yourself if the student doesn't get there: ${completion.question}`);
   }
+  if (completion.minTurns !== null) {
+    parts.push(`The student should send at least ${completion.minTurns} messages, so don't wrap the conversation up before then.`);
+  }
   if (completion.maxTurns !== null) {
     parts.push(`The student has at most ${completion.maxTurns} messages, so keep the conversation moving.`);
   }

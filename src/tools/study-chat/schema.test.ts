@@ -27,7 +27,7 @@ const valid = (): StudyChatSettings => ({
     tone: "Warm but busy",
     helpfulness: "balanced",
   },
-  completion: { maxTurns: 12, timeLimitMinutes: null, question: null, studentCanFinish: true },
+  completion: { maxTurns: 12, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: true },
   rubric: {
     criteria: [
       { label: "Questions", description: "Asks questions that uncover the key facts.", points: 4 },
@@ -98,7 +98,7 @@ describe("Study Chat settings", () => {
   });
 
   it("needs at least one way for the chat to end", () => {
-    const never = { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false };
+    const never = { maxTurns: null, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false };
     expect(errorsOf({ ...valid(), completion: never })).toEqual(["completion"]);
     expect(errorsOf({ ...valid(), completion: { ...never, question: "Should she open it?" } })).toEqual([]);
   });
@@ -175,7 +175,7 @@ describe("setting labels", () => {
     const s = valid();
     s.goal = " ";
     s.persona.tone = "x".repeat(301);
-    s.completion = { maxTurns: null, timeLimitMinutes: 0, question: null, studentCanFinish: false };
+    s.completion = { maxTurns: null, minTurns: null, timeLimitMinutes: 0, question: null, studentCanFinish: false };
     const result = StudyChatSettings.safeParse(s);
     if (result.success) throw new Error("expected a problem");
     expect(settingProblems(result.error)).toEqual([
@@ -187,9 +187,23 @@ describe("setting labels", () => {
 
   it("pass the custom message through", () => {
     const s = valid();
-    s.completion = { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false };
+    s.completion = { maxTurns: null, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false };
     const result = StudyChatSettings.safeParse(s);
     if (result.success) throw new Error("expected a problem");
     expect(settingProblems(result.error)).toEqual(["The chat needs at least one way to end."]);
   });
 });
+
+describe("fewest student messages", () => {
+  it("is optional, read as none in settings saved before it existed, and can't exceed the most messages", async () => {
+    const { StudyChatSettings } = await import("./schema");
+    const { draft } = await import("./test-fixtures");
+    const old = JSON.parse(JSON.stringify(draft()));
+    delete old.completion.minTurns;
+    expect(StudyChatSettings.parse(old).completion.minTurns).toBeNull();
+    const over = draft({ completion: { ...draft().completion, maxTurns: 3, minTurns: 4 } });
+    expect(StudyChatSettings.safeParse(over).success).toBe(false);
+    expect(StudyChatSettings.safeParse(draft({ completion: { ...draft().completion, maxTurns: 6, minTurns: 3 } })).success).toBe(true);
+  });
+});
+

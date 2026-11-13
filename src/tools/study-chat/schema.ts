@@ -39,6 +39,51 @@ const LabeledItem = z.strictObject({
 
 export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 
+/** When a chat ends, field by field; the rules that tie them together are in `Completion`. */
+const CompletionFields = z
+  .strictObject({
+    maxTurns: z.int().min(1).max(100).nullable().meta({
+      title: "Most student messages",
+      description: "The chat ends after this many student messages. NULL for no limit.",
+    }),
+    // Missing in settings saved before it existed: no minimum.
+    minTurns: z.int().min(1).max(100).nullable().default(null).meta({
+      title: "Fewest student messages",
+      description: "The chat can't end on the question or by the student before this many student messages. NULL for no minimum.",
+      help: "Optional. Students must send at least this many messages before answering the question or clicking Finish ends the chat. The message limit and time limit still end it.",
+    }),
+    timeLimitMinutes: z.int().min(1).max(240).nullable().meta({
+      title: "Time limit (minutes)",
+      description: "NULL for no time limit.",
+    }),
+    question: text(1000).nullable().meta({
+      title: "Question that ends the chat",
+      description: "The chat ends once the student has answered this. NULL when not used.",
+      help: "Optional. The character makes sure the chat gets to this question, and the chat ends once the student has answered it. Leave it empty to end the chat only by messages, time or the student.",
+    }),
+    studentCanFinish: z.boolean().meta({
+      title: "Students can end the chat themselves",
+    }),
+  });
+
+const ONE_WAY_TO_END = "The chat needs at least one way to end.";
+const endsSomehow = (c: { maxTurns: number | null; timeLimitMinutes: number | null; question: string | null; studentCanFinish: boolean }) =>
+  c.maxTurns !== null || c.timeLimitMinutes !== null || c.question !== null || c.studentCanFinish;
+
+/** A chat needs at least one way to end, and no minimum above its limit. */
+const Completion = CompletionFields.refine(endsSomehow, { message: ONE_WAY_TO_END })
+  .refine((c) => c.minTurns === null || c.maxTurns === null || c.minTurns <= c.maxTurns, {
+    message: "“Fewest student messages” can't be more than “Most student messages”.",
+  })
+  .meta({ title: "When the chat ends" });
+
+/**
+ * What the drafting model fills in: every field required (OpenAI refuses a
+ * schema with defaults), so the minimum is left out and a draft has none;
+ * the teacher sets it on Chat options.
+ */
+const DraftCompletion = CompletionFields.omit({ minTurns: true }).refine(endsSomehow, { message: ONE_WAY_TO_END });
+
 /**
  * Every setting, without the rules that tie one setting to another. The draft
  * is generated against this (draft.ts) because "Students bring their own work"
@@ -104,30 +149,7 @@ export const StudyChatFields = z
         }),
       })
       .meta({ title: "Persona", description: "The character the AI plays in the chat." }),
-    completion: z
-      .strictObject({
-        maxTurns: z.int().min(1).max(100).nullable().meta({
-          title: "Most student messages",
-          description: "The chat ends after this many student messages. NULL for no limit.",
-        }),
-        timeLimitMinutes: z.int().min(1).max(240).nullable().meta({
-          title: "Time limit (minutes)",
-          description: "NULL for no time limit.",
-        }),
-        question: text(1000).nullable().meta({
-          title: "Question that ends the chat",
-          description: "The chat ends once the student has answered this. NULL when not used.",
-          help: "Optional. The character makes sure the chat gets to this question, and the chat ends once the student has answered it. Leave it empty to end the chat only by messages, time or the student.",
-        }),
-        studentCanFinish: z.boolean().meta({
-          title: "Students can end the chat themselves",
-        }),
-      })
-      .refine(
-        (c) => c.maxTurns !== null || c.timeLimitMinutes !== null || c.question !== null || c.studentCanFinish,
-        { message: "The chat needs at least one way to end." },
-      )
-      .meta({ title: "When the chat ends" }),
+    completion: Completion,
     rubric: z
       .strictObject({
         criteria: z
@@ -160,7 +182,9 @@ export const StudyChatFields = z
  * which create.ts keeps from the suggestion. OpenAI's structured output
  * refuses a schema with any field not required, and those two have defaults.
  */
-export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true });
+export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true }).extend({
+  completion: DraftCompletion,
+});
 
 export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
   message: "A Defend chat is about each student's own work, so “Students add their own paper or project first” stays on.",
