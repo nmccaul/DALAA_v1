@@ -11,6 +11,7 @@ import { MODES } from "./modes";
 import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
+import { WIZARD_FORM_ID } from "./wizard/steps";
 
 type S = StudyChatSettings;
 type Item = { label: string; description: string };
@@ -107,9 +108,10 @@ function ItemsEditor({ path, items, max, onChange }: { path: string[]; items: It
 
 /**
  * In the wizard: which step this is (the server works out where Next goes)
- * and where Back goes. The step's cards start open, with no search box and no Publish.
+ * and the step Back goes to. Back, like Next and the step list, saves first.
+ * The step's cards start open, with no search box and no Publish.
  */
-export type WizardEditing = { step: string; back: string | null };
+export type WizardEditing = { step: string; previous: string | null };
 
 /**
  * The review screen's body: one short summary card per part of the chat, each
@@ -236,6 +238,7 @@ export function StudyChatEditor({
   const scenario = s.scenarios[0];
   return (
     <form
+      id={wizard ? WIZARD_FORM_ID : undefined}
       action={action}
       // Enter in a one-line field must not publish.
       onKeyDown={(e) => e.key === "Enter" && e.target instanceof HTMLInputElement && e.preventDefault()}
@@ -494,10 +497,10 @@ export function StudyChatEditor({
             <Button variant="secondary" name="intent" value="save" disabled={pending}>
               Save as draft
             </Button>
-            {wizard.back && (
-              <Link href={wizard.back} className="text-sm text-muted hover:text-text">
+            {wizard.previous && (
+              <button type="submit" name="intent" value={`goto:${wizard.previous}`} disabled={pending} className="text-sm text-muted hover:text-text">
                 ← Back
-              </Link>
+              </button>
             )}
           </>
         ) : published ? (

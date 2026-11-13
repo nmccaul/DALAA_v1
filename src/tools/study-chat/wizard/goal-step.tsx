@@ -43,6 +43,7 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
 
   return (
     <WizardShell
+      go={{ materials: { href: back } }}
       step="goal"
       title="What should students be able to do?"
       note={
