@@ -12,6 +12,22 @@ import { Button, inputStyles } from "./ui";
 const recent = typeof window === "undefined" ? null : installRing(window);
 
 /**
+ * The picture copies each field's current value into a `value` attribute,
+ * which a dropdown and a text box don't draw from, so the picture showed
+ * their defaults instead of what the person chose (feedback 906b03ff). This
+ * makes the copy show the chosen option and the typed text.
+ */
+function showLiveValue(cloned: Node) {
+  if (!(cloned instanceof Element) || !cloned.hasAttribute("value")) return;
+  const value = cloned.getAttribute("value") ?? "";
+  if (cloned.tagName === "SELECT") {
+    for (const option of cloned.querySelectorAll("option")) option.toggleAttribute("selected", option.value === value);
+  } else if (cloned.tagName === "TEXTAREA") {
+    cloned.textContent = value;
+  }
+}
+
+/**
  * A JPEG of the page as the person sees it, without this panel, small enough
  * for the server to keep; NULL when it can't be taken. The library loads only
  * when someone opens the panel.
@@ -20,7 +36,7 @@ async function capturePage(): Promise<string | null> {
   try {
     const { domToJpeg } = await import("modern-screenshot");
     const skip = (node: Node) => !(node instanceof HTMLElement && node.dataset.feedback !== undefined);
-    const base = { filter: skip, backgroundColor: getComputedStyle(document.body).backgroundColor };
+    const base = { filter: skip, onCloneEachNode: showLiveValue, backgroundColor: getComputedStyle(document.body).backgroundColor };
     for (const [scale, quality] of [[Math.min(window.devicePixelRatio, 1.5), 0.75], [0.75, 0.6], [0.5, 0.5]]) {
       const shot = await domToJpeg(document.body, { ...base, scale, quality });
       if (dataUrlBytes(shot) <= SCREENSHOT_MAX_BYTES) return shot;

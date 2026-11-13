@@ -64,6 +64,9 @@ export function addMaterialPath(courseId: string, kind: AddKind, ids: MaterialId
 
 /** "About how long?" on step 2, passed to drafting as a hint. */
 export const MINUTES = [
+  // Very short chats, e.g. a quick demo or a warm-up (feedback 906b03ff).
+  { value: "2-5", label: "2–5 minutes" },
+  { value: "5-10", label: "5–10 minutes" },
   { value: "10-15", label: "10–15 minutes" },
   { value: "20-30", label: "20–30 minutes" },
   { value: "45+", label: "45 minutes or more" },

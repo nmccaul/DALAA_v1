@@ -9,6 +9,13 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-13",
+    changes: [
+      "\"About how long?\" now offers 2–5 and 5–10 minutes for very short chats.",
+      "The picture sent with feedback shows what you picked in dropdowns, not the default.",
+    ],
+  },
+  {
     date: "2026-11-12",
     changes: [
       "Class prep brief on Insights: the AI reads every finished conversation and tells you what the class found confusing, what it did well, the questions it asked, and questions to raise in class.",
