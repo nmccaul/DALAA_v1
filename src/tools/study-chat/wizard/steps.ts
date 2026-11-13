@@ -1,12 +1,15 @@
-/** The new Study Chat wizard's seven steps, in order (D-034). */
+/**
+ * The Study Chat wizard's six steps, in order (D-034; reworked 2026-11-13 by
+ * Nathan: each step answers one question the teacher has). `label` is the
+ * step list's; `question` is the step's title.
+ */
 export const WIZARD_STEPS = [
-  { slug: "materials", label: "Materials" },
-  { slug: "goal", label: "Learning goal" },
-  { slug: "type", label: "Activity type" },
-  { slug: "scenario", label: "Scenario and persona" },
-  { slug: "options", label: "Chat options" },
-  { slug: "grading", label: "Grading" },
-  { slug: "review", label: "Review and assign" },
+  { slug: "materials", label: "Materials", question: "What should students read, and what should the AI know?" },
+  { slug: "goal", label: "Goal and activity", question: "What should students be able to do?" },
+  { slug: "scenario", label: "The AI's role", question: "Who should the AI be?" },
+  { slug: "grading", label: "Grading", question: "How will you know they got it?" },
+  { slug: "options", label: "Chat options", question: "How should the chat run?" },
+  { slug: "review", label: "Review and assign", question: "Review and assign" },
 ] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number]["slug"];
@@ -26,8 +29,8 @@ export function stepIndex(step: WizardStep): number {
  */
 export const WIZARD_FORM_ID = "wizard-step-form";
 
-/** Steps 4–7 work on the drafted activity; 1–3 come before it exists. */
-export const SETUP_STEPS = ["scenario", "options", "grading", "review"] as const satisfies readonly WizardStep[];
+/** Steps 3–6 work on the drafted activity; 1–2 come before it exists. */
+export const SETUP_STEPS = ["scenario", "grading", "options", "review"] as const satisfies readonly WizardStep[];
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
 export function isSetupStep(value: unknown): value is SetupStep {
@@ -56,7 +59,7 @@ export function nextSetupStep(step: SetupStep): SetupStep | null {
   return SETUP_STEPS[SETUP_STEPS.indexOf(step) + 1] ?? null;
 }
 
-/** The step before `step`, or null on the first (step 3 came before the activity existed; there's no going back to it). */
+/** The step before `step`, or null on the first (step 2 came before the activity existed; there's no going back to it). */
 export function previousSetupStep(step: SetupStep): SetupStep | null {
   return SETUP_STEPS[SETUP_STEPS.indexOf(step) - 1] ?? null;
 }

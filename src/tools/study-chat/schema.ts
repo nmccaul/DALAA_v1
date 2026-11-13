@@ -51,7 +51,7 @@ export const StudyChatFields = z
     // as the teacher set it (create.ts). Missing in settings saved before it
     // existed, which asked for no work.
     studentWork: z.boolean().default(false).meta({
-      title: "Students bring their own work",
+      title: "Students add their own paper or project first",
       description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
       help: "Before the chat, each student uploads or pastes their own paper, code or plan, and the chat is about their work. Leave it off when everyone works from the same readings.",
     }),
@@ -73,15 +73,17 @@ export const StudyChatFields = z
       .array(LabeledItem)
       .max(6)
       .meta({
-        title: "Positions",
+        title: "Positions students can take",
         description: "Directions a student may take (for example, for or against). Empty when there are none.",
+        help: "Sides a student might take, like for or against. Insights shows how many took each. Leave it empty when there are no sides.",
       }),
     touchpoints: z
       .array(LabeledItem)
       .max(12)
       .meta({
-        title: "Touchpoints",
+        title: "Key points to listen for",
         description: "Points the teacher wants to see whether each student brings up (for example, cost or culture).",
+        help: "Ideas you hope each student brings up. Each is checked yes or no with the student's words, and shows in Insights and in students' progress. They don't score points on their own; the criteria below do.",
       }),
     // The teacher's switch, like `studentWork`: drafting leaves it off and
     // create.ts sets it. Missing in settings saved before it existed: off.
@@ -144,7 +146,11 @@ export const StudyChatFields = z
           description: "How hard the AI grader is on partial answers.",
         }),
       })
-      .meta({ title: "Grading", description: "What the AI grader scores the chat on." }),
+      .meta({
+        title: "How it's scored",
+        description: "What the AI grader scores the chat on.",
+        help: "The criteria the AI grader scores, each worth points. Only these make up the grade.",
+      }),
   })
   .meta({ title: "Study Chat settings" });
 
@@ -157,7 +163,7 @@ export const StudyChatFields = z
 export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true });
 
 export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
-  message: "A Defend chat is about each student's own work, so “Students bring their own work” stays on.",
+  message: "A Defend chat is about each student's own work, so “Students add their own paper or project first” stays on.",
   path: ["studentWork"],
 });
 

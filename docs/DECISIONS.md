@@ -274,6 +274,20 @@ reach production before the code) and those were test attempts anyway.
 *2026-11-09, Nathan.* Reference: Nathan's "DAALAA Course Tabs Mockup" (D-032).
 - **Wizard order:** 1 Materials · 2 Learning goal · 3 Activity type ·
   4 Scenario and persona · 5 Chat options · 6 Grading · 7 Review and assign.
+- **Reworked to six questions** (*2026-11-13, Nathan*): 1 What should students
+  read, and what should the AI know? · 2 What should students be able to do?
+  (the goal and the kind of activity, suggested together in one call,
+  "Suggested based on your reading") · 3 Who should the AI be? (scenario,
+  opening message, persona) · 4 How will you know they got it? (key points to
+  listen for, positions only when students take a side, how it's scored) ·
+  5 How should the chat run? · 6 Review and assign. Next on step 2 drafts the
+  chat; step 3 has "Skip to review". Kinds of activity are seven groups by what
+  the student does (Explain / teach back, Apply, Argue, Question, Practice a
+  conversation, Connect, Defend their work), each holding one or more of the
+  existing modes as a "Style" (`wizard/types.ts`); settings still store the
+  mode. Touchpoints are named "Key points to listen for" (a checklist that
+  feeds Insights and student progress, no points) and the rubric "How it's
+  scored" (only it makes the grade). Drafted situations stay under 120 words.
   Materials come first so the AI can **suggest the learning goal** from them,
   then **suggest the type** from the materials and goal. The teacher's goal is
   kept word for word; the AI drafts the rest around it.

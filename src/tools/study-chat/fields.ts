@@ -1,7 +1,7 @@
 /** The review screen's settings, in screen order (editor.tsx); labels come from the schema (`settingTitle`). */
 
 /** The editor's cards, in screen order. */
-export const CARD_KEYS = ["goal", "scenarios", "positions", "touchpoints", "persona", "completion", "rubric"] as const;
+export const CARD_KEYS = ["goal", "scenarios", "persona", "touchpoints", "positions", "rubric", "completion"] as const;
 export type CardKey = (typeof CARD_KEYS)[number];
 
 /** The cards to render: all of them, or only `only` (a wizard step's), still in screen order. */

@@ -78,7 +78,7 @@ describe("Study Chat settings", () => {
     expect(errorsOf({ ...valid(), mode: "defend", studentWork: true })).toEqual([]);
     expect(errorsOf({ ...valid(), mode: "defend", studentWork: false })).toEqual(["studentWork"]);
     const error = StudyChatSettings.safeParse({ ...valid(), mode: "defend" }).error!;
-    expect(settingProblems(error)).toEqual(["A Defend chat is about each student's own work, so “Students bring their own work” stays on."]);
+    expect(settingProblems(error)).toEqual(["A Defend chat is about each student's own work, so “Students add their own paper or project first” stays on."]);
     for (const slug of MODE_SLUGS.filter((m) => !MODES[m].needsStudentWork)) {
       expect(errorsOf({ ...valid(), mode: slug, studentWork: false })).toEqual([]);
     }
@@ -114,7 +114,7 @@ describe("Study Chat settings", () => {
 
   it("gives every field a label for the review screen", () => {
     const json = JSON.stringify(StudyChatSettings.toJSONSchema());
-    for (const label of ["Goal", "Positions", "Touchpoints", "Persona", "When the chat ends", "Grading"]) {
+    for (const label of ["Goal", "Positions students can take", "Key points to listen for", "Persona", "When the chat ends", "How it's scored"]) {
       expect(json).toContain(`"title":"${label}"`);
     }
   });

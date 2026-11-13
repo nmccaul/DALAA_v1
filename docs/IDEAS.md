@@ -27,3 +27,10 @@ Shown in the wizard as disabled "Coming soon" until built:
 ## From the Help tab (D-032, 2026-11-12)
 
 - **Ask the DALAA wizard**: on the Help tab, a teacher asks the AI how to do something in DALAA and gets an answer for their course. Shown as a Preview until built. *Opinion:* worth it only if it answers from our own help text and the course's real state; a generic chatbot will give wrong directions.
+
+## From the create-flow rework (Nathan, 2026-11-13)
+
+- **Collaborate** as a kind of activity: the student and the AI build something together (a plan, an outline) rather than the student explaining or defending. Needs its own prompts and rubric hints.
+- **Assess** as a kind of activity: a short oral check of what the student knows, question by question, closer to a quiz than a conversation.
+- **Voice chat**: students talk instead of type. Shown as Coming soon on Chat options.
+

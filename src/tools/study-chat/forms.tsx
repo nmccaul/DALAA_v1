@@ -181,7 +181,7 @@ export function ModeForm({
       <label className="flex items-start gap-3">
         <input type="checkbox" name="studentWork" className="mt-1 shrink-0" />
         <span className="flex flex-col gap-1">
-          <span className="font-medium">Students bring their own work</span>
+          <span className="font-medium">Students add their own paper or project first</span>
           <span className="text-sm text-muted">Each student adds their paper, code or plan before the chat, and the chat is about it. Defend always asks for it.</span>
         </span>
       </label>

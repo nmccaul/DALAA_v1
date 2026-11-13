@@ -45,6 +45,8 @@ const SYSTEM = [
   "Rules:",
   "- Base everything on the material. Use its names, facts and figures; don't invent facts it doesn't support.",
   "- Write for the teacher in plain language. The situation is written for the AI that will run the chat.",
+  "- Keep the situation short: at most 120 words, in a few plain sentences, no numbered lists. Say who the character is, what they",
+  "  want from the student, and what to push on; the touchpoints and rubric hold the details, so don't repeat them there.",
   "- The opening message is the character's first line to the student: in character, short, and ending with a question.",
   "- Touchpoints are 3 to 6 specific ideas from the material a strong student would bring up.",
   "- Positions are only for chats where students choose a side or a course of action; otherwise leave the list empty.",
