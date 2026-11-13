@@ -117,7 +117,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
  * character asks it, and it stays in sight above the chat.
  */
 function TaskCard({ view, hasContent, hasWork }: { view: ReturnType<typeof studentView>; hasContent: boolean; hasWork: boolean }) {
-  const { maxTurns, timeLimitMinutes, question, studentCanFinish } = view.limits;
+  const { maxTurns, minTurns, timeLimitMinutes, question, studentCanFinish } = view.limits;
   const ends = [
     maxTurns !== null && `after ${maxTurns} ${maxTurns === 1 ? "message" : "messages"} from you`,
     timeLimitMinutes !== null &&
@@ -148,6 +148,12 @@ function TaskCard({ view, hasContent, hasWork }: { view: ReturnType<typeof stude
             words.
           </li>
           {ends.length > 0 && <li>The chat ends {ends.join(", or ")}.</li>}
+          {minTurns !== null && (
+            <li>
+              Send at least {minTurns} {minTurns === 1 ? "message" : "messages"} first: the chat can&apos;t end on the question or Finish
+              before then.
+            </li>
+          )}
         </ol>
       </div>
       <div className="flex flex-col gap-1 text-sm">

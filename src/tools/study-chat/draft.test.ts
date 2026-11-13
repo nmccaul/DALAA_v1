@@ -78,7 +78,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("drafts a Defend chat that validates, about each student's own work", async () => {
-    const model = answering(drafted({ mode: "debate", studentWork: false, completion: { maxTurns: 8, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
+    const model = answering(drafted({ mode: "debate", studentWork: false, completion: { maxTurns: 8, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: true } }));
     const result = await draftSettings(db, model, {}, { ...harbor, mode: "defend" });
     if (!result.ok) throw new Error(result.reason);
     expect(result.settings).toMatchObject({ mode: "defend", studentWork: true, completion: { maxTurns: 8 } });
@@ -89,7 +89,7 @@ describe("Study Chat drafting", () => {
   });
 
   it("asks once more when the draft doesn't fit the schema", async () => {
-    const noWayToEnd = drafted({ completion: { maxTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } });
+    const noWayToEnd = drafted({ completion: { maxTurns: null, minTurns: null, timeLimitMinutes: null, question: null, studentCanFinish: false } });
     const model = answering(noWayToEnd, drafted());
     expect(await draftSettings(db, model, {}, { ...harbor, mode: "case-chat" })).toEqual({ ok: true, settings: draft() });
     expect(model.doGenerateCalls).toHaveLength(2);

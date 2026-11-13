@@ -29,6 +29,7 @@ export const FIELDS: { path: string[]; more?: boolean; card?: string }[] = [
   { path: ["persona", "background"], more: true },
   { path: ["persona", "tone"], more: true },
   { path: ["completion", "maxTurns"] },
+  { path: ["completion", "minTurns"] },
   { path: ["completion", "timeLimitMinutes"] },
   { path: ["completion", "question"] },
   { path: ["completion", "studentCanFinish"] },

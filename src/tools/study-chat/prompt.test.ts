@@ -63,7 +63,7 @@ describe("the chat prompt", () => {
   it("names the question only when there is one, and skips what's missing", () => {
     const settings = draft({
       positions: [],
-      completion: { maxTurns: null, timeLimitMinutes: 20, question: "Should Maya open the store?", studentCanFinish: false },
+      completion: { maxTurns: null, minTurns: null, timeLimitMinutes: 20, question: "Should Maya open the store?", studentCanFinish: false },
     });
     const prompt = chatSystemPrompt(settings, [], [], null);
     expect(prompt).toContain("Should Maya open the store?");

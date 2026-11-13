@@ -52,7 +52,7 @@ export function ChatRoom({
   const end = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const { maxTurns, timeLimitMinutes, studentCanFinish } = view.limits;
+  const { maxTurns, minTurns, timeLimitMinutes, studentCanFinish } = view.limits;
   const left = minutesLeft(startedAt, timeLimitMinutes, now);
   const timeUp = left === 0;
   const over = ended ?? (timeUp ? ENDED.time : null);
@@ -157,6 +157,14 @@ export function ChatRoom({
           )}
           {progress?.points && <Meter label="Key points you've made" value={progress.points.covered} of={progress.points.total} />}
         </div>
+        {/* The fewest messages before the question or Finish can end the chat, named so "sent" makes sense. */}
+        {minTurns !== null && !over && (
+          <p className={turns.length >= minTurns ? "font-medium text-success" : "text-muted"}>
+            {turns.length >= minTurns
+              ? `✓ Minimum reached: you've sent at least ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
+              : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end: ${turns.length} so far`}
+          </p>
+        )}
         {timeLimitMinutes !== null && !over && (
           <p className="text-muted">
             {left === null
@@ -233,7 +241,10 @@ export function ChatRoom({
             <Button type="submit" disabled={pending !== null || draft.trim() === ""}>
               {busy ? "Waiting for the reply…" : "Send"}
             </Button>
-            {studentCanFinish && turns.length > 0 && !confirming && (
+            {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && (
+              <span className="text-sm text-muted">You can finish after {minTurns} messages.</span>
+            )}
+            {studentCanFinish && turns.length >= Math.max(1, minTurns ?? 1) && !confirming && (
               <button
                 type="button"
                 onClick={() => setConfirming(true)}

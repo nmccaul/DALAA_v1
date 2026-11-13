@@ -49,7 +49,7 @@ const saved = await saveContent(db(), teacher, course, randomUUID(), { kind: "ca
 if (!saved.ok) throw new Error(saved.reason);
 const settings = draft({
   completion: {
-    maxTurns: 6,
+    maxTurns: 6, minTurns: null,
     timeLimitMinutes: null,
     question: "Should Harbor Bikes open the second store now or wait?",
     studentCanFinish: true,

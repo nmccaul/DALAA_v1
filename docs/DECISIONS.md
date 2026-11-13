@@ -288,6 +288,11 @@ reach production before the code) and those were test attempts anyway.
   mode. Touchpoints are named "Key points to listen for" (a checklist that
   feeds Insights and student progress, no points) and the rubric "How it's
   scored" (only it makes the grade). Drafted situations stay under 120 words.
+- **Fewest student messages** (*2026-11-13, Nathan*): optional on Chat
+  options. Before it, answering the question doesn't end the chat and Finish
+  is held back; the message and time limits still end it. Students see it in
+  How it works and above the chat ("✓ Minimum reached"). Drafts leave it
+  empty (the drafting schema can't carry a default); old settings read as none.
   Materials come first so the AI can **suggest the learning goal** from them,
   then **suggest the type** from the materials and goal. The teacher's goal is
   kept word for word; the AI drafts the rest around it.

@@ -35,7 +35,7 @@ export const STUDENT_SWITCHES_STEP = "options" satisfies SetupStep;
 
 /** Options from the mockup that don't exist yet, shown disabled on their step (ralph/PLAN.md). */
 export const SETUP_COMING_SOON: Partial<Record<SetupStep, readonly string[]>> = {
-  options: ["Voice chat", "Hints", "Minimum exchanges", "Feedback on each criterion"],
+  options: ["Voice chat", "Hints", "Feedback on each criterion"],
   grading: ["Redraft with AI", "Use a saved rubric", "Allowed attempts", "Score to keep"],
 };
 

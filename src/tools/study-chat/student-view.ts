@@ -29,6 +29,8 @@ export type StudentChatView = {
   /** NULL: no limit, or no question. */
   limits: {
     maxTurns: number | null;
+    /** The fewest messages before answering the question or Finish can end it; NULL for none. */
+    minTurns: number | null;
     timeLimitMinutes: number | null;
     question: string | null;
     studentCanFinish: boolean;
@@ -50,7 +52,7 @@ export type StudentProgress = {
 
 export function studentView(settings: StudyChatSettings): StudentChatView {
   const [scenario] = settings.scenarios;
-  const { maxTurns, timeLimitMinutes, question, studentCanFinish } = settings.completion;
+  const { maxTurns, minTurns, timeLimitMinutes, question, studentCanFinish } = settings.completion;
   return {
     title: scenario.title,
     goal: settings.goal,
@@ -58,6 +60,6 @@ export function studentView(settings: StudyChatSettings): StudentChatView {
     opening: scenario.opening,
     persona: { name: settings.persona.name, role: settings.persona.title },
     bringsWork: settings.studentWork,
-    limits: { maxTurns, timeLimitMinutes, question, studentCanFinish },
+    limits: { maxTurns, minTurns, timeLimitMinutes, question, studentCanFinish },
   };
 }
