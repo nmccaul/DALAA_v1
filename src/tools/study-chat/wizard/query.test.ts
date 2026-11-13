@@ -47,6 +47,8 @@ describe("step 2's answers in the URL", () => {
   it("keeps the teacher's goal and a known length, and drops anything else", () => {
     expect(goalFromQuery({ goal: "  Defend a recommendation.  ", minutes: "45+" })).toEqual({ goal: "Defend a recommendation.", minutes: "45+" });
     expect(goalFromQuery({ goal: "   ", minutes: "90" })).toEqual({ goal: null, minutes: null });
+    expect(goalFromQuery({ goal: "Name the stripes.", minutes: "2-5" })).toEqual({ goal: "Name the stripes.", minutes: "2-5" });
+    expect(goalFromQuery({ goal: "Name the stripes.", minutes: "5-10" }).minutes).toBe("5-10");
     expect(goalFromQuery({ goal: ["a", "b"] })).toEqual({ goal: null, minutes: null });
     expect(goalFromQuery({ goal: "x".repeat(5000) }).goal).toHaveLength(1000);
   });
