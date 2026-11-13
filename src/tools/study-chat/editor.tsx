@@ -1,10 +1,9 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Button, inputStyles } from "@/components/ui";
 import { saveSettingsAction, type FormState } from "./actions";
-import Link from "next/link";
 import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
@@ -147,6 +146,12 @@ export function StudyChatEditor({
     }),
     {},
   );
+
+  // A refused save (from Next, Back or the step list) brings its reasons into view.
+  const refused = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.error || state.problems) refused.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [state]);
 
   const json = JSON.stringify(s);
   const savedJson = state.savedAt ? state.snapshot : JSON.stringify(initial);
@@ -477,7 +482,7 @@ export function StudyChatEditor({
       </div>
 
       {(state.error || state.problems) && (
-        <div role="alert" className="flex flex-col gap-1 text-sm text-danger">
+        <div ref={refused} role="alert" className="flex flex-col gap-1 text-sm text-danger">
           {state.error && <p>{state.error}</p>}
           {state.problems && (
             <ul className="list-disc pl-5">

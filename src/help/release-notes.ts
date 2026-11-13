@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-13",
     changes: [
+      "In the new-activity wizard, click any step in the list on the left to go straight to it. From Scenario onward it saves your changes first (Back does too), and tells you if something still needs filling in.",
       "If saving fails because Student View signed you in as Canvas's Test Student, DALAA now says so and how to sign back in as yourself.",
       "Picking materials for a new activity: search by title or show one kind (Canvas Pages, Uploaded, …), see how many you've ticked, and Next stays at the bottom of the screen instead of below the whole list.",
       "\"About how long?\" now offers 2–5 and 5–10 minutes for very short chats.",
