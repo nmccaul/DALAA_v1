@@ -13,6 +13,9 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     changes: [
       "\"About how long?\" now offers 2–5 and 5–10 minutes for very short chats.",
       "The picture sent with feedback shows what you picked in dropdowns, not the default.",
+      "The chat's opening message is now on the Scenario step, right under the situation, so you can see and change the first thing students read.",
+      "A chat no longer gets stuck on \"Waiting for the reply\": if a reply doesn't finish, students can send again.",
+      "\"Try it yourself\" now points to Canvas Assignments, where Student View starts.",
     ],
   },
   {

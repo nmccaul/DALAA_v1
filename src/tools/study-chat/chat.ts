@@ -19,7 +19,7 @@ import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import { ADD_WORK_FIRST, ENDED, REPLY_FAILED } from "./student-messages";
-import { studentProgress, trackProgress } from "./progress";
+import { CHECK_TIMEOUT_MS, studentProgress, trackProgress } from "./progress";
 import { chatMessages, chatSystemPrompt, type Exchange } from "./prompt";
 import { StudyChatSettings } from "./schema";
 import { MAX_MESSAGE_LENGTH, type StudentProgress } from "./student-view";
@@ -97,6 +97,7 @@ export async function questionAnswered(
           "to answer later? Whether the answer is good doesn't matter. `awaitingStudent`: does the AI's last reply " +
           "ask the student to explain, justify or add something they haven't given yet?",
         prompt: `Question: ${question}\n\nConversation:\n${transcript}`,
+        abortSignal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
       },
     );
     return answered && !awaitingStudent;

@@ -147,21 +147,22 @@ export function TryItYourself({ title, assigned, canvasCourseUrl }: { title: str
   return (
     <>
       <p className="text-sm text-muted">Take it the way your students will, with Canvas&apos;s Student View:</p>
+      {/* Student View starts from Assignments or the course home, not from Settings (feedback 3ecc5d28). */}
       <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
-        <li>Open the course&apos;s Settings in Canvas and click <b>Student View</b> on the right.</li>
         <li>
-          Go to <b>Assignments</b> and open &ldquo;{title}&rdquo;.
+          In Canvas, go to <b>Assignments</b> and click <b>Student View</b> at the top right.
         </li>
+        <li>Open &ldquo;{title}&rdquo; and take it.</li>
         <li>When you&apos;re done, click <b>Leave Student View</b> at the bottom of Canvas.</li>
       </ol>
       <p className="text-sm text-muted">Your attempt counts as Canvas&apos;s Test Student and shows on the Results tab.</p>
       <a
-        href={`${canvasCourseUrl}/settings`}
+        href={`${canvasCourseUrl}/assignments`}
         target="_blank"
         rel="noopener noreferrer"
         className="self-start font-medium text-accent-text underline"
       >
-        Open course Settings in Canvas ↗
+        Open Assignments in Canvas ↗
       </a>
     </>
   );

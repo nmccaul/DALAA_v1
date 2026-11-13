@@ -19,7 +19,7 @@ export const FIELDS: { path: string[]; more?: boolean; card?: string }[] = [
   { path: ["scenarios", "title"] },
   { path: ["scenarios", "situation"] },
   { path: ["studentWork"], card: "scenarios" },
-  { path: ["scenarios", "opening"], more: true },
+  { path: ["scenarios", "opening"] },
   { path: ["positions"] },
   { path: ["touchpoints"] },
   { path: ["showProgress"], card: "touchpoints" },
