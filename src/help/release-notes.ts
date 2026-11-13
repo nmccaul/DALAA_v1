@@ -11,6 +11,11 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-13",
     changes: [
+<<<<<<< Updated upstream
+=======
+      "If saving fails because Student View signed you in as Canvas's Test Student, DALAA now says so and how to sign back in as yourself.",
+      "Picking materials for a new activity: search by title or show one kind (Canvas Pages, Uploaded, …), see how many you've ticked, and Next stays at the bottom of the screen instead of below the whole list.",
+>>>>>>> Stashed changes
       "\"About how long?\" now offers 2–5 and 5–10 minutes for very short chats.",
       "The picture sent with feedback shows what you picked in dropdowns, not the default.",
       "The chat's opening message is now on the Scenario step, right under the situation, so you can see and change the first thing students read.",

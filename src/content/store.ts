@@ -3,7 +3,7 @@
  * (db/migrations/*_course_content.sql). Only a course's teachers save it.
  */
 
-import { getTaughtCourse } from "@/courses/queries";
+import { getTaughtCourse, notTeachingReason } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { readContent, type ContentInput } from "./read";
@@ -38,7 +38,7 @@ export async function saveTo(
   creationKey: string,
   input: ContentInput,
 ): Promise<SaveResult> {
-  if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: "That course isn't one you teach." };
+  if (!(await getTaughtCourse(db, actor, courseId))) return { ok: false, reason: notTeachingReason(actor) };
 
   const read = await readContent(input);
   if (!read.ok) return read;
