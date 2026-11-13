@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL } from "@/content/materials";
+import { CANVAS_PROBLEM, loadMaterialRows } from "@/content/materials";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
@@ -18,7 +18,7 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
   const isTicked = new Set([...ticked.contentIds.map((id) => `content:${id}`), ...ticked.guideIds.map((id) => `guide:${id}`)]);
   const picks: PickRow[] = rows.flatMap((r) => {
     const value = pickValue(r);
-    return value ? [{ value, name: r.name, source: SOURCE_LABEL[r.source], seenBy: r.seenBy, checked: isTicked.has(value) }] : [];
+    return value ? [{ value, name: r.name, source: r.source, seenBy: r.seenBy, checked: isTicked.has(value) }] : [];
   });
 
   return (

@@ -11,11 +11,12 @@ import { VaultError } from "@/canvas/vault";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import type { MaterialSource } from "./material-sources";
 
 export type Material = {
   id: string;
   name: string;
-  source: "paste" | "upload" | "canvas-page" | "canvas-file" | "web";
+  source: MaterialSource;
   /** A web page's address; null for everything else. */
   url: string | null;
   /** "students": students and the AI read it; "ai": only the AI does. */
@@ -44,14 +45,7 @@ export async function listCourseMaterials(db: Db, actor: Actor, courseId: string
   );
 }
 
-/** What each source is called on the Materials tab. */
-export const SOURCE_LABEL: Record<Material["source"], string> = {
-  paste: "Pasted",
-  upload: "Uploaded",
-  "canvas-page": "Canvas Page",
-  "canvas-file": "Canvas File",
-  web: "Web page",
-};
+export { SOURCE_LABEL } from "./material-sources";
 
 /** One row of the Materials tab: a saved material, or a Canvas Page or File ("canvas" until an activity uses it). */
 export type MaterialRow = {
