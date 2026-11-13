@@ -11,18 +11,15 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-13",
     changes: [
-<<<<<<< Updated upstream
-=======
       "If saving fails because Student View signed you in as Canvas's Test Student, DALAA now says so and how to sign back in as yourself.",
       "Picking materials for a new activity: search by title or show one kind (Canvas Pages, Uploaded, …), see how many you've ticked, and Next stays at the bottom of the screen instead of below the whole list.",
->>>>>>> Stashed changes
       "\"About how long?\" now offers 2–5 and 5–10 minutes for very short chats.",
       "The picture sent with feedback shows what you picked in dropdowns, not the default.",
       "The chat's opening message is now on the Scenario step, right under the situation, so you can see and change the first thing students read.",
       "A chat no longer gets stuck on \"Waiting for the reply\": if a reply doesn't finish, students can send again.",
       "\"Try it yourself\" now points to Canvas Assignments, where Student View starts.",
-      "A Study Chat is now three short steps for students: Your task (goal, how it works, how it's graded), Read, then Chat, where the character's question stays in sight. A bar shows where they are, and they can go back to the reading mid-chat without losing anything.",
-      "With progress turned on, students see bars for messages and points covered, and which points they've covered.",
+      "A Study Chat is now three short steps for students: Your task (goal, how it works, how it's graded), Read, then Chat. A bar shows where they are, and they can go back to the reading mid-chat without losing anything.",
+      "Above the chat, students see how many messages they have left before it ends and, with progress turned on, the key points they've made.",
     ],
   },
   {
