@@ -14,7 +14,7 @@ import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 import { parsePicks, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
-import { savedStepTarget, setupPath } from "./wizard/steps";
+import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
 import { typeRequestFrom } from "./wizard/type-request";
 import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
@@ -153,8 +153,10 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   }
   const saved = await saveStudyChat(db(), actor, activityId, settings);
   if (!saved.ok) return { error: saved.reason, problems: saved.problems };
+  const picker = pickerRequest(form.get(PICKER_PARAM));
+  if (form.get("intent") === "later") redirect(keepPicker(finishLaterPath(courseId), picker));
   const target = savedStepTarget(form.get("wizardStep"), form.get("intent"));
-  if (target) redirect(keepPicker(setupPath(courseId, activityId, target), pickerRequest(form.get(PICKER_PARAM))));
+  if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
   if (form.get("intent") !== "publish") return { savedAt: Date.now() };
 
   const published = await publishStudyChat(db(), actor, activityId);

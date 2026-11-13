@@ -3,7 +3,8 @@
  * (CLAUDE.md: each tool has its own schema). The AI drafts every field (T17);
  * the teacher reviews and changes them. Each field's `title` is the label the
  * teacher sees and the review screen searches; `description` tells the
- * drafting model what to write.
+ * drafting model what to write; `help`, where there is one, is the line the
+ * teacher sees under the label when the title alone doesn't say enough.
  *
  * Unknown keys are refused, so a setting this code doesn't read can't be
  * stored and silently ignored. "No limit" is NULL, never 0.
@@ -52,6 +53,7 @@ export const StudyChatFields = z
     studentWork: z.boolean().default(false).meta({
       title: "Students bring their own work",
       description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
+      help: "Before the chat, each student uploads or pastes their own paper, code or plan, and the chat is about their work. Leave it off when everyone works from the same readings.",
     }),
     goal: text(1000).meta({
       title: "Goal",
@@ -85,6 +87,7 @@ export const StudyChatFields = z
     // create.ts sets it. Missing in settings saved before it existed: off.
     showProgress: z.boolean().default(false).meta({
       title: "Show students their progress",
+      help: "While they chat, students see how many messages they have left and which points they've covered.",
       description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
     }),
     persona: z
@@ -110,8 +113,9 @@ export const StudyChatFields = z
           description: "NULL for no time limit.",
         }),
         question: text(1000).nullable().meta({
-          title: "Question to answer",
+          title: "Question that ends the chat",
           description: "The chat ends once the student has answered this. NULL when not used.",
+          help: "Optional. The character makes sure the chat gets to this question, and the chat ends once the student has answered it. Leave it empty to end the chat only by messages, time or the student.",
         }),
         studentCanFinish: z.boolean().meta({
           title: "Students can end the chat themselves",
@@ -164,24 +168,35 @@ export function rubricPoints(settings: StudyChatSettings): number {
   return settings.rubric.criteria.reduce((sum, c) => sum + c.points, 0);
 }
 
-/**
- * The teacher-facing label of the setting at `path` (keys only; list
- * positions are skipped), read from the schema's `title`s so the editor, its
- * search and its error messages can't drift from the schema.
- */
-export function settingTitle(path: readonly PropertyKey[]): string {
+/** The schema's meta for the setting at `path` (keys only; list positions, as numbers or digit strings, are skipped). */
+function settingMeta(path: readonly PropertyKey[]) {
   let node = StudyChatSettings as z.ZodType;
   for (const key of path) {
-    if (typeof key !== "string") continue;
+    if (typeof key !== "string" || /^\d+$/.test(key)) continue;
     while (node instanceof z.ZodNullable || node instanceof z.ZodArray) {
       node = (node instanceof z.ZodNullable ? node.unwrap() : node.element) as z.ZodType;
     }
     if (!(node instanceof z.ZodObject) || !Object.hasOwn(node.shape, key)) throw new Error(`No setting ${path.join(".")}`);
     node = node.shape[key] as z.ZodType;
   }
-  const title = node.meta()?.title;
+  return node.meta();
+}
+
+/**
+ * The teacher-facing label of the setting at `path` (keys only; list
+ * positions are skipped), read from the schema's `title`s so the editor, its
+ * search and its error messages can't drift from the schema.
+ */
+export function settingTitle(path: readonly PropertyKey[]): string {
+  const title = settingMeta(path)?.title;
   if (!title) throw new Error(`Setting ${path.join(".")} has no title`);
   return title;
+}
+
+/** The teacher-facing line under a setting's label, or null when its title says enough. */
+export function settingHelp(path: readonly PropertyKey[]): string | null {
+  const help = settingMeta(path)?.help;
+  return typeof help === "string" ? help : null;
 }
 
 /** Why settings don't fit, as plain sentences that name each setting. */

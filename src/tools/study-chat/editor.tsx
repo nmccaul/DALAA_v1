@@ -7,7 +7,7 @@ import { saveSettingsAction, type FormState } from "./actions";
 import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
-import { rubricPoints, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
+import { rubricPoints, settingHelp, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
 import { WIZARD_FORM_ID } from "./wizard/steps";
@@ -44,11 +44,17 @@ function Items({ items, none }: { items: Item[]; none: string }) {
 
 function Field({ path, label, children }: { path: string[]; label?: string; children: (id: string) => ReactNode }) {
   const id = fieldId(path);
+  const help = settingHelp(path);
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
         {label ?? settingTitle(path)}
       </label>
+      {help && (
+        <p id={`${id}-help`} className="-mt-0.5 text-[13px] text-muted">
+          {help}
+        </p>
+      )}
       {children(id)}
     </div>
   );
@@ -208,6 +214,9 @@ export function StudyChatEditor({
     studentWork: {
       id: fieldId(["studentWork"]),
       label: settingTitle(["studentWork"]),
+      help: MODES[s.mode].needsStudentWork
+        ? `${settingHelp(["studentWork"])} A ${MODES[s.mode].label} chat always needs it.`
+        : settingHelp(["studentWork"]),
       input: (
         <input
           id={fieldId(["studentWork"])}
@@ -221,6 +230,7 @@ export function StudyChatEditor({
     showProgress: {
       id: fieldId(["showProgress"]),
       label: settingTitle(["showProgress"]),
+      help: settingHelp(["showProgress"]),
       input: (
         <input
           id={fieldId(["showProgress"])}
@@ -464,7 +474,12 @@ export function StudyChatEditor({
           <OptionTable
             title="What students see and do"
             rows={[switches.studentWork, switches.showProgress].map((sw) => ({
-              label: <label htmlFor={sw.id}>{sw.label}</label>,
+              label: (
+                <>
+                  <label htmlFor={sw.id}>{sw.label}</label>
+                  {sw.help && <span className="mt-0.5 block text-[13px] font-normal text-muted">{sw.help}</span>}
+                </>
+              ),
               control: sw.input,
             }))}
             comingSoon={comingSoon}
@@ -496,17 +511,12 @@ export function StudyChatEditor({
       <div className="flex flex-wrap items-center gap-3">
         {wizard ? (
           <>
-            <Button name="intent" value="next" disabled={pending}>
-              {pending ? "Saving…" : "Next"}
-            </Button>
-            <Button variant="secondary" name="intent" value="save" disabled={pending}>
-              Save as draft
-            </Button>
             {wizard.previous && (
               <button type="submit" name="intent" value={`goto:${wizard.previous}`} disabled={pending} className="text-sm text-muted hover:text-text">
                 ← Back
               </button>
             )}
+            <span className="flex-1" />
           </>
         ) : published ? (
           <Button name="intent" value="save" disabled={pending}>
@@ -525,6 +535,11 @@ export function StudyChatEditor({
         <span className="text-sm text-muted" role="status">
           {json === savedJson ? (state.savedAt ? "Saved." : "") : "You have changes that aren't saved yet."}
         </span>
+        {wizard && (
+          <Button name="intent" value="next" disabled={pending}>
+            {pending ? "Saving…" : "Next"}
+          </Button>
+        )}
       </div>
     </form>
   );

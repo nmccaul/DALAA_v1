@@ -32,7 +32,7 @@ export function OptionTable({
               <th scope="row" className="px-5 py-3 text-left font-medium">
                 {label}
               </th>
-              <td className="px-5 py-3 text-right text-xs">Coming soon</td>
+              <td className="px-5 py-3 text-right text-xs whitespace-nowrap">Coming soon</td>
             </tr>
           ))}
         </tbody>
