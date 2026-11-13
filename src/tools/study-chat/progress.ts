@@ -130,7 +130,12 @@ export async function studentProgress(db: Db, settings: StudyChatSettings, attem
     points:
       settings.touchpoints.length === 0
         ? null
-        : { covered: touchpoints.filter((t) => keys.has(t.key)).length, total: settings.touchpoints.length },
+        : (() => {
+            const covered = touchpoints.filter((t) => keys.has(t.key));
+            // The names as the settings have them now (the student's own attempt's settings, D-031).
+            const label = new Map(settings.touchpoints.map((t) => [itemKey(t.label), t.label]));
+            return { covered: covered.length, total: settings.touchpoints.length, names: covered.map((t) => label.get(t.key) ?? t.label) };
+          })(),
     position: settings.positions.length > 0 && position ? position.label : null,
   };
 }

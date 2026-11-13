@@ -7,7 +7,7 @@ import { Button, inputStyles } from "@/components/ui";
 import type { Exchange } from "./prompt";
 import { finishChatAction } from "./student-actions";
 import { ENDED, REPLY_FAILED } from "./student-messages";
-import { MAX_MESSAGE_LENGTH, progressLines, type StudentChatView, type StudentProgress } from "./student-view";
+import { MAX_MESSAGE_LENGTH, type StudentChatView, type StudentProgress } from "./student-view";
 import { readTurnEvents } from "./turn-stream";
 
 /** The message waiting for its reply. `key` is reused when it's sent again, so a retry never counts twice. */
@@ -148,20 +148,29 @@ export function ChatRoom({
 
   return (
     <section aria-label="Chat" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-        {maxTurns !== null && (
-          <span>
-            Messages sent: {Math.min(sent, maxTurns)} of {maxTurns}
-          </span>
-        )}
+      {/* How far along the student is, each meter naming what it counts (feedback abf69c71). */}
+      <div className="z-10 flex flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-3 text-sm shadow-sm lg:sticky lg:top-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {maxTurns !== null && <Meter label="Messages sent" value={Math.min(sent, maxTurns)} of={maxTurns} />}
+          {progress?.points && <Meter label="Points covered" value={progress.points.covered} of={progress.points.total} />}
+        </div>
         {timeLimitMinutes !== null && !over && (
-          <span>
+          <p className="text-muted">
             {left === null
               ? `Time limit: ${timeLimitMinutes} minutes, starting with your first message`
               : `Time left: ${left} ${left === 1 ? "minute" : "minutes"}`}
-          </span>
+          </p>
         )}
-        {progress && progressLines(progress).map((line) => <span key={line}>{line}</span>)}
+        {progress?.points && progress.points.names.length > 0 && (
+          <ul aria-label="Points you've covered" className="flex flex-wrap gap-1.5">
+            {progress.points.names.map((name) => (
+              <li key={name} className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[13px] text-accent-text">
+                ✓ {name}
+              </li>
+            ))}
+          </ul>
+        )}
+        {progress?.position && <p>Your position: <span className="font-medium">{progress.position}</span></p>}
       </div>
 
       <div role="log" aria-live="polite" className="flex flex-col gap-3">
@@ -247,6 +256,24 @@ export function ChatRoom({
         </form>
       )}
     </section>
+  );
+}
+
+/** A labelled bar: "Messages sent 2 of 6". */
+function Meter({ label, value, of }: { label: string; value: number; of: number }) {
+  const percent = of === 0 ? 0 : Math.round((value / of) * 100);
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="flex justify-between gap-2">
+        <span>{label}</span>
+        <span className="text-muted tabular-nums">
+          {value} of {of}
+        </span>
+      </span>
+      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={of} aria-valuenow={value} className="h-2 overflow-hidden rounded-full bg-subtle">
+        <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
+      </div>
+    </div>
   );
 }
 

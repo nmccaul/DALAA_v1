@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { progressLines, studentView } from "./student-view";
+import { studentView } from "./student-view";
 import { draft } from "./test-fixtures";
 
 describe("studentView", () => {
-  it("passes only the title, opening, persona name and role, whether to bring work, and the limits", () => {
+  it("passes only the title, goal, criterion names and points, opening, persona name and role, whether to bring work, and the limits", () => {
     const settings = draft({
       completion: { maxTurns: null, timeLimitMinutes: 20, question: "Should Maya open the store?", studentCanFinish: false },
     });
     expect(studentView(settings)).toEqual({
       title: "Second store",
+      goal: settings.goal,
+      criteria: settings.rubric.criteria.map((c) => ({ label: c.label, points: c.points })),
       opening: "Thanks for coming in. I have to decide about the second store by Friday. Where do we start?",
       persona: { name: "Maya Ortiz", role: "Owner of Harbor Bikes" },
       bringsWork: false,
@@ -20,23 +22,16 @@ describe("studentView", () => {
     const settings = draft();
     const sent = JSON.stringify(studentView(settings));
     const hidden = [
-      settings.goal,
       settings.scenarios[0].situation,
       settings.persona.background,
       settings.persona.tone,
       ...settings.positions.flatMap((p) => [p.label, p.description]),
       ...settings.touchpoints.flatMap((t) => [t.label, t.description]),
-      ...settings.rubric.criteria.flatMap((c) => [c.label, c.description]),
+      // Criterion names are shown (abf69c71); what earns full points never is.
+      ...settings.rubric.criteria.map((c) => c.description),
     ];
     for (const text of hidden) expect(sent).not.toContain(text);
     expect(sent).not.toMatch(/rubric|strictness|helpfulness|touchpoint|position/i);
   });
 });
 
-describe("progressLines", () => {
-  it("names what the meter counts", () => {
-    expect(progressLines({ points: { covered: 2, total: 4 }, position: null })).toEqual(["Points covered — 2 of 4"]);
-    expect(progressLines({ points: { covered: 0, total: 3 }, position: "Wait" })).toEqual(["Points covered — 0 of 3", "Your position: Wait"]);
-    expect(progressLines({ points: null, position: null })).toEqual([]);
-  });
-});

@@ -63,7 +63,7 @@ describe("turnResponse + readTurnEvents", () => {
   });
 
   it("carries the progress meter with the saved reply", async () => {
-    const progress = { points: { covered: 1, total: 3 }, position: "Wait" };
+    const progress = { points: { covered: 1, total: 3, names: ["Cash flow"] }, position: "Wait" };
     const { response } = turnResponse(streamed(["Ok"], { ok: true, reply: "Ok", attempt: attempt(), progress }));
     expect((await events(response)).at(-1)).toEqual({ type: "reply", reply: "Ok", ended: null, progress });
   });

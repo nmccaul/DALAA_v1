@@ -197,14 +197,14 @@ describe("live touchpoint tracking", () => {
       expect((await readChat(db, student, activity))?.progress).toBeNull();
     });
 
-    it("counts touchpoints covered and names the student's position when it's on, after each reply", async () => {
+    it("counts touchpoints covered, names the ones covered and the student's position when it's on, after each reply", async () => {
       await show(true);
-      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 0, total: 2 }, position: null });
+      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 0, total: 2, names: [] }, position: null });
       state.track = { touchpoints: ["Cash flow"], position: null };
-      expect(await send("Cash is tight.")).toMatchObject({ ok: true, progress: { points: { covered: 1, total: 2 }, position: null } });
+      expect(await send("Cash is tight.")).toMatchObject({ ok: true, progress: { points: { covered: 1, total: 2, names: ["Cash flow"] }, position: null } });
       state.track = { touchpoints: ["Lease terms"], position: "Wait" };
-      expect(await send("Lease is long, so wait.")).toMatchObject({ progress: { points: { covered: 2, total: 2 }, position: "Wait" } });
-      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 2, total: 2 }, position: "Wait" });
+      expect(await send("Lease is long, so wait.")).toMatchObject({ progress: { points: { covered: 2, total: 2, names: ["Cash flow", "Lease terms"] }, position: "Wait" } });
+      expect((await readChat(db, student, activity))?.progress).toEqual({ points: { covered: 2, total: 2, names: ["Cash flow", "Lease terms"] }, position: "Wait" });
     });
 
     it("shows a replayed turn the same meter", async () => {

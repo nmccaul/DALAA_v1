@@ -18,7 +18,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/activiti
     <>
       {!framed && (
         <header className="border-b border-border bg-surface">
-          <div className="mx-auto flex h-14 max-w-3xl items-center gap-4 px-4 sm:px-6">
+          <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
             <Link href="/" className="shrink-0" aria-label="DALAA home">
               <Logo />
             </Link>
@@ -31,7 +31,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/activiti
           </div>
         </header>
       )}
-      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-8 pb-24 sm:px-6">
+      <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pt-8 pb-24 sm:px-6">
         {children}
       </main>
       <FeedbackButton />

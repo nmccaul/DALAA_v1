@@ -330,3 +330,16 @@ for class from what students said; grading and Canvas come second.
   students asked, discussion questions) that runs only when the teacher asks
   and is kept until they refresh it.
 
+### D-036 · Students see their goal and what they're graded on; reading beside the chat
+*2026-11-13, Nathan* (feedback abf69c71, ae27bc44).
+- **A student sees the learning goal and the rubric's criterion names and
+  points**, not what earns full points (a description can give the answer
+  away). The situation, the persona's background, positions and
+  touchpoints stay with the AI and the grader (`student-view.ts`).
+- **Progress, when the teacher turns it on, names the points already
+  covered** (the student said them), never the ones still to cover; messages
+  and points are bars, pinned above the chat on a wide screen.
+- **Layout:** the task across the top (goal, question, how it works, how it's
+  graded); then the reading on the left, staying in view, and the chat on
+  the right. A phone stacks them.
+
