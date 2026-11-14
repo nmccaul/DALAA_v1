@@ -4,7 +4,7 @@ import { graderModel } from "@/ai/models";
 import { db } from "@/db/client";
 import { PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
-import { suggestGoalAndType } from "../suggest";
+import { suggestTypes } from "../suggest";
 import { GoalTypeForm } from "./goal-type-form";
 import { pickedMaterials } from "./picks";
 import { goalFromQuery, materialsFromQuery, materialsStepPath } from "./query";
@@ -15,9 +15,10 @@ import { groupOf } from "./types";
 const title = WIZARD_STEPS.find((s) => s.slug === "goal")!.question;
 
 /**
- * Wizard step 2: the learning goal and the kind of activity, suggested
- * together from the ticked materials in one call (Nathan, 2026-11-13: one
- * decision, "suggested based on reading"). Next drafts the whole chat
+ * Wizard step 2: how students will work with the AI, then the learning goal
+ * written for that kind, then the length. The kinds and their goals are
+ * suggested from the ticked materials in one call (feedback 084938dc: the
+ * interaction first, then the outcome). Next drafts the whole chat
  * (wizardTypeAction) and opens step 3.
  */
 export async function GoalStep({ actor, course, searchParams }: CreateScreenProps) {
@@ -29,7 +30,7 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
 
   if (!materials.ok) {
     return (
-      <WizardShell step="goal" title={title} note={<p>I suggest a goal once the materials are picked.</p>}>
+      <WizardShell step="goal" title={title} note={<p>I suggest the kind of activity once the materials are picked.</p>}>
         <p role="alert" className="text-danger">
           {materials.reason}
         </p>
@@ -40,13 +41,8 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
     );
   }
 
-  const suggestion = await suggestGoalAndType(db(), graderModel(), { userId: actor.userId, courseId: course.id }, materials);
-  const goal = kept.goal ?? suggestion.goal ?? "";
+  const suggested = await suggestTypes(db(), graderModel(), { userId: actor.userId, courseId: course.id }, materials);
   const count = materials.readings.length + materials.guides.length;
-  const carried = [
-    { name: "content", value: ids.contentIds.join(",") },
-    ...(ids.guideIds.length > 0 ? [{ name: "guide", value: ids.guideIds.join(",") }] : []),
-  ];
 
   return (
     <WizardShell
@@ -54,13 +50,13 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
       step="goal"
       title={title}
       note={
-        suggestion.goal ? (
+        suggested[0].reason ? (
           <p>
-            I read your {count === 1 ? "material" : `${count} materials`} and suggested a goal and the kind of activity that fits it:{" "}
-            {groupOf(suggestion.types[0].mode).label}. Change either, then I&apos;ll draft the whole chat.
+            I read your {count === 1 ? "material" : `${count} materials`}. {groupOf(suggested[0].mode).label} fits it best, so it&apos;s
+            picked, with a goal written for it. Pick another kind and I&apos;ll rewrite the goal for that one.
           </p>
         ) : (
-          <p>Write the goal in a sentence or two and pick the kind of activity. I&apos;ll draft the whole chat around them.</p>
+          <p>Pick how students will work with the AI, then write the goal. I&apos;ll draft the whole chat around them.</p>
         )
       }
       comingSoon={["Ask the wizard for changes", "Start from a copy", "Activity group"]}
@@ -69,11 +65,11 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
         courseId={course.id}
         creationKey={randomUUID()}
         addToCanvas={addToCanvas}
-        carried={carried}
-        goal={goal}
-        goalSuggested={!kept.goal && suggestion.goal !== null}
+        contentIds={ids.contentIds}
+        guideIds={ids.guideIds}
+        kept={kept.goal}
         minutes={kept.minutes}
-        suggested={suggestion.types}
+        suggested={suggested}
         back={back}
       />
     </WizardShell>

@@ -288,6 +288,13 @@ reach production before the code) and those were test attempts anyway.
   mode. Touchpoints are named "Key points to listen for" (a checklist that
   feeds Insights and student progress, no points) and the rubric "How it's
   scored" (only it makes the grade). Drafted situations stay under 120 words.
+- **Step 2 puts the interaction first** (*2026-11-13, Nathan*, feedback
+  084938dc): "How will students work through this reading?" shows all seven
+  kinds as cards, each saying what students do and who the AI is (the
+  suggested one first), then the learning goal, which DALAA grades against,
+  then the length. The goal follows the kind: the first call suggests two
+  kinds, each with its own goal; picking another asks for a goal for it
+  (`suggestGoalFor`). A goal the teacher has typed is never replaced.
 - **Fewest student messages** (*2026-11-13, Nathan*): optional on Chat
   options. Before it, answering the question doesn't end the chat and Finish
   is held back; the message and time limits still end it. Students see it in

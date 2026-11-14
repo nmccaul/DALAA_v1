@@ -14,6 +14,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "Creating a Study Chat is now six questions. Step 2 suggests the goal and the kind of activity together, based on your reading, from seven clear kinds (Explain, Apply, Argue, Question, Practice a conversation, Connect, Defend their work).",
       "Grading now holds the key points to listen for and how the chat is scored, each with a line on what it does. After the draft, \"Skip to review\" goes straight to the end.",
       "Drafted scenarios are shorter.",
+      "Step 2 starts with how students will work with the AI: every kind of activity is shown, each saying what students do and who the AI is. The learning goal comes next and is rewritten for the kind you pick, unless you've written your own.",
       "Chat options has \"Fewest student messages\": students must send at least that many before answering the question or Finish can end the chat, and they see when they've reached it.",
       "In the new-activity wizard, \"Save as draft\" is now \"Save and finish later\" at the top right of each step, away from Next. It saves and takes you back to your activities. Back is on the left and Next on the right.",
       "Chat options explain themselves: \"Students bring their own work\" and \"Show students their progress\" each have a line saying what they do, and \"Question to answer\" is now \"Question that ends the chat\", with a note on how it works.",

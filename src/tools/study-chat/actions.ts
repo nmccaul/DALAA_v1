@@ -12,7 +12,8 @@ import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
-import { parsePicks, savePicks } from "./wizard/picks";
+import { suggestGoalFor } from "./suggest";
+import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
 import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
 import { typeRequestFrom } from "./wizard/type-request";
@@ -93,6 +94,20 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
  * draft comes back with the choice kept (`mode`).
  */
 export type TypeState = FormState & { mode?: string };
+
+/**
+ * Step 2: a goal written for the kind the teacher just picked, when the first
+ * suggestion had none for it (feedback 084938dc: the goal follows the kind).
+ * NULL when none comes back; the teacher's own goal is never replaced here.
+ */
+export async function goalForTypeAction(courseId: string, contentIds: string[], guideIds: string[], mode: string): Promise<string | null> {
+  const actor = await requireActor();
+  const slug = MODE_SLUGS.find((m) => m === mode);
+  if (!slug) return null;
+  const materials = await pickedMaterials(db(), actor, courseId, { contentIds, guideIds });
+  if (!materials.ok) return null;
+  return suggestGoalFor(db(), graderModel(), { userId: actor.userId, courseId }, materials, slug);
+}
 
 export async function wizardTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
   const actor = await requireActor();

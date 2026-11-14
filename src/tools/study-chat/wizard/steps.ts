@@ -5,7 +5,7 @@
  */
 export const WIZARD_STEPS = [
   { slug: "materials", label: "Materials", question: "What should students read, and what should the AI know?" },
-  { slug: "goal", label: "Goal and activity", question: "What should students be able to do?" },
+  { slug: "goal", label: "Activity and goal", question: "How will students work through this reading?" },
   { slug: "scenario", label: "The AI's role", question: "Who should the AI be?" },
   { slug: "grading", label: "Grading", question: "How will you know they got it?" },
   { slug: "options", label: "Chat options", question: "How should the chat run?" },
