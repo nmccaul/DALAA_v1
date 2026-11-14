@@ -2,7 +2,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { suggestGoalAndType, suggestPrompt } from "./suggest";
+import { goalPrompt, suggestGoalFor, suggestPrompt, suggestTypes } from "./suggest";
 import { answering } from "./test-fixtures";
 
 const sent = (model: MockLanguageModelV4) => JSON.stringify(model.doGenerateCalls[0].prompt);
@@ -12,9 +12,17 @@ const harbor = {
   guides: [],
 };
 
-const explainOnly = [{ mode: "explain", reason: null }];
+const explainOnly = [{ mode: "explain", reason: null, goal: null }];
 
-describe("suggestGoalAndType", () => {
+const failing = () =>
+  new MockLanguageModelV4({
+    modelId: "test/grader",
+    doGenerate: async () => {
+      throw new Error("gateway down");
+    },
+  });
+
+describe("step 2 suggestions", () => {
   let db: Db;
   const ledger = () => db.query<{ purpose: string; ok: boolean }>("select purpose, ok from ai_calls order by created_at");
 
@@ -25,75 +33,64 @@ describe("suggestGoalAndType", () => {
     await db.query("delete from ai_calls");
   });
 
-  it("suggests the goal and the two best types in one call, recorded as suggest.goal", async () => {
+  it("suggests the two best kinds, each with a goal written for it, in one call recorded as suggest.goal", async () => {
     const model = answering({
-      goal: "  Recommend whether Harbor Bikes should open a second store,\n using the case's numbers. ",
       types: [
-        { mode: "Case-Chat", reason: " The case has a decision  to make. " },
-        { mode: "debate", reason: "There are two sides." },
-        { mode: "socratic", reason: "A third is dropped." },
+        { mode: "Case-Chat", reason: " The case has a decision  to make. ", goal: " Recommend whether Maya should open\n a second store. " },
+        { mode: "debate", reason: "There are two sides.", goal: "Defend opening or waiting." },
+        { mode: "socratic", reason: "A third is dropped.", goal: "x" },
       ],
     });
-    expect(await suggestGoalAndType(db, model, {}, harbor)).toEqual({
-      goal: "Recommend whether Harbor Bikes should open a second store, using the case's numbers.",
-      types: [
-        { mode: "case-chat", reason: "The case has a decision to make." },
-        { mode: "debate", reason: "There are two sides." },
-      ],
-    });
+    expect(await suggestTypes(db, model, {}, harbor)).toEqual([
+      { mode: "case-chat", reason: "The case has a decision to make.", goal: "Recommend whether Maya should open a second store." },
+      { mode: "debate", reason: "There are two sides.", goal: "Defend opening or waiting." },
+    ]);
     expect(model.doGenerateCalls).toHaveLength(1);
     expect(sent(model)).toContain("Harbor Bikes sells 1,200 bikes a year.");
     expect(await ledger()).toEqual([{ purpose: "suggest.goal", ok: true }]);
   });
 
-  it("drops modes that don't exist and repeats, and keeps a mode whose reason is unusable without it", async () => {
+  it("drops kinds that don't exist and repeats, and keeps a kind whose reason or goal is unusable without it", async () => {
     const model = answering({
-      goal: "Decide.",
       types: [
-        { mode: "lecture", reason: "Not a mode." },
-        { mode: "apply", reason: "x".repeat(301) },
-        { mode: "apply", reason: "Again." },
+        { mode: "lecture", reason: "Not a mode.", goal: "Lecture." },
+        { mode: "apply", reason: "x".repeat(301), goal: "   " },
+        { mode: "apply", reason: "Again.", goal: "Again." },
       ],
     });
-    expect((await suggestGoalAndType(db, model, {}, harbor)).types).toEqual([{ mode: "apply", reason: null }]);
+    expect(await suggestTypes(db, model, {}, harbor)).toEqual([{ mode: "apply", reason: null, goal: null }]);
   });
 
-  it("is no goal and Explain when the model fails, answers off-schema, or answers blank", async () => {
-    const failing = new MockLanguageModelV4({
-      modelId: "test/grader",
-      doGenerate: async () => {
-        throw new Error("gateway down");
-      },
-    });
-    const none = { goal: null, types: explainOnly };
-    expect(await suggestGoalAndType(db, failing, {}, harbor)).toEqual(none);
-    expect(await suggestGoalAndType(db, answering({ nope: 1 }), {}, harbor)).toEqual(none);
-    expect(await suggestGoalAndType(db, answering({ goal: "   ", types: [] }), {}, harbor)).toEqual(none);
-    expect((await suggestGoalAndType(db, answering({ goal: "x".repeat(601), types: [] }), {}, harbor)).goal).toBeNull();
-    expect((await ledger()).map((r) => r.purpose)).toEqual(Array(4).fill("suggest.goal"));
+  it("falls back to Explain with no goal when the model fails or answers off-schema, and asks nothing with no reading text", async () => {
+    expect(await suggestTypes(db, failing(), {}, harbor)).toEqual(explainOnly);
+    expect(await suggestTypes(db, answering({ nope: 1 }), {}, harbor)).toEqual(explainOnly);
+    expect(await suggestTypes(db, answering({ types: [] }), {}, harbor)).toEqual(explainOnly);
+    const unused = answering({ types: [] });
+    expect(await suggestTypes(db, unused, {}, { readings: [{ name: "Empty", body: "  " }], guides: [] })).toEqual(explainOnly);
+    expect(unused.doGenerateCalls).toHaveLength(0);
   });
 
-  it("asks nothing when there's no reading text", async () => {
-    const model = answering({ goal: "Anything", types: [] });
-    expect(await suggestGoalAndType(db, model, {}, { readings: [{ name: "Empty", body: "  " }], guides: [] })).toEqual({
-      goal: null,
-      types: explainOnly,
-    });
-    expect(model.doGenerateCalls).toHaveLength(0);
+  it("writes a goal for the kind the teacher picked, or none when the model fails or answers blank", async () => {
+    const model = answering({ goal: "  Defend opening the store\n or waiting. " });
+    expect(await suggestGoalFor(db, model, {}, harbor, "debate")).toBe("Defend opening the store or waiting.");
+    expect(sent(model)).toContain("The kind of chat: Debate.");
+    expect(await suggestGoalFor(db, failing(), {}, harbor, "debate")).toBeNull();
+    expect(await suggestGoalFor(db, answering({ goal: "x".repeat(601) }), {}, harbor, "debate")).toBeNull();
+    expect((await ledger()).map((r) => r.purpose)).toEqual(Array(3).fill("suggest.goal"));
   });
 });
 
-describe("suggestPrompt", () => {
-  it("lists every mode and fences every reading and AI-only note under its own name", () => {
-    const { prompt } = suggestPrompt({
+describe("prompts", () => {
+  it("list every kind and fence every reading and AI-only note under its own name", () => {
+    const materials = {
       readings: [...harbor.readings, { name: "Lease terms", body: "The lease runs five years." }],
       guides: [{ name: "Answer key", body: "Waiting is better: cash is short in winter." }],
-    });
+    };
+    const { prompt } = suggestPrompt(materials);
     expect(prompt).toContain("- case-chat: Case Chat.");
     expect(prompt).toContain("- defend: Defend.");
-    expect(prompt).toContain('Material title: Case: Harbor Bikes\n<material role="student-reading">');
     expect(prompt).toContain('Material title: Lease terms\n<material role="student-reading">\nThe lease runs five years.');
-    expect(prompt).toContain('("Answer key")');
     expect(prompt).toContain('<material role="ai-only-guide">\nWaiting is better');
+    expect(goalPrompt(materials, "pitch").prompt).toContain("The kind of chat: Pitch.");
   });
 });

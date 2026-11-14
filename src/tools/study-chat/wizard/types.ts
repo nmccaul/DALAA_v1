@@ -12,23 +12,62 @@ export type TypeGroup = {
   label: string;
   /** What the student does, in one line. */
   does: string;
+  /** Who the AI is and what it does, in one line, so the kind is easy to picture. */
+  ai: string;
   /** The modes in this group, the usual one first. Two or more show a "Style" choice. */
   modes: readonly ModeSlug[];
 };
 
 export const TYPE_GROUPS: readonly TypeGroup[] = [
-  { key: "explain", label: "Explain / teach back", does: "Students explain the idea in their own words to a curious beginner.", modes: ["explain"] },
-  { key: "apply", label: "Apply", does: "Students use the material on a new problem or a case and recommend what to do.", modes: ["apply", "case-chat"] },
-  { key: "argue", label: "Argue", does: "Students take a position or pitch an idea and defend it against pushback.", modes: ["debate", "pitch"] },
-  { key: "question", label: "Question", does: "Students have their reasoning and assumptions probed until they think it through.", modes: ["socratic"] },
+  {
+    key: "explain",
+    label: "Explain / teach back",
+    does: "Students teach the idea in their own words.",
+    ai: "The AI plays a curious beginner who keeps asking \"why?\" and \"what does that mean?\"",
+    modes: ["explain"],
+  },
+  {
+    key: "apply",
+    label: "Apply",
+    does: "Students use the material to solve a new problem or a case.",
+    ai: "The AI presents the situation (or plays someone in the case) and asks what they'd do.",
+    modes: ["apply", "case-chat"],
+  },
+  {
+    key: "argue",
+    label: "Argue",
+    does: "Students take a position, or pitch an idea, and back it up.",
+    ai: "The AI pushes back with counter-arguments and tough questions.",
+    modes: ["debate", "pitch"],
+  },
+  {
+    key: "question",
+    label: "Question",
+    does: "Students reason through an idea out loud.",
+    ai: "The AI asks probing questions (\"how do you know?\") but never gives the answer.",
+    modes: ["socratic"],
+  },
   {
     key: "practice",
     label: "Practice a conversation",
     does: "Students rehearse a real conversation: an interview, a negotiation, a hard talk.",
+    ai: "The AI plays the other person, realistically.",
     modes: ["roleplay", "interview"],
   },
-  { key: "connect", label: "Connect", does: "Students relate the material to their own life, or a passage to life today.", modes: ["liken-to-me", "liken-to-us"] },
-  { key: "defend", label: "Defend their work", does: "Students add their own paper, code or plan, then answer an examiner's questions about it.", modes: ["defend"] },
+  {
+    key: "connect",
+    label: "Connect",
+    does: "Students relate the material to their own life, or a passage to life today.",
+    ai: "The AI asks for examples from their experience and how the idea applies.",
+    modes: ["liken-to-me", "liken-to-us"],
+  },
+  {
+    key: "defend",
+    label: "Defend their work",
+    does: "Students add their own paper, code or plan, then explain and defend it.",
+    ai: "The AI is an examiner who has read their work and asks about it.",
+    modes: ["defend"],
+  },
 ];
 
 /** The group a mode belongs to. Every mode is in exactly one (types.test.ts). */
