@@ -106,7 +106,8 @@ export async function goalForTypeAction(courseId: string, contentIds: string[], 
   if (!slug) return null;
   const materials = await pickedMaterials(db(), actor, courseId, { contentIds, guideIds });
   if (!materials.ok) return null;
-  return suggestGoalFor(db(), graderModel(), { userId: actor.userId, courseId }, materials, slug);
+  // The quick model: a teacher is waiting on it, and it's one or two sentences (feedback a1fc461e).
+  return suggestGoalFor(db(), chatModel(), { userId: actor.userId, courseId }, materials, slug);
 }
 
 export async function wizardTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
