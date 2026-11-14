@@ -74,6 +74,8 @@ describe("step 2 suggestions", () => {
     const model = answering({ goal: "  Defend opening the store\n or waiting. " });
     expect(await suggestGoalFor(db, model, {}, harbor, "debate")).toBe("Defend opening the store or waiting.");
     expect(sent(model)).toContain("The kind of chat: Debate.");
+    // A teacher is waiting: the call gives up rather than hold step 2 (feedback a1fc461e).
+    expect(model.doGenerateCalls[0].abortSignal).toBeInstanceOf(AbortSignal);
     expect(await suggestGoalFor(db, failing(), {}, harbor, "debate")).toBeNull();
     expect(await suggestGoalFor(db, answering({ goal: "x".repeat(601) }), {}, harbor, "debate")).toBeNull();
     expect((await ledger()).map((r) => r.purpose)).toEqual(Array(3).fill("suggest.goal"));

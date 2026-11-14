@@ -139,7 +139,13 @@ export function goalPrompt(materials: SuggestMaterials, mode: ModeSlug): { syste
   return { system, prompt: [kind, ...materialBlocks(materials)].join("\n\n") };
 }
 
-/** A goal for the kind the teacher picked on step 2, when the first suggestion had none for it; NULL when none comes back. */
+/** How long a teacher waits for a goal for the kind they picked before writing their own. */
+export const GOAL_TIMEOUT_MS = 20_000;
+
+/**
+ * A goal for the kind the teacher picked on step 2, when the first suggestion
+ * had none for it; NULL when none comes back, or not within GOAL_TIMEOUT_MS.
+ */
 export async function suggestGoalFor(
   db: Db,
   model: LanguageModel,
@@ -149,7 +155,10 @@ export async function suggestGoalFor(
 ): Promise<string | null> {
   if (noReading(materials)) return null;
   try {
-    const answer = await generateStructured(db, model, { ...ctx, purpose: "suggest.goal" }, GoalAnswer, goalPrompt(materials, mode));
+    const answer = await generateStructured(db, model, { ...ctx, purpose: "suggest.goal" }, GoalAnswer, {
+      ...goalPrompt(materials, mode),
+      abortSignal: AbortSignal.timeout(GOAL_TIMEOUT_MS),
+    });
     return tidy(answer.goal, MAX_GOAL_CHARS);
   } catch (error) {
     console.error("study-chat goal suggestion failed:", error instanceof Error ? error.name : "unknown error");

@@ -9,6 +9,12 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-14",
+    changes: [
+      "Fixed: on step 2, \"Draft the chat\" could stay greyed out after you switched kinds of activity. Goals for other kinds are now written faster, and if one can't be written you can type your own.",
+    ],
+  },
+  {
     date: "2026-11-13",
     changes: [
       "Creating a Study Chat is now six questions. Step 2 suggests the goal and the kind of activity together, based on your reading, from seven clear kinds (Explain, Apply, Argue, Question, Practice a conversation, Connect, Defend their work).",

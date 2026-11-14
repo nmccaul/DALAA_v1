@@ -11,7 +11,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Button, inputStyles } from "@/components/ui";
 import { goalForTypeAction, wizardTypeAction, type TypeState } from "../actions";
 import { PickerField } from "../forms";
@@ -87,21 +87,26 @@ export function GoalTypeForm({
   const [own, setOwn] = useState<string | null>(kept);
   const edited = own !== null;
   const goal = own ?? goals.get(mode) ?? "";
-  const [writing, startWriting] = useTransition();
+  // Kinds whose goal couldn't be written: the teacher writes one instead.
+  const [failed, setFailed] = useState<ReadonlySet<ModeSlug>>(() => new Set());
+  // Kinds already asked for, so switching back and forth asks once each.
+  const asked = useRef(new Set<ModeSlug>());
+  // Only the chosen kind matters: a slower answer for another kind never holds this one up (feedback a1fc461e).
+  const waiting = !edited && !goals.has(mode) && !failed.has(mode);
 
   const contentKey = contentIds.join(",");
   const guideKey = guideIds.join(",");
   // A kind with no goal yet gets one written for it, unless the teacher has written their own.
+  // Its answer is kept for that kind whenever it comes, even if the teacher has moved on.
   useEffect(() => {
-    if (edited || goals.has(mode)) return;
-    let current = true;
-    startWriting(async () => {
-      const written = await goalForTypeAction(courseId, contentKey.split(","), guideKey ? guideKey.split(",") : [], mode);
-      if (current && written) setGoals((g) => new Map(g).set(mode, written));
-    });
-    return () => {
-      current = false;
-    };
+    if (edited || goals.has(mode) || asked.current.has(mode)) return;
+    asked.current.add(mode);
+    goalForTypeAction(courseId, contentKey.split(","), guideKey ? guideKey.split(",") : [], mode)
+      .catch(() => null)
+      .then((written) => {
+        if (written) setGoals((g) => new Map(g).set(mode, written));
+        else setFailed((f) => new Set(f).add(mode));
+      });
   }, [mode, edited, goals, courseId, contentKey, guideKey]);
 
   if (pending) {
@@ -207,13 +212,13 @@ export function GoalTypeForm({
           className={`${inputStyles} field-sizing-content min-h-24`}
         />
         <p role="status" className="text-sm text-muted">
-          {writing && !edited
-            ? `Writing a goal for ${chosen.label}…`
-            : edited
-              ? "Your goal. It stays as you wrote it if you change the kind above."
-              : showing
-                ? `Written for ${chosen.label}, based on your reading. Edit it until it says what you want.`
-                : "Write it in a sentence or two."}
+          {edited
+            ? "Your goal. It stays as you wrote it if you change the kind above."
+            : showing
+              ? `Written for ${chosen.label}, based on your reading. Edit it until it says what you want.`
+              : waiting
+                ? `Writing a goal for ${chosen.label}…`
+                : `I couldn't write a goal for ${chosen.label} this time. Write it in a sentence or two.`}
         </p>
       </div>
 
@@ -242,7 +247,7 @@ export function GoalTypeForm({
           ← Back
         </Link>
         <span className="flex-1" />
-        <Button type="submit" disabled={writing && !edited}>
+        <Button type="submit" disabled={waiting}>
           Draft the chat
         </Button>
       </div>
