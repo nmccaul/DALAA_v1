@@ -8,6 +8,8 @@ Decks, one-pagers, slides, and copy. Name files `YYYY-MM-DD-short-name.ext`.
 |---|---|---|
 | Pitch deck (7 slides: cover, problem, market, example Case Chat, students, teachers, close; indigo brand, Outfit + Geist) | `pitch-deck/project/` (one HTML file per slide + `deck.json`; images are artifact assets) | https://claude.ai/artifact/XTxRDK4A9StesD7HFvUweb (private until shared) |
 | Logo: "dalaa" indigo dialogue (current, 2026-10-03) | `brand/2026-10-03-dalaa-indigo-dialogue-logo.png` (original); app-ready files in `public/brand/` | In the app (favicon, icons) |
+| Logo candidate: "dala learning" dots (2026-11-16): black rounded-square chat mark with two dots and an indigo corner; "dala" in heavy black, "learning" in grey below | `brand/2026-11-16-dala-learning-dots-logo.png` (432×214 PNG, from Nathan) | Not used. Candidate only; note the "dala" spelling (S-006b) |
+| Wordmark candidate: "dala learning" (2026-11-16): "dala" in heavy black with an indigo leaf on the "a"'s tail, "learning" in grey below; no separate mark | `brand/2026-11-16-dala-learning-wordmark.png` (316x174 PNG, from Nathan) | Not used. Candidate only; pairs with the dots logo above |
 | Wordmark candidate: "dalaa" teal parrot (superseded) | `brand/2026-09-30-dalaa-teal-parrot-wordmark.png` | Not final — name undecided (strategy S-006) |
 
 ## Logo usage (indigo dialogue)
