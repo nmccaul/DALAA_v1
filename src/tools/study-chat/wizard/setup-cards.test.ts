@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CARD_KEYS, shownCards } from "../fields";
 import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
-import { STUDY_CHAT } from "../create";
+import { blankSettings, STUDY_CHAT } from "../create";
 import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupCards, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
 import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
 
@@ -84,11 +84,17 @@ describe("wizard steps 4–6 extras", () => {
 describe("setupNote", () => {
   it("names the kind of activity and the character, and counts what grading holds, from the stored settings", () => {
     expect(setupNote("scenario", draft())).toBe(
-      "I drafted this chat as Apply, with Maya Ortiz to lead it. The opening message is the first thing students read. Change anything that doesn't fit your class.",
+      "Maya Ortiz leads this Apply chat. The opening message is the first thing students read. Use Tweak on any box to have me rewrite it.",
     );
     expect(setupNote("grading", draft())).toBe(
-      "I drafted 1 key point to listen for and 2 criteria worth 10 points. Key points are a checklist; only the criteria score. The activity is worth the total.",
+      "This chat has 1 key point to listen for and 2 criteria worth 10 points. Key points are a checklist; only the criteria score. The activity is worth the total.",
     );
+  });
+
+  it("offers to write a step nothing's been written on yet (feedback aab2aed5)", () => {
+    const blank = blankSettings({ mode: "debate", goal: "Defend a side.", studentWork: false, typeReason: null });
+    expect(setupNote("scenario", blank)).toMatch(/^Your Argue chat needs someone for the AI to play and a first message\. Write them, or let me draft this page/);
+    expect(setupNote("grading", blank)).toMatch(/or let me draft them from your goal and materials\.$/);
   });
 });
 

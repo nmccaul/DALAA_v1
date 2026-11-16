@@ -180,8 +180,8 @@ describe("setting labels", () => {
     if (result.success) throw new Error("expected a problem");
     expect(settingProblems(result.error)).toEqual([
       "“Goal” can't be empty.",
-      "“Tone” is too long.",
-      "“Time limit (minutes)” is too low or too short.",
+      "“Persona › Tone” is too long.",
+      "“When the chat ends › Time limit (minutes)” is too low or too short.",
     ]);
   });
 

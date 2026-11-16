@@ -16,165 +16,183 @@
 import { z } from "zod";
 import { MODE_SLUGS, MODES } from "./modes";
 
-const text = (max: number) => z.string().trim().min(1).max(max);
-
-const Scenario = z
-  .strictObject({
-    title: text(120).meta({ title: "Title", description: "A short name for the scenario." }),
-    situation: text(4000).meta({
-      title: "Situation",
-      description: "What the chat is about and how it unfolds, written for the AI that runs the chat.",
-    }),
-    opening: text(1000).meta({
-      title: "Opening message",
-      description: "The AI's first message to the student.",
-    }),
-  })
-  .meta({ title: "Scenario" });
-
-const LabeledItem = z.strictObject({
-  label: text(120).meta({ title: "Name" }),
-  description: text(1000).meta({ title: "Description" }),
-});
-
+/**
+ * Every setting, built twice: `complete` is a chat students can take (every
+ * text written, at least one criterion, a way to end), checked to publish,
+ * try or run it; otherwise it's a chat still being set up, which the teacher
+ * may save with fields left empty (Nathan, 2026-11-16: the teacher writes, or
+ * asks DALAA to; nothing is drafted until they do). One builder, so the two
+ * can't drift apart.
+ */
 export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 
-/** When a chat ends, field by field; the rules that tie them together are in `Completion`. */
-const CompletionFields = z
-  .strictObject({
-    maxTurns: z.int().min(1).max(100).nullable().meta({
-      title: "Most student messages",
-      description: "The chat ends after this many student messages. NULL for no limit.",
-    }),
-    // Missing in settings saved before it existed: no minimum.
-    minTurns: z.int().min(1).max(100).nullable().default(null).meta({
-      title: "Fewest student messages",
-      description: "The chat can't end on the question or by the student before this many student messages. NULL for no minimum.",
-      help: "Optional. Students must send at least this many messages before answering the question or clicking Finish ends the chat. The message limit and time limit still end it.",
-    }),
-    timeLimitMinutes: z.int().min(1).max(240).nullable().meta({
-      title: "Time limit (minutes)",
-      description: "NULL for no time limit.",
-    }),
-    question: text(1000).nullable().meta({
-      title: "Question that ends the chat",
-      description: "The chat ends once the student has answered this. NULL when not used.",
-      help: "Optional. The character makes sure the chat gets to this question, and the chat ends once the student has answered it. Leave it empty to end the chat only by messages, time or the student.",
-    }),
-    studentCanFinish: z.boolean().meta({
-      title: "Students can end the chat themselves",
-    }),
+function settingsSchema(complete: boolean) {
+  const text = (max: number) => (complete ? z.string().trim().min(1).max(max) : z.string().trim().max(max));
+
+  const Scenario = z
+    .strictObject({
+      title: text(120).meta({ title: "Title", description: "A short name for the scenario." }),
+      situation: text(4000).meta({
+        title: "Situation",
+        description: "What the chat is about and how it unfolds, written for the AI that runs the chat.",
+      }),
+      opening: text(1000).meta({
+        title: "Opening message",
+        description: "The AI's first message to the student.",
+      }),
+    })
+    .meta({ title: "Scenario" });
+
+  const LabeledItem = z.strictObject({
+    label: text(120).meta({ title: "Name" }),
+    description: text(1000).meta({ title: "Description" }),
   });
 
-const ONE_WAY_TO_END = "The chat needs at least one way to end.";
-const endsSomehow = (c: { maxTurns: number | null; timeLimitMinutes: number | null; question: string | null; studentCanFinish: boolean }) =>
-  c.maxTurns !== null || c.timeLimitMinutes !== null || c.question !== null || c.studentCanFinish;
+  /** When a chat ends, field by field; the rules that tie them together are in `Completion`. */
+  const CompletionFields = z
+    .strictObject({
+      maxTurns: z.int().min(1).max(100).nullable().meta({
+        title: "Most student messages",
+        description: "The chat ends after this many student messages. NULL for no limit.",
+      }),
+      // Missing in settings saved before it existed: no minimum.
+      minTurns: z.int().min(1).max(100).nullable().default(null).meta({
+        title: "Fewest student messages",
+        description: "The chat can't end on the question or by the student before this many student messages. NULL for no minimum.",
+        help: "Optional. Students must send at least this many messages before answering the question or clicking Finish ends the chat. The message limit and time limit still end it.",
+      }),
+      timeLimitMinutes: z.int().min(1).max(240).nullable().meta({
+        title: "Time limit (minutes)",
+        description: "NULL for no time limit.",
+      }),
+      question: text(1000).nullable().meta({
+        title: "Question that ends the chat",
+        description: "The chat ends once the student has answered this. NULL when not used.",
+        help: "Optional. The character makes sure the chat gets to this question, and the chat ends once the student has answered it. Leave it empty to end the chat only by messages, time or the student.",
+      }),
+      studentCanFinish: z.boolean().meta({
+        title: "Students can end the chat themselves",
+      }),
+    });
 
-/** A chat needs at least one way to end, and no minimum above its limit. */
-const Completion = CompletionFields.refine(endsSomehow, { message: ONE_WAY_TO_END })
-  .refine((c) => c.minTurns === null || c.maxTurns === null || c.minTurns <= c.maxTurns, {
-    message: "“Fewest student messages” can't be more than “Most student messages”.",
-  })
-  .meta({ title: "When the chat ends" });
+  const ONE_WAY_TO_END = "The chat needs at least one way to end.";
+  const endsSomehow = (c: { maxTurns: number | null; timeLimitMinutes: number | null; question: string | null; studentCanFinish: boolean }) =>
+    c.maxTurns !== null || c.timeLimitMinutes !== null || c.question !== null || c.studentCanFinish;
 
-/**
- * What the drafting model fills in: every field required (OpenAI refuses a
- * schema with defaults), so the minimum is left out and a draft has none;
- * the teacher sets it on Chat options.
- */
-const DraftCompletion = CompletionFields.omit({ minTurns: true }).refine(endsSomehow, { message: ONE_WAY_TO_END });
+  /** A chat needs at least one way to end, and no minimum above its limit (checked once it's complete). */
+  const Completion = complete
+    ? CompletionFields.refine(endsSomehow, { message: ONE_WAY_TO_END })
+        .refine((c) => c.minTurns === null || c.maxTurns === null || c.minTurns <= c.maxTurns, {
+          message: "“Fewest student messages” can't be more than “Most student messages”.",
+        })
+        .meta({ title: "When the chat ends" })
+    : CompletionFields.meta({ title: "When the chat ends" });
+
+  /**
+   * What the drafting model fills in: every field required (OpenAI refuses a
+   * schema with defaults), so the minimum is left out and a draft has none;
+   * the teacher sets it on Chat options.
+   */
+  const DraftCompletion = CompletionFields.omit({ minTurns: true }).refine(endsSomehow, { message: ONE_WAY_TO_END });
+
+  const StudyChatFields = z
+    .strictObject({
+      mode: z.enum(MODE_SLUGS).meta({ title: "Mode", description: "The kind of chat this is." }),
+      // The teacher's switch on the create flow, not the AI's: drafting keeps it
+      // as the teacher set it (create.ts). Missing in settings saved before it
+      // existed, which asked for no work.
+      studentWork: z.boolean().default(false).meta({
+        title: "Students add their own paper or project first",
+        description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
+        help: "Before the chat, each student uploads or pastes their own paper, code or plan, and the chat is about their work. Leave it off when everyone works from the same readings.",
+      }),
+      goal: text(1000).meta({
+        title: "Goal",
+        description: "What students should be able to do after the chat, in one or two sentences.",
+      }),
+      // Why the wizard suggested this type (suggest.ts), for the teacher's
+      // wizard panel. The teacher's only: the student view and every prompt are
+      // built field by field and never read it. Missing when the type wasn't
+      // suggested, or in settings saved before it existed.
+      typeReason: text(300).optional().meta({
+        title: "Why this type",
+        description: "Why DALAA suggested this kind of chat.",
+      }),
+      // A list so stages can come later; v1 runs exactly one.
+      scenarios: z.array(Scenario).length(1).meta({ title: "Scenario" }),
+      positions: z
+        .array(LabeledItem)
+        .max(6)
+        .meta({
+          title: "Positions students can take",
+          description: "Directions a student may take (for example, for or against). Empty when there are none.",
+          help: "Sides a student might take, like for or against. Insights shows how many took each. Leave it empty when there are no sides.",
+        }),
+      touchpoints: z
+        .array(LabeledItem)
+        .max(12)
+        .meta({
+          title: "Key points to listen for",
+          description: "Points the teacher wants to see whether each student brings up (for example, cost or culture).",
+          help: "Ideas you hope each student brings up. Each is checked yes or no with the student's words, and shows in Insights and in students' progress. They don't score points on their own; the criteria below do.",
+        }),
+      // The teacher's switch, like `studentWork`: drafting leaves it off and
+      // create.ts sets it. Missing in settings saved before it existed: off.
+      showProgress: z.boolean().default(false).meta({
+        title: "Show students their progress",
+        help: "While they chat, students see how many messages they have left and which points they've covered.",
+        description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
+      }),
+      persona: z
+        .strictObject({
+          name: text(80).meta({ title: "Name" }),
+          title: text(120).meta({ title: "Role", description: "Who they are, e.g. 'CEO of Harbor Bikes'." }),
+          background: text(2000).meta({ title: "Background" }),
+          tone: text(300).meta({ title: "Tone", description: "How they talk, e.g. 'warm but busy'." }),
+          helpfulness: z.enum(["challenging", "balanced", "supportive"]).meta({
+            title: "How much they help",
+            description: "Challenging pushes back and gives little away; supportive offers hints.",
+          }),
+        })
+        .meta({ title: "Persona", description: "The character the AI plays in the chat." }),
+      completion: Completion,
+      rubric: z
+        .strictObject({
+          criteria: z
+            .array(
+              z.strictObject({
+                label: text(120).meta({ title: "Criterion" }),
+                description: text(1000).meta({ title: "What earns full points" }),
+                points: z.number().positive().max(1000).meta({ title: "Points" }),
+              }),
+            )
+            .min(complete ? 1 : 0)
+            .max(10)
+            .meta({ title: "Criteria" }),
+          strictness: z.enum(STRICTNESS).meta({
+            title: "Grader strictness",
+            description: "How hard the AI grader is on partial answers.",
+          }),
+        })
+        .meta({
+          title: "How it's scored",
+          description: "What the AI grader scores the chat on.",
+          help: "The criteria the AI grader scores, each worth points. Only these make up the grade.",
+        }),
+    })
+    .meta({ title: "Study Chat settings" });
+
+  return { StudyChatFields, DraftCompletion };
+}
+
+const complete = settingsSchema(true);
 
 /**
  * Every setting, without the rules that tie one setting to another. The draft
  * is generated against this (draft.ts) because "Students bring their own work"
  * is the teacher's switch, set after the model answers.
  */
-export const StudyChatFields = z
-  .strictObject({
-    mode: z.enum(MODE_SLUGS).meta({ title: "Mode", description: "The kind of chat this is." }),
-    // The teacher's switch on the create flow, not the AI's: drafting keeps it
-    // as the teacher set it (create.ts). Missing in settings saved before it
-    // existed, which asked for no work.
-    studentWork: z.boolean().default(false).meta({
-      title: "Students add their own paper or project first",
-      description: "Each student adds their own paper, code or plan before the chat, and the chat is about it.",
-      help: "Before the chat, each student uploads or pastes their own paper, code or plan, and the chat is about their work. Leave it off when everyone works from the same readings.",
-    }),
-    goal: text(1000).meta({
-      title: "Goal",
-      description: "What students should be able to do after the chat, in one or two sentences.",
-    }),
-    // Why the wizard suggested this type (suggest.ts), for the teacher's
-    // wizard panel. The teacher's only: the student view and every prompt are
-    // built field by field and never read it. Missing when the type wasn't
-    // suggested, or in settings saved before it existed.
-    typeReason: text(300).optional().meta({
-      title: "Why this type",
-      description: "Why DALAA suggested this kind of chat.",
-    }),
-    // A list so stages can come later; v1 runs exactly one.
-    scenarios: z.array(Scenario).length(1).meta({ title: "Scenario" }),
-    positions: z
-      .array(LabeledItem)
-      .max(6)
-      .meta({
-        title: "Positions students can take",
-        description: "Directions a student may take (for example, for or against). Empty when there are none.",
-        help: "Sides a student might take, like for or against. Insights shows how many took each. Leave it empty when there are no sides.",
-      }),
-    touchpoints: z
-      .array(LabeledItem)
-      .max(12)
-      .meta({
-        title: "Key points to listen for",
-        description: "Points the teacher wants to see whether each student brings up (for example, cost or culture).",
-        help: "Ideas you hope each student brings up. Each is checked yes or no with the student's words, and shows in Insights and in students' progress. They don't score points on their own; the criteria below do.",
-      }),
-    // The teacher's switch, like `studentWork`: drafting leaves it off and
-    // create.ts sets it. Missing in settings saved before it existed: off.
-    showProgress: z.boolean().default(false).meta({
-      title: "Show students their progress",
-      help: "While they chat, students see how many messages they have left and which points they've covered.",
-      description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
-    }),
-    persona: z
-      .strictObject({
-        name: text(80).meta({ title: "Name" }),
-        title: text(120).meta({ title: "Role", description: "Who they are, e.g. 'CEO of Harbor Bikes'." }),
-        background: text(2000).meta({ title: "Background" }),
-        tone: text(300).meta({ title: "Tone", description: "How they talk, e.g. 'warm but busy'." }),
-        helpfulness: z.enum(["challenging", "balanced", "supportive"]).meta({
-          title: "How much they help",
-          description: "Challenging pushes back and gives little away; supportive offers hints.",
-        }),
-      })
-      .meta({ title: "Persona", description: "The character the AI plays in the chat." }),
-    completion: Completion,
-    rubric: z
-      .strictObject({
-        criteria: z
-          .array(
-            z.strictObject({
-              label: text(120).meta({ title: "Criterion" }),
-              description: text(1000).meta({ title: "What earns full points" }),
-              points: z.number().positive().max(1000).meta({ title: "Points" }),
-            }),
-          )
-          .min(1)
-          .max(10)
-          .meta({ title: "Criteria" }),
-        strictness: z.enum(STRICTNESS).meta({
-          title: "Grader strictness",
-          description: "How hard the AI grader is on partial answers.",
-        }),
-      })
-      .meta({
-        title: "How it's scored",
-        description: "What the AI grader scores the chat on.",
-        help: "The criteria the AI grader scores, each worth points. Only these make up the grade.",
-      }),
-  })
-  .meta({ title: "Study Chat settings" });
+export const StudyChatFields = complete.StudyChatFields;
 
 /**
  * What the model drafts (draft.ts): every setting but the teacher's own
@@ -183,13 +201,26 @@ export const StudyChatFields = z
  * refuses a schema with any field not required, and those two have defaults.
  */
 export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true }).extend({
-  completion: DraftCompletion,
+  completion: complete.DraftCompletion,
 });
 
-export const StudyChatSettings = StudyChatFields.refine((s) => s.studentWork || !MODES[s.mode].needsStudentWork, {
-  message: "A Defend chat is about each student's own work, so “Students add their own paper or project first” stays on.",
-  path: ["studentWork"],
-});
+const studentWorkRule: [(s: { studentWork: boolean; mode: (typeof MODE_SLUGS)[number] }) => boolean, { message: string; path: string[] }] = [
+  (s) => s.studentWork || !MODES[s.mode].needsStudentWork,
+  {
+    message: "A Defend chat is about each student's own work, so “Students add their own paper or project first” stays on.",
+    path: ["studentWork"],
+  },
+];
+
+/** A chat students can take: what publishing, trying and running it check. */
+export const StudyChatSettings = StudyChatFields.refine(...studentWorkRule);
+
+/**
+ * A chat still being set up: the same settings, any text may be empty and
+ * there may be no criteria yet. What a draft's setup steps save; the same
+ * type as StudyChatSettings, so every screen reads it alike.
+ */
+export const StudyChatSetupSettings = settingsSchema(false).StudyChatFields.refine(...studentWorkRule);
 
 export type StudyChatSettings = z.infer<typeof StudyChatSettings>;
 
@@ -233,8 +264,13 @@ export function settingHelp(path: readonly PropertyKey[]): string | null {
 export function settingProblems(error: z.ZodError): string[] {
   const problems = error.issues.map((issue) => {
     if (issue.code === "custom") return issue.message;
-    const where = `“${settingTitle(issue.path)}”`;
-    if (issue.code === "too_small") return issue.origin === "string" ? `${where} can't be empty.` : `${where} is too low or too short.`;
+    // A setting inside a card names its card too: "Persona › Name", not just "Name".
+    const keys = issue.path.filter((k) => typeof k === "string" && !/^\d+$/.test(k));
+    const where = keys.length > 1 ? `“${settingTitle(keys.slice(0, 1))} › ${settingTitle(issue.path)}”` : `“${settingTitle(issue.path)}”`;
+    if (issue.code === "too_small") {
+      if (issue.origin === "string") return `${where} can't be empty.`;
+      return issue.origin === "array" ? `${where} needs at least one.` : `${where} is too low or too short.`;
+    }
     if (issue.code === "too_big") return issue.origin === "string" ? `${where} is too long.` : `${where} is too high or has too many.`;
     return `${where} needs a valid value.`;
   });

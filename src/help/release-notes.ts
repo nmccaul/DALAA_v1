@@ -9,6 +9,15 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-16",
+    changes: [
+      "Creating a Study Chat no longer writes everything for you. After step 2 the AI's role and the grading open empty: write them yourself, or click \"Draft this page with DALAA\". If you've written some boxes, DALAA fills in only the empty ones and keeps to what you wrote.",
+      "Every box has its own DALAA button: Draft writes an empty box, and Tweak rewrites a filled one, with room to say what to change (\"shorter\", \"use alien jargon\").",
+      "\"About how long?\" moved from step 2 to Chat options, where it sets the message limit.",
+      "Review and assign lists anything still empty before you can try or assign the chat.",
+    ],
+  },
+  {
     date: "2026-11-14",
     changes: [
       "Fixed: on step 2, \"Draft the chat\" could stay greyed out after you switched kinds of activity. Goals for other kinds are now written faster, and if one can't be written you can type your own.",

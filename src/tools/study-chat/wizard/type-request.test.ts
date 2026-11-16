@@ -13,15 +13,14 @@ function form(fields: Record<string, string>): FormData {
   return data;
 }
 
-const base = { content: `${A},${B}`, guide: G, goal: "  Explain why prices rise.  ", minutes: "45+", mode: "apply", creationKey: KEY };
+const base = { content: `${A},${B}`, guide: G, goal: "  Explain why prices rise.  ", mode: "apply", creationKey: KEY };
 
-describe("step 3's form", () => {
-  it("carries the picks, goal and length, and the chosen type", () => {
+describe("step 2's form", () => {
+  it("carries the picks and goal, and the chosen type", () => {
     expect(typeRequestFrom(form(base))).toEqual({
       ok: true,
       ids: { contentIds: [A, B], guideIds: [G] },
       goal: "Explain why prices rise.",
-      minutes: "45+",
       mode: "apply",
       typeReason: null,
       studentWork: false,
@@ -49,10 +48,9 @@ describe("step 3's form", () => {
     expect(defend.ok && defend.studentWork).toBe(true);
   });
 
-  it("drops a bad length and needs no AI-only notes", () => {
-    const parsed = typeRequestFrom(form({ ...base, guide: "", minutes: "3 hours" }));
+  it("needs no AI-only notes", () => {
+    const parsed = typeRequestFrom(form({ ...base, guide: "" }));
     expect(parsed.ok && parsed.ids).toEqual({ contentIds: [A, B], guideIds: [] });
-    expect(parsed.ok && parsed.minutes).toBeNull();
   });
 
   it("refuses in a plain sentence when something is missing", () => {

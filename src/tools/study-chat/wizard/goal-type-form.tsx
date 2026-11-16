@@ -17,7 +17,6 @@ import { goalForTypeAction, wizardTypeAction, type TypeState } from "../actions"
 import { PickerField } from "../forms";
 import type { ModeSlug } from "../modes";
 import type { TypeSuggestion } from "../suggest";
-import { MINUTES, type Minutes } from "./query";
 import { reasonField } from "./type-request";
 import { groupOf, styleLabel, TYPE_GROUPS, type TypeGroup } from "./types";
 
@@ -39,7 +38,8 @@ const ICONS: Record<string, Icon> = {
  * saying what students do and who the AI is; the suggested one leads. The
  * goal is written for the chosen kind: switching kinds brings that kind's
  * goal (asking the AI when the first suggestion had none), unless the teacher
- * has written their own, which is never replaced. Next drafts the chat.
+ * has written their own, which is never replaced. Next saves the chat and
+ * opens step 3, where the teacher writes the rest or asks DALAA to.
  */
 export function GoalTypeForm({
   courseId,
@@ -48,7 +48,6 @@ export function GoalTypeForm({
   contentIds,
   guideIds,
   kept,
-  minutes,
   suggested,
   back,
 }: {
@@ -59,7 +58,6 @@ export function GoalTypeForm({
   guideIds: string[];
   /** The teacher's own goal, coming back to this step; NULL to use the suggestions. */
   kept: string | null;
-  minutes: Minutes | null;
   /** The AI's kinds, best first, each with why it fits and its goal (never empty). */
   suggested: TypeSuggestion[];
   back: string;
@@ -112,11 +110,7 @@ export function GoalTypeForm({
   if (pending) {
     return (
       <section role="status" className="flex flex-col gap-2 rounded-panel border border-border bg-surface p-6">
-        <h3 className="font-display text-lg font-semibold">DALAA is drafting your chat…</h3>
-        <p className="text-muted">
-          It&apos;s reading your materials and writing the AI&apos;s role, the opening, the grading and when the chat ends, around your
-          goal. This takes up to a minute.
-        </p>
+        <h3 className="font-display text-lg font-semibold">Saving your chat…</h3>
       </section>
     );
   }
@@ -222,20 +216,6 @@ export function GoalTypeForm({
         </p>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="minutes" className="flex flex-col gap-0.5">
-          <span className="text-lg font-bold">3. About how long?</span>
-          <span className="text-sm text-muted">DALAA sizes the chat to fit. You can set exact limits in Chat options.</span>
-        </label>
-        <select id="minutes" name="minutes" defaultValue={minutes ?? "10-15"} className={`${inputStyles} sm:max-w-xs`}>
-          {MINUTES.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {state.error && (
         <p role="alert" className="text-danger">
           {state.error}
@@ -248,7 +228,7 @@ export function GoalTypeForm({
         </Link>
         <span className="flex-1" />
         <Button type="submit" disabled={waiting}>
-          Draft the chat
+          Next
         </Button>
       </div>
     </form>

@@ -377,3 +377,25 @@ for class from what students said; grading and Canvas come second.
   ends" counting down (the limit is a maximum) and "Key points you've made". One column, so it fits inside Canvas. (This replaced a two-column
   version shipped earlier that day.)
 
+### D-037 · The teacher writes; DALAA drafts when asked
+*2026-11-16, Nathan* (feedback aab2aed5, 04c68408, 3a3b2402; Lucy's 016b4768
+and bc22f7df asked for the same).
+- **Step 2's Next no longer drafts the whole chat.** It saves the kind, goal
+  and materials at once (`startStudyChat`), and steps 3–4 open empty. This
+  changes CLAUDE.md's "a blank field is never a screen's primary state": the
+  primary state is now an empty step with one obvious **"Draft this page with
+  DALAA"** button (and an optional line of direction for it), so the
+  one-click path stays. With some boxes written, it becomes "Fill in the empty
+  boxes" and keeps to what the teacher wrote.
+- **Every text box and list has a DALAA button** (`parts.ts`, `assist.ts`):
+  Draft when empty; Tweak when filled, with a small box for what to change.
+  It stays after every answer. One box uses the quick chat model; a list or a
+  page uses the grader's. Nothing is saved until the teacher saves the step.
+- **A draft may be saved part-written** (`StudyChatSetupSettings`: the same
+  settings, any text may be empty, no criteria yet; points NULL until there
+  are criteria). Publishing, trying and running a chat still need the complete
+  schema; Review and assign lists what's missing instead of the trial and
+  Assign. A published chat's edits must stay complete.
+- **"About how long?" moved to Chat options**, as buttons that set "Most
+  student messages" (the choice itself isn't stored). New chats start at 12
+  messages, no time limit, students can finish.

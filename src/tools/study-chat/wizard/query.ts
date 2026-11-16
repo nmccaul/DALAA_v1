@@ -62,15 +62,21 @@ export function addMaterialPath(courseId: string, kind: AddKind, ids: MaterialId
   return `/courses/${courseId}/materials/new?kind=${kind}&next=${encodeURIComponent(next)}`;
 }
 
-/** "About how long?" on step 2, passed to drafting as a hint. */
+/**
+ * "About how long?" on Chat options (feedback 3a3b2402): each length sets
+ * "Most student messages" to `turns`. Also a hint for drafting a whole chat.
+ */
 export const MINUTES = [
   // Very short chats, e.g. a quick demo or a warm-up (feedback 906b03ff).
-  { value: "2-5", label: "2–5 minutes" },
-  { value: "5-10", label: "5–10 minutes" },
-  { value: "10-15", label: "10–15 minutes" },
-  { value: "20-30", label: "20–30 minutes" },
-  { value: "45+", label: "45 minutes or more" },
+  { value: "2-5", label: "2–5 minutes", turns: 4 },
+  { value: "5-10", label: "5–10 minutes", turns: 8 },
+  { value: "10-15", label: "10–15 minutes", turns: 12 },
+  { value: "20-30", label: "20–30 minutes", turns: 20 },
+  { value: "45+", label: "45 minutes or more", turns: 30 },
 ] as const;
+
+/** The length a new chat starts with. */
+export const DEFAULT_MINUTES: Minutes = "10-15";
 
 export type Minutes = (typeof MINUTES)[number]["value"];
 

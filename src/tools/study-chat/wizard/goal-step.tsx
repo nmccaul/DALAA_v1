@@ -18,8 +18,8 @@ const title = WIZARD_STEPS.find((s) => s.slug === "goal")!.question;
  * Wizard step 2: how students will work with the AI, then the learning goal
  * written for that kind, then the length. The kinds and their goals are
  * suggested from the ticked materials in one call (feedback 084938dc: the
- * interaction first, then the outcome). Next drafts the whole chat
- * (wizardTypeAction) and opens step 3.
+ * interaction first, then the outcome). Next saves the chat
+ * (wizardTypeAction) and opens step 3; nothing more is drafted until the teacher asks.
  */
 export async function GoalStep({ actor, course, searchParams }: CreateScreenProps) {
   const addToCanvas = pickerRequest(searchParams[PICKER_PARAM]);
@@ -56,7 +56,7 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
             picked, with a goal written for it. Pick another kind and I&apos;ll rewrite the goal for that one.
           </p>
         ) : (
-          <p>Pick how students will work with the AI, then write the goal. I&apos;ll draft the whole chat around them.</p>
+          <p>Pick how students will work with the AI, then write the goal. Next, you&apos;ll set up the AI&apos;s role.</p>
         )
       }
       comingSoon={["Ask the wizard for changes", "Start from a copy", "Activity group"]}
@@ -68,7 +68,6 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
         contentIds={ids.contentIds}
         guideIds={ids.guideIds}
         kept={kept.goal}
-        minutes={kept.minutes}
         suggested={suggested}
         back={back}
       />
