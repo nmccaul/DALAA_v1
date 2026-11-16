@@ -9,7 +9,7 @@ import { StudyChatEditor } from "./editor";
 import { MaterialForm, RemoveGuideForm } from "./forms";
 import { canvasGuideHref, GuidePanel } from "./guide-panel";
 import { MODES } from "./modes";
-import { StudyChatSettings } from "./schema";
+import { StudyChatSettings, StudyChatSetupSettings } from "./schema";
 import { TrialPanel } from "./trial-panel";
 
 /** Why a saved change won't reach some students (D-031); NULL when nobody has started. Exported for tests. */
@@ -20,7 +20,7 @@ export function startedNote(started: number): string | null {
 
 /** The drafted Study Chat as short summary cards the teacher opens to edit, then Publish. */
 export async function StudyChatReview({ activity, addToCanvas }: ReviewScreenProps) {
-  const parsed = StudyChatSettings.safeParse(activity.settings);
+  const parsed = (activity.status === "published" ? StudyChatSettings : StudyChatSetupSettings).safeParse(activity.settings);
   if (!parsed.success) {
     return <p className="text-danger">Some of this chat&apos;s settings don&apos;t fit any more. Create it again.</p>;
   }

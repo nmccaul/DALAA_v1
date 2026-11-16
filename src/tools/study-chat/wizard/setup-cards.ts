@@ -1,6 +1,7 @@
 import type { CardKey } from "../fields";
 import { rubricPoints, type StudyChatSettings } from "../schema";
 import type { ModeSlug } from "../modes";
+import { isEmpty, STEP_PARTS } from "../parts";
 import { groupOf, typeName } from "./types";
 import type { SetupStep } from "./steps";
 
@@ -36,21 +37,28 @@ export const STUDENT_SWITCHES_STEP = "options" satisfies SetupStep;
 /** Options from the mockup that don't exist yet, shown disabled on their step (ralph/PLAN.md). */
 export const SETUP_COMING_SOON: Partial<Record<SetupStep, readonly string[]>> = {
   options: ["Voice chat", "Hints", "Feedback on each criterion"],
-  grading: ["Redraft with AI", "Use a saved rubric", "Allowed attempts", "Score to keep"],
+  grading: ["Use a saved rubric", "Allowed attempts", "Score to keep"],
 };
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The wizard panel's note for a step, from what's stored (never from what the AI might have meant). */
 export function setupNote(step: SetupStep, s: StudyChatSettings): string {
+  // Nothing on the step written yet: the teacher writes it, or asks DALAA to (feedback aab2aed5).
+  const blank = (STEP_PARTS[step] ?? []).every((k) => isEmpty(s, k));
   switch (step) {
-    case "scenario":
-      return `I drafted this chat as ${groupOf(s.mode).label}, with ${s.persona.name} to lead it. The opening message is the first thing students read. Change anything that doesn't fit your class.`;
+    case "scenario": {
+      const kind = groupOf(s.mode).label;
+      return blank
+        ? `Your ${kind} chat needs someone for the AI to play and a first message. Write them, or let me draft this page from your materials. Any box can be drafted or tweaked with its own button.`
+        : `${s.persona.name ? `${s.persona.name} leads this ${kind} chat.` : `This is your ${kind} chat.`} The opening message is the first thing students read. Use Tweak on any box to have me rewrite it.`;
+    }
     case "options":
       return "These decide when a chat ends and what students see while they chat. Leave a limit empty for none.";
     case "grading": {
+      if (blank) return "Add the key points to listen for and the criteria that score, or let me draft them from your goal and materials.";
       const listen = count(s.touchpoints.length, "key point", "key points");
-      return `I drafted ${listen} to listen for and ${count(s.rubric.criteria.length, "criterion", "criteria")} worth ${rubricPoints(s)} points. Key points are a checklist; only the criteria score. The activity is worth the total.`;
+      return `This chat has ${listen} to listen for and ${count(s.rubric.criteria.length, "criterion", "criteria")} worth ${rubricPoints(s)} points. Key points are a checklist; only the criteria score. The activity is worth the total.`;
     }
     case "review":
       return "Check the summary, try it as a student, then assign it.";

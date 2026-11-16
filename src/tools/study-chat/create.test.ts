@@ -8,7 +8,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { findTool, isLive } from "@/tools/catalog";
-import { createStudyChat, publishStudyChat, saveStudyChat, STUDY_CHAT } from "./create";
+import { blankSettings, createStudyChat, publishStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT, unfinished } from "./create";
 import { studentView } from "./student-view";
 import { answering, draft, drafted } from "./test-fixtures";
 
@@ -237,7 +237,7 @@ describe("creating a Study Chat", () => {
     await db.query("update activities set settings = settings - 'goal' where id = $1", [result.activityId]);
     expect(await publishStudyChat(db, prof, result.activityId)).toEqual({
       ok: false,
-      reason: "Some settings need fixing before you publish.",
+      reason: "Finish setting it up before you publish: “Goal” needs a valid value.",
     });
 
     await db.query("update activities set settings = $2 where id = $1", [result.activityId, JSON.stringify(draft())]);
@@ -282,11 +282,42 @@ describe("creating a Study Chat", () => {
     });
     if (!result.ok) throw new Error(result.reason);
 
-    expect(await saveStudyChat(db, prof, result.activityId, { ...draft(), goal: "", secret: true })).toEqual({
+    expect(await saveStudyChat(db, prof, result.activityId, { ...draft(), goal: "x".repeat(1001), secret: true })).toEqual({
       ok: false,
       reason: "Some settings need fixing before you save.",
-      problems: ["“Goal” can't be empty.", "“Study Chat settings” needs a valid value."],
+      problems: ["“Goal” is too long.", "“Study Chat settings” needs a valid value."],
     });
     expect((await getTaughtActivity(db, prof, result.activityId))?.settings).toEqual(draft());
+
+    // Once published, every box must stay written.
+    expect(await publishStudyChat(db, prof, result.activityId)).toEqual({ ok: true });
+    expect(await saveStudyChat(db, prof, result.activityId, { ...draft(), goal: "" })).toEqual({
+      ok: false,
+      reason: "Some settings need fixing before you save.",
+      problems: ["“Goal” can't be empty."],
+    });
+  });
+
+  it("starts a chat from steps 1–2 with nothing drafted, saves it part-written, and won't publish it until it's complete", async () => {
+    const key = randomUUID();
+    const request = { contentIds: [content], guideIds: [], mode: "debate" as const, goal: " Defend a side. ", studentWork: false, typeReason: "Two sides.", creationKey: key };
+    const started = await startStudyChat(db, prof, course, request);
+    if (!started.ok) throw new Error(started.reason);
+    expect(await startStudyChat(db, prof, course, request)).toEqual(started);
+
+    const activity = await getTaughtActivity(db, prof, started.activityId);
+    expect(activity).toMatchObject({ title: "Case: Harbor Bikes", points: null, status: "draft" });
+    expect(activity?.settings).toEqual(blankSettings({ ...request, goal: "Defend a side." }));
+    expect((await activityMaterials(db, started.activityId)).readings.map((r) => r.id)).toEqual([content]);
+
+    // The teacher writes the scenario only: saved, titled from it, still no points.
+    const blank = blankSettings(request);
+    const partly = { ...blank, scenarios: [{ title: "Bike debate", situation: "", opening: "" }] };
+    expect(await saveStudyChat(db, prof, started.activityId, partly)).toEqual({ ok: true });
+    expect(await getTaughtActivity(db, prof, started.activityId)).toMatchObject({ title: "Bike debate", points: null });
+    expect(unfinished(partly)).toContain("“Scenario › Situation” can't be empty.");
+    expect(unfinished(partly)).toContain("“How it's scored › Criteria” needs at least one.");
+    expect(await publishStudyChat(db, prof, started.activityId)).toEqual({ ok: false, reason: expect.stringMatching(/^Finish setting it up before you publish: /) });
+    expect(unfinished(draft())).toEqual([]);
   });
 });

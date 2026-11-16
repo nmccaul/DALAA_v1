@@ -11,7 +11,8 @@ import type { SetupScreenProps } from "@/tools/screens";
 import { StudyChatEditor } from "../editor";
 import { PublishForm } from "../forms";
 import { startedNote } from "../review-screen";
-import { StudyChatSettings } from "../schema";
+import { unfinished } from "../create";
+import { StudyChatSettings, StudyChatSetupSettings } from "../schema";
 import { TrialPanel } from "../trial-panel";
 import { reviewSummary, setupCards, setupNote } from "./setup-cards";
 import { WizardShell } from "./shell";
@@ -27,7 +28,8 @@ import { finishLaterPath, isSetupStep, previousSetupStep, SETUP_STEPS, setupPath
 export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScreenProps) {
   if (!isSetupStep(step)) notFound();
   const title = WIZARD_STEPS.find((s) => s.slug === step)!.question;
-  const parsed = StudyChatSettings.safeParse(activity.settings);
+  // A draft may be part-written (the teacher writes, or asks DALAA); a published chat is complete.
+  const parsed = (activity.status === "published" ? StudyChatSettings : StudyChatSetupSettings).safeParse(activity.settings);
   if (!parsed.success) {
     return (
       <WizardShell step={step} title={title} note={null}>
@@ -46,6 +48,29 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
     const published = activity.status === "published";
     // From Canvas's "Add to Canvas" picker, Publish goes back to the picker; Canvas makes the assignment there.
     const assign = assignToCanvasOn() && !addToCanvas;
+    const missing = unfinished(activity.settings);
+    if (missing.length > 0) {
+      return (
+        <WizardShell step={step} title={title} note={<p>A few things are still empty. Fill them in, then try it and assign it.</p>} go={go(false)} later={{ href: later }}>
+          <section role="status" className="flex flex-col gap-2 rounded-panel border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
+            <h4 className="font-semibold">Before students can take it</h4>
+            <ul className="list-disc pl-5">
+              {missing.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          </section>
+          <div className="flex flex-wrap items-center gap-3">
+            {previous && (
+              <Link href={path(previous)} className="text-sm text-muted hover:text-text">
+                ← Back
+              </Link>
+            )}
+            <ButtonLink href={path(SETUP_STEPS[0])}>Finish setting it up</ButtonLink>
+          </div>
+        </WizardShell>
+      );
+    }
     return (
       <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} go={go(false)} later={published ? undefined : { href: later }}>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-panel border border-border bg-surface px-4 py-3">

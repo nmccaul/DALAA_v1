@@ -52,9 +52,11 @@ human says otherwise.
   it is first needed, not on a settings page up front. Importing a Canvas course
   creates its sections and roster in the same step.
 - **One primary action per screen**, visually obvious. Secondary paths are small.
-- **A blank field is never a screen's primary state.** Authoring screens open with
-  a draft generated from the teacher's source material. A *bad* draft is worse
-  than none — it burns patience and gets rewritten anyway.
+- **A blank field is never a dead end.** An empty authoring screen has one
+  obvious button that drafts it from the teacher's material, and every box can
+  be drafted or tweaked on its own (D-037: the teacher writes first if they
+  want). A *bad* draft is worse than none — it burns patience and gets
+  rewritten anyway.
 - **Every tool uses the shared shell:** same navigation, same menus, same
   placement of Save / Preview / Schedule / Post grades. Tools may differ in
   accent color and in the activity screen itself — nothing else.

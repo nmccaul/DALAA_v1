@@ -10,7 +10,12 @@ import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
-import { createStudyChat, publishStudyChat, saveStudyChat } from "./create";
+import { getTaughtActivity } from "@/activities/store";
+import { activityMaterials } from "@/activities/materials";
+import { assistParts, MAX_INSTRUCTION_CHARS, type AssistResult } from "./assist";
+import { createStudyChat, publishStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT } from "./create";
+import { isListPart, isPartKey } from "./parts";
+import { StudyChatSetupSettings } from "./schema";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
 import { suggestGoalFor } from "./suggest";
 import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
@@ -110,6 +115,7 @@ export async function goalForTypeAction(courseId: string, contentIds: string[], 
   return suggestGoalFor(db(), chatModel(), { userId: actor.userId, courseId }, materials, slug);
 }
 
+/** Step 2's Next: saves the chat with its kind and goal, no AI draft, and opens step 3 for the teacher to write. */
 export async function wizardTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
@@ -117,18 +123,47 @@ export async function wizardTypeAction(_prev: TypeState, form: FormData): Promis
   const request = typeRequestFrom(form);
   if (!request.ok) return { error: request.reason, mode };
 
-  const created = await createStudyChat(db(), graderModel(), actor, courseId, {
+  const created = await startStudyChat(db(), actor, courseId, {
     contentIds: request.ids.contentIds,
     guideIds: request.ids.guideIds,
     mode: request.mode,
     studentWork: request.studentWork,
     goal: request.goal,
-    minutes: request.minutes,
     typeReason: request.typeReason,
     creationKey: request.creationKey,
   });
   if (!created.ok) return { error: created.reason, mode };
   redirect(keepPicker(setupPath(courseId, created.activityId, "scenario"), pickerRequest(form.get(PICKER_PARAM))));
+}
+
+/**
+ * A ✨ button: DALAA writes the parts asked for (one box, one list, or a
+ * step's empty ones) from the activity's materials and the settings on
+ * screen, following the teacher's direction. Nothing is saved; the editor
+ * shows the result. One box goes to the quick model, more to the grader's.
+ */
+export async function assistAction(activityId: string, settings: string, parts: string[], instruction: string): Promise<AssistResult> {
+  const actor = await requireActor();
+  const activity = await getTaughtActivity(db(), actor, activityId);
+  if (!activity || activity.tool !== STUDY_CHAT) return { ok: false, reason: "That activity isn't one of yours." };
+  let current: unknown;
+  try {
+    current = JSON.parse(settings);
+  } catch {
+    return { ok: false, reason: "Reload the page and try again." };
+  }
+  const parsed = StudyChatSetupSettings.safeParse(current);
+  if (!parsed.success) return { ok: false, reason: "Fix the settings marked on this page, then try again." };
+  const keys = [...new Set(parts.filter(isPartKey))];
+  const { readings, guides } = await activityMaterials(db(), activity.id);
+  const oneBox = keys.length === 1 && !isListPart(keys[0]);
+  return assistParts(db(), oneBox ? chatModel() : graderModel(), { userId: actor.userId, courseId: activity.courseId }, {
+    readings,
+    guides,
+    settings: parsed.data,
+    parts: keys,
+    instruction: instruction.slice(0, MAX_INSTRUCTION_CHARS),
+  });
 }
 
 /** Step 2: a mode (or "suggest"), then the AI drafts it and the review opens. */

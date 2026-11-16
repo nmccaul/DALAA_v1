@@ -2,13 +2,17 @@
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
+import { Sparkle } from "@phosphor-icons/react";
 import { Button, inputStyles } from "@/components/ui";
-import { saveSettingsAction, type FormState } from "./actions";
+import { assistAction, saveSettingsAction, type FormState } from "./actions";
+import { AssistButton } from "./assist-button";
 import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
+import { applyParts, isEmpty, partTitle, PARTS, STEP_PARTS, type PartKey } from "./parts";
 import { rubricPoints, settingHelp, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
+import { MINUTES } from "./wizard/query";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
 import { WIZARD_FORM_ID } from "./wizard/steps";
 
@@ -43,14 +47,17 @@ function Items({ items, none }: { items: Item[]; none: string }) {
   );
 }
 
-function Field({ path, label, children }: { path: string[]; label?: string; children: (id: string) => ReactNode }) {
+function Field({ path, label, action, children }: { path: string[]; label?: string; action?: ReactNode; children: (id: string) => ReactNode }) {
   const id = fieldId(path);
   const help = settingHelp(path);
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label ?? settingTitle(path)}
-      </label>
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-medium">
+          {label ?? settingTitle(path)}
+        </label>
+        {action}
+      </span>
       {help && (
         <p id={`${id}-help`} className="-mt-0.5 text-[13px] text-muted">
           {help}
@@ -112,6 +119,11 @@ function ItemsEditor({ path, items, max, onChange }: { path: string[]; items: It
   );
 }
 
+/** A list's DALAA button, at the top right of its card. */
+function ListAssist({ children }: { children: ReactNode }) {
+  return <div className="flex justify-end">{children}</div>;
+}
+
 /**
  * In the wizard: which step this is (the server works out where Next goes)
  * and the step Back goes to. Back, like Next and the step list, saves first.
@@ -170,6 +182,35 @@ export function StudyChatEditor({
     });
   const toggle = (key: string, isOpen: boolean) =>
     setOpen((prev) => (prev.has(key) === isOpen ? prev : isOpen ? new Set(prev).add(key) : new Set([...prev].filter((k) => k !== key))));
+
+  // DALAA writes one thing at a time: a box, a list, or the step's empty boxes ("page").
+  const [writing, setWriting] = useState<PartKey | "page" | null>(null);
+  const [assistError, setAssistError] = useState<{ at: PartKey | "page"; reason: string } | null>(null);
+  const runAssist = async (at: PartKey | "page", parts: PartKey[], instruction: string) => {
+    setWriting(at);
+    setAssistError(null);
+    const result = await assistAction(activityId, JSON.stringify(s), parts, instruction).catch(() => ({
+      ok: false as const,
+      reason: "DALAA couldn't write that this time. Try again, or write it yourself.",
+    }));
+    setWriting(null);
+    if (result.ok) change((d) => applyParts(d, result.values));
+    else setAssistError({ at, reason: result.reason });
+  };
+  const assist = (key: PartKey) => (
+    <AssistButton
+      name={partTitle(key)}
+      empty={isEmpty(s, key)}
+      busy={writing === key || (writing === "page" && pageParts.includes(key))}
+      disabled={writing !== null}
+      error={assistError?.at === key ? assistError.reason : null}
+      onRun={(instruction) => runAssist(key, [key], instruction)}
+    />
+  );
+  // On a wizard step: the boxes "Draft this page" fills, those still empty (feedback aab2aed5).
+  const stepParts = (wizard ? (STEP_PARTS[wizard.step] ?? []) : []).filter((k) => shown.includes(PARTS[k].path[0] as CardKey));
+  const pageParts = stepParts.filter((k) => isEmpty(s, k));
+  const [direction, setDirection] = useState("");
 
   const q = query.trim().toLowerCase();
   const matches = q
@@ -303,35 +344,75 @@ export function StudyChatEditor({
       )}
 
       <div className="flex max-w-3xl flex-col gap-4">
+        {pageParts.length > 0 && (
+          <section aria-label="Draft with DALAA" className="flex flex-col gap-2 rounded-panel border border-accent bg-accent-soft p-4">
+            <p className="text-sm">
+              {pageParts.length === stepParts.length
+                ? "Write this page yourself, or let DALAA draft it from your materials and goal. Then use Tweak on any box."
+                : "DALAA can fill in the empty boxes, keeping to what you've written."}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                aria-label="Anything DALAA should know? (optional)"
+                value={direction}
+                maxLength={500}
+                placeholder="Anything DALAA should know? (optional) e.g. set it in a hospital"
+                onChange={(e) => setDirection(e.target.value)}
+                className={`${inputStyles} min-w-0 flex-1 basis-64 text-sm`}
+                autoComplete="off"
+              />
+              <Button type="button" disabled={writing !== null} onClick={() => runAssist("page", pageParts, direction)}>
+                <Sparkle size={16} weight="fill" aria-hidden />
+                {writing === "page" ? "Drafting…" : pageParts.length === stepParts.length ? "Draft this page with DALAA" : "Fill in the empty boxes"}
+              </Button>
+            </div>
+            {assistError?.at === "page" && (
+              <p role="alert" className="text-sm text-danger">
+                {assistError.reason}
+              </p>
+            )}
+          </section>
+        )}
         {card(
           "goal",
           <p>{s.goal}</p>,
-          <Field path={["goal"]}>{text(s.goal, (v) => change((d) => void (d.goal = v)), 3)}</Field>,
+          <Field path={["goal"]} action={assist("goal")}>{text(s.goal, (v) => change((d) => void (d.goal = v)), 3)}</Field>,
         )}
         {card(
           "scenarios",
           <>
-            <p className="font-medium">{scenario.title}</p>
-            <p>{scenario.situation}</p>
-            <p>
-              <span className="text-muted">Opens with:</span> &ldquo;{scenario.opening}&rdquo;
-            </p>
+            {scenario.title || scenario.situation || scenario.opening ? (
+              <>
+                <p className="font-medium">{scenario.title}</p>
+                <p>{scenario.situation}</p>
+                {scenario.opening && (
+                  <p>
+                    <span className="text-muted">Opens with:</span> &ldquo;{scenario.opening}&rdquo;
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-muted">Not written yet.</p>
+            )}
             {s.studentWork && <p className="text-muted">Each student adds their own work before the chat.</p>}
           </>,
           <>
-            <Field path={["scenarios", "title"]}>{text(scenario.title, (v) => change((d) => void (d.scenarios[0].title = v)))}</Field>
-            <Field path={["scenarios", "situation"]}>
+            <Field path={["scenarios", "title"]} action={assist("title")}>{text(scenario.title, (v) => change((d) => void (d.scenarios[0].title = v)))}</Field>
+            <Field path={["scenarios", "situation"]} action={assist("situation")}>
               {text(scenario.situation, (v) => change((d) => void (d.scenarios[0].situation = v)), 6)}
             </Field>
             {/* The first thing a student sees, so never under "More options" (feedback 2038e05e). */}
-            <Field path={["scenarios", "opening"]}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>
+            <Field path={["scenarios", "opening"]} action={assist("opening")}>{text(scenario.opening, (v) => change((d) => void (d.scenarios[0].opening = v)), 3)}</Field>
             {inCard(switches.studentWork)}
           </>,
         )}
         {card(
           "positions",
           <Items items={s.positions} none="None: students don't pick a side." />,
-          <ItemsEditor path={["positions"]} items={s.positions} max={6} onChange={(v) => change((d) => void (d.positions = v))} />,
+          <>
+            <ListAssist>{assist("positions")}</ListAssist>
+            <ItemsEditor path={["positions"]} items={s.positions} max={6} onChange={(v) => change((d) => void (d.positions = v))} />
+          </>,
         )}
         {card(
           "touchpoints",
@@ -340,18 +421,24 @@ export function StudyChatEditor({
             {s.showProgress && <p className="text-muted">Students see their progress as they chat.</p>}
           </>,
           <>
+            <ListAssist>{assist("touchpoints")}</ListAssist>
             <ItemsEditor path={["touchpoints"]} items={s.touchpoints} max={12} onChange={(v) => change((d) => void (d.touchpoints = v))} />
             {inCard(switches.showProgress)}
           </>,
         )}
         {card(
           "persona",
-          <p>
-            <span className="font-medium">{s.persona.name}</span>, {s.persona.title} · {HELPFULNESS[s.persona.helpfulness]}
-          </p>,
+          s.persona.name ? (
+            <p>
+              <span className="font-medium">{s.persona.name}</span>
+              {s.persona.title && `, ${s.persona.title}`} · {HELPFULNESS[s.persona.helpfulness]}
+            </p>
+          ) : (
+            <p className="text-muted">Not written yet.</p>
+          ),
           <>
-            <Field path={["persona", "name"]}>{text(s.persona.name, (v) => change((d) => void (d.persona.name = v)))}</Field>
-            <Field path={["persona", "title"]}>{text(s.persona.title, (v) => change((d) => void (d.persona.title = v)))}</Field>
+            <Field path={["persona", "name"]} action={assist("personaName")}>{text(s.persona.name, (v) => change((d) => void (d.persona.name = v)))}</Field>
+            <Field path={["persona", "title"]} action={assist("personaRole")}>{text(s.persona.title, (v) => change((d) => void (d.persona.title = v)))}</Field>
             <Field path={["persona", "helpfulness"]}>
               {(id) => (
                 <select
@@ -370,8 +457,8 @@ export function StudyChatEditor({
             </Field>
           </>,
           <>
-            <Field path={["persona", "background"]}>{text(s.persona.background, (v) => change((d) => void (d.persona.background = v)), 4)}</Field>
-            <Field path={["persona", "tone"]}>{text(s.persona.tone, (v) => change((d) => void (d.persona.tone = v)))}</Field>
+            <Field path={["persona", "background"]} action={assist("background")}>{text(s.persona.background, (v) => change((d) => void (d.persona.background = v)), 4)}</Field>
+            <Field path={["persona", "tone"]} action={assist("tone")}>{text(s.persona.tone, (v) => change((d) => void (d.persona.tone = v)))}</Field>
           </>,
         )}
         {card(
@@ -382,12 +469,29 @@ export function StudyChatEditor({
             ))}
           </ul>,
           <>
+            {/* The length lives with the limits it sets (feedback 3a3b2402); nothing stores the choice itself. */}
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium">About how long?</span>
+              <span className="-mt-0.5 text-[13px] text-muted">Pick a length to set “{settingTitle(["completion", "maxTurns"])}” to fit. Add a time limit below for a hard stop.</span>
+              <span className="flex flex-wrap gap-2">
+                {MINUTES.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => change((d) => void (d.completion.maxTurns = m.turns))}
+                    className="rounded-full border border-border-strong bg-surface px-3 py-0.5 text-sm text-accent-text hover:bg-subtle"
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </span>
+            </div>
             <Field path={["completion", "maxTurns"]}>{limit(s.completion.maxTurns, (v) => change((d) => void (d.completion.maxTurns = v)))}</Field>
             <Field path={["completion", "minTurns"]}>{limit(s.completion.minTurns, (v) => change((d) => void (d.completion.minTurns = v)))}</Field>
             <Field path={["completion", "timeLimitMinutes"]}>
               {limit(s.completion.timeLimitMinutes, (v) => change((d) => void (d.completion.timeLimitMinutes = v)))}
             </Field>
-            <Field path={["completion", "question"]}>
+            <Field path={["completion", "question"]} action={assist("question")}>
               {text(s.completion.question ?? "", (v) => change((d) => void (d.completion.question = v.trim() === "" ? null : v)), 2)}
             </Field>
             <label className="flex items-center gap-2 text-sm font-medium">
@@ -414,6 +518,7 @@ export function StudyChatEditor({
             ))}
           </ul>,
           <div id={fieldId(["rubric", "criteria"])} tabIndex={-1} className="flex flex-col gap-3">
+            <ListAssist>{assist("criteria")}</ListAssist>
             {s.rubric.criteria.map((c, i) => (
               <div key={i} className="flex flex-col gap-2 rounded-control border border-border p-3">
                 <Field path={["rubric", "criteria", String(i), "label"]} label={settingTitle(["rubric", "criteria", "label"])}>
