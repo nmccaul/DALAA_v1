@@ -22,6 +22,7 @@ import {
 } from "@/results/insights-charts";
 import { runBriefAction } from "../../actions";
 import { BriefButton } from "../../brief-button";
+import { AskPanel } from "./ask-panel";
 import { CopyList } from "./copy-list";
 
 export const metadata: Metadata = { title: "Insights" };
@@ -95,6 +96,8 @@ export default async function AssignmentInsightsPage({ params, searchParams }: P
         quoteHref={quoteHref}
         nameOf={who}
       />
+
+      {finished > 0 && <AskPanel activityId={activityId} attemptsBase={`${base}/attempts`} names={Object.fromEntries(nameOf)} />}
 
       {view.graded > 0 && <Numbers view={view} quoteHref={quoteHref} nameOf={who} />}
     </div>

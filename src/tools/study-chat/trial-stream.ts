@@ -6,7 +6,7 @@
  */
 
 import type { Trial, TrialOutcome, TrialStep } from "./trial";
-import { jsonLine, ndjson, readJsonLines } from "./turn-stream";
+import { jsonLine, ndjson, readJsonLines } from "@/lib/ndjson";
 
 export type TrialEvent = TrialStep | { type: "done"; trial: Trial & { ending: string } } | { type: "failed"; reason: string };
 
