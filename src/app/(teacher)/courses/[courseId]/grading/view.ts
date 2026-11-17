@@ -6,3 +6,6 @@ export type ResultsView = (typeof RESULTS_VIEWS)[number];
 export function resultsView(view: string | string[] | undefined): ResultsView {
   return (RESULTS_VIEWS as readonly unknown[]).includes(view) ? (view as ResultsView) : "insights";
 }
+
+/** One assignment's Insights page. */
+export const insightsPath = (courseId: string, activityId: string) => `/courses/${courseId}/grading/insights/${activityId}`;

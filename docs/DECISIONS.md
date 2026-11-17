@@ -355,6 +355,20 @@ for class from what students said; grading and Canvas come second.
   criterion; then an AI class-prep brief (confusions, strong ideas, questions
   students asked, discussion questions) that runs only when the teacher asks
   and is kept until they refresh it.
+- **Update, 2026-11-16 (Nathan): one assignment at a time, takeaways first,
+  as cheap as it works.** Insights opens on a card per assignment (finished,
+  average, whether its takeaways are made); each opens its own page
+  (`grading/insights/[activityId]`): four numbers (finished, average, weakest
+  criterion, most-missed point), then the big takeaways (a summary sentence
+  and the three findings that cover the most students, the rest a click
+  away), then the numbers as pictures (score spread, rubric, key points
+  including any nobody raised, positions). The numbers come from saved
+  grades and cost no AI call. The brief now uses the chat model, reads each
+  student's grade line instead of working out the numbers, and reads the
+  AI's replies cut to 300 characters (`clip` in the tool's `conversation`);
+  the students' words go in whole and quotes are still checked. Measured
+  locally: 10 conversations for $0.010 (gpt-5.2 would be about $0.06).
+  Discussion questions never carry a student label.
 
 ### D-036 · Students see their goal and what they're graded on; a Study Chat is three steps
 *2026-11-13, Nathan* (feedback abf69c71, ae27bc44).

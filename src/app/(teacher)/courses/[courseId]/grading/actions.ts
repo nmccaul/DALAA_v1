@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { graderModel } from "@/ai/models";
+import { chatModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { db } from "@/db/client";
 import { sendGrades } from "@/lti/grades";
@@ -10,6 +10,7 @@ import { resolveDispute } from "@/results/disputes";
 import { setTeacherScore } from "@/results/grading";
 import { summaryQuery } from "./push-text";
 import { backTo } from "./back";
+import { insightsPath } from "./view";
 
 /** Saves the teacher's score, or with "reset" puts the AI's score back. */
 export async function setScoreAction(form: FormData): Promise<void> {
@@ -56,12 +57,15 @@ export async function sendGradesAction(form: FormData): Promise<void> {
   redirect(`${grading}?${q}#grades-${activityId}`);
 }
 
-/** "Analyze conversations": makes the activity's class-prep brief, then shows it on Insights. */
+/**
+ * "Analyze conversations": makes the activity's class-prep brief with the
+ * chat model (the cheap one, D-035 2026-11-16), then shows its takeaways.
+ */
 export async function runBriefAction(form: FormData): Promise<void> {
   const courseId = String(form.get("courseId"));
   const activityId = String(form.get("activityId"));
-  const result = await runBrief(db(), graderModel(), await requireActor(), activityId);
-  const q = new URLSearchParams({ view: "insights", brief: result, activity: activityId });
+  const result = await runBrief(db(), chatModel(), await requireActor(), activityId);
+  const q = new URLSearchParams({ brief: result });
   if (form.get("names") === "1") q.set("names", "1");
-  redirect(`/courses/${courseId}/grading?${q}#brief-${activityId}`);
+  redirect(`${insightsPath(courseId, activityId)}?${q}#takeaways`);
 }

@@ -10,6 +10,7 @@ import { latestDispute } from "@/results/disputes";
 import { getResult } from "@/results/store";
 import { screensFor } from "@/tools/screens";
 import { DisputeForm, ScoreForm } from "../../score-forms";
+import { insightsPath } from "../../view";
 
 export const metadata: Metadata = { title: "Student's conversation" };
 
@@ -49,9 +50,15 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <Link href={`${base}?view=grades#${attempt.id}`} className="text-sm text-accent-text hover:underline">
-          ← Grades
-        </Link>
+        {q.from === "insights" ? (
+          <Link href={insightsPath(course.id, attempt.activityId)} className="text-sm text-accent-text hover:underline">
+            ← Insights
+          </Link>
+        ) : (
+          <Link href={`${base}?view=grades#${attempt.id}`} className="text-sm text-accent-text hover:underline">
+            ← Grades
+          </Link>
+        )}
         <h2 className="text-2xl font-normal break-words">{attempt.studentName}</h2>
         <p className="text-sm text-muted">
           {attempt.activityTitle} · Started <LocalTime value={attempt.startedAt} />

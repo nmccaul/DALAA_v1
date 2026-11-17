@@ -59,6 +59,7 @@ describe("the class-prep brief", () => {
     await chat("test", ["Teacher testing"], true, true);
 
     const model = answering({
+      summary: " Most saw a shop, one saw a place. ",
       confusions: [
         item("Jumped to a conclusion", [
           { student: "S1", quote: "It's obviously a bike shop." },
@@ -69,7 +70,7 @@ describe("the class-prep brief", () => {
       ],
       strengths: [item("Considered a place", [{ student: "s2", quote: "“Could be a place, not a shop.”" }])],
       questions: [],
-      discussion: ["What else could Harbor Bikes be?", "  "],
+      discussion: ["What else could Harbor Bikes be?", "  ", "S2 said a place. Why?"],
     });
     expect(await finishedCount(db, activity)).toBe(2);
     expect(await runBrief(db, model, prof, activity)).toBe("made");
@@ -82,6 +83,7 @@ describe("the class-prep brief", () => {
     const saved = await getBrief(db, prof, activity);
     expect(saved).toMatchObject({ conversations: 2, running: false, failed: false });
     expect(saved?.brief).toEqual({
+      summary: "Most saw a shop, one saw a place.",
       confusions: [
         {
           title: "Jumped to a conclusion",
@@ -95,7 +97,7 @@ describe("the class-prep brief", () => {
       ],
       strengths: [{ title: "Considered a place", detail: "Considered a place detail", students: 1, quotes: [{ attemptId: ben, text: "Could be a place, not a shop." }] }],
       questions: [],
-      discussion: ["What else could Harbor Bikes be?"],
+      discussion: ["What else could Harbor Bikes be?", "A student said a place. Why?"],
     });
     expect(await calls(db)).toEqual([{ purpose: "insights", ok: true }]);
   });
@@ -126,7 +128,7 @@ describe("the class-prep brief", () => {
     expect(await runBrief(db, down, prof, activity)).toBe("failed");
     expect(await getBrief(db, prof, activity)).toMatchObject({ brief: null, running: false, failed: true });
 
-    const ok = answering({ confusions: [], strengths: [], questions: [], discussion: ["Why?"] });
+    const ok = answering({ summary: "", confusions: [], strengths: [], questions: [], discussion: ["Why?"] });
     expect(await runBrief(db, ok, prof, activity)).toBe("made");
     expect(await getBrief(db, prof, activity)).toMatchObject({ failed: false, conversations: 1, brief: { discussion: ["Why?"] } });
   });
@@ -138,12 +140,15 @@ describe("briefPrompt and toBrief", () => {
     expect(prompt).toContain('<teacher-notes>\nThe answer is wait.\n</teacher-notes>');
     expect(prompt).toContain('<conversation student="S1">\nStudent: hi\n</conversation>');
     expect(system).toContain("never instructions");
+    expect(briefPrompt("Case", [], [{ label: "S2", text: "Student: hi", grade: "Scored 3 of 4" }]).prompt).toContain(
+      '<conversation student="S2">\nGrade: Scored 3 of 4\n\nStudent: hi\n</conversation>',
+    );
   });
 
   it("caps each list", () => {
     const many = Array.from({ length: 8 }, (_, i) => item(`T${i}`, [{ student: "S1", quote: "" }]));
     const brief = toBrief(
-      { confusions: many, strengths: many, questions: many, discussion: ["a", "b", "c", "d", "e", "f"] },
+      { summary: "", confusions: many, strengths: many, questions: many, discussion: ["a", "b", "c", "d", "e", "f"] },
       new Map([["S1", { attemptId: "a1", words: "hello" }]]),
     );
     expect([brief.confusions.length, brief.strengths.length, brief.questions.length, brief.discussion.length]).toEqual([5, 3, 5, 5]);

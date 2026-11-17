@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
-import { classInsights, summarize, type GradedRow } from "./insights";
+import { classInsights, gradeLine, summarize, type GradedRow } from "./insights";
 
 const row = (n: number, position: string | null, hits: string[], scores: number[]): GradedRow => ({
   attemptId: `a${n}`,
   studentName: `S${n}`,
+  score: scores.reduce((a, b) => a + b, 0),
+  maxScore: 4 * scores.length,
   position,
   touchpoints: ["Cash", "Season"].map((label) => ({ label, hit: hits.includes(label), evidence: hits.includes(label) ? `${label} said by S${n}` : null })),
   criteria: scores.map((score, i) => ({ label: `C${i}`, score, max: 4, evidence: null, feedback: "." })),
@@ -15,6 +17,8 @@ describe("summarize", () => {
   it("counts positions and points raised, most first, keeping each student's quote", () => {
     const view = summarize([row(1, "Wait", ["Cash"], [4, 1]), row(2, "Open", ["Cash", "Season"], [2, 1]), row(3, "Wait", [], [3, 1]), row(4, null, [], [1, 1])]);
     expect(view.graded).toBe(4);
+    expect(view.scores).toEqual([5 / 8, 3 / 8, 4 / 8, 2 / 8]);
+    expect(view.average).toBe(0.4375);
     expect(view.noPosition).toBe(1);
     expect(view.positions.map((p) => [p.label, p.students])).toEqual([["Wait", 2], ["Open", 1]]);
     expect(view.positions[0].quotes.map((q) => q.attemptId)).toEqual(["a1", "a3"]);
@@ -26,8 +30,17 @@ describe("summarize", () => {
     ]);
   });
 
+  it("lists a point nobody raised, last", () => {
+    expect(summarize([row(1, null, ["Season"], [1])]).touchpoints.map((t) => [t.label, t.students])).toEqual([["Season", 1], ["Cash", 0]]);
+  });
+
   it("is empty with nothing graded", () => {
-    expect(summarize([])).toEqual({ graded: 0, positions: [], noPosition: 0, touchpoints: [], criteria: [] });
+    expect(summarize([])).toEqual({ graded: 0, scores: [], average: null, positions: [], noPosition: 0, touchpoints: [], criteria: [] });
+  });
+
+  it("puts a student's grade in one line, with the points they missed", () => {
+    expect(gradeLine(row(1, "Wait", ["Cash"], [4, 1.5]))).toBe("Scored 5.5 of 8. position: Wait. missed: Season");
+    expect(gradeLine(row(2, null, ["Cash", "Season"], [2]))).toBe("Scored 2 of 4");
   });
 });
 
@@ -76,7 +89,7 @@ describe("classInsights", () => {
     await take("test", true, true);
 
     const view = await classInsights(db, prof, activity);
-    expect(view).toMatchObject({ graded: 1, noPosition: 0, criteria: [{ label: "Q", average: 3, max: 4, students: 1 }] });
+    expect(view).toMatchObject({ graded: 1, scores: [0.75], noPosition: 0, criteria: [{ label: "Q", average: 3, max: 4, students: 1 }] });
     expect(view?.positions).toEqual([{ label: "Wait", students: 1, quotes: [expect.objectContaining({ studentName: "ana", text: null })] }]);
     expect(view?.touchpoints[0].quotes[0]).toMatchObject({ studentName: "ana", text: "cash is tight" });
     expect(await classInsights(db, other, activity)).toBeNull();
