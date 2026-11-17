@@ -33,6 +33,7 @@ export const FIELDS: { path: string[]; more?: boolean; card?: string }[] = [
   { path: ["completion", "timeLimitMinutes"] },
   { path: ["completion", "question"] },
   { path: ["completion", "studentCanFinish"] },
+  { path: ["answerWith"], card: "completion" },
   { path: ["rubric", "criteria"] },
   { path: ["rubric", "strictness"], more: true },
 ];

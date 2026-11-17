@@ -6,7 +6,7 @@
  * Server-only. Tests never call these: they pass a mock model to `src/ai/call.ts`.
  */
 
-import { gateway, type LanguageModel } from "ai";
+import { gateway, type LanguageModel, type TranscriptionModel } from "ai";
 
 function modelFromEnv(name: "CHAT_MODEL" | "GRADER_MODEL"): LanguageModel {
   const id = process.env[name]?.trim();
@@ -22,4 +22,13 @@ export function chatModel(): LanguageModel {
 /** The model that grades transcripts and drafts settings: careful. */
 export function graderModel(): LanguageModel {
   return modelFromEnv("GRADER_MODEL");
+}
+
+/**
+ * The model that turns a student's speech into their message (D-038). An env
+ * override like the others; without one, OpenAI's small transcriber (about
+ * $0.003 a minute), since dictation shouldn't need setting up to work.
+ */
+export function dictationModel(): TranscriptionModel {
+  return gateway.transcriptionModel(process.env.DICTATION_MODEL?.trim() || "openai/gpt-4o-mini-transcribe");
 }

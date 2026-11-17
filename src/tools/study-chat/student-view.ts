@@ -10,7 +10,7 @@
  * criterion's description can give the answer away.
  */
 
-import type { StudyChatSettings } from "./schema";
+import type { AnswerWith, StudyChatSettings } from "./schema";
 
 /** The longest message a student may send; the page stops typing there, `sendTurn` refuses past it. */
 export const MAX_MESSAGE_LENGTH = 4000;
@@ -26,6 +26,8 @@ export type StudentChatView = {
   persona: { name: string; role: string };
   /** The student adds their own work before the chat starts. */
   bringsWork: boolean;
+  /** Typing, speaking (the microphone writes the message), or the student's choice. */
+  answerWith: AnswerWith;
   /** NULL: no limit, or no question. */
   limits: {
     maxTurns: number | null;
@@ -60,6 +62,7 @@ export function studentView(settings: StudyChatSettings): StudentChatView {
     opening: scenario.opening,
     persona: { name: settings.persona.name, role: settings.persona.title },
     bringsWork: settings.studentWork,
+    answerWith: settings.answerWith,
     limits: { maxTurns, minTurns, timeLimitMinutes, question, studentCanFinish },
   };
 }

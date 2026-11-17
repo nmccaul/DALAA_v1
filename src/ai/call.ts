@@ -7,7 +7,16 @@
  * tests) and who the call was for. Prompts and replies are never logged.
  */
 
-import { generateText, Output, streamText, type LanguageModel, type LanguageModelUsage, type ModelMessage } from "ai";
+import {
+  experimental_transcribe as transcribe,
+  generateText,
+  Output,
+  streamText,
+  type LanguageModel,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type TranscriptionModel,
+} from "ai";
 import type { z } from "zod";
 import type { Db } from "@/db/types";
 
@@ -158,5 +167,27 @@ export async function generateStructured<S extends z.ZodType>(
     return result.output as z.infer<S>;
   } finally {
     await settled();
+  }
+}
+
+/**
+ * Speech to text (a student dictating a message). One ledger row, with no
+ * tokens (transcription bills by the minute) and the gateway's cost.
+ */
+export async function transcribeSpeech(
+  db: Db,
+  model: TranscriptionModel,
+  ctx: AiCallContext,
+  audio: Uint8Array,
+  abortSignal?: AbortSignal,
+): Promise<string> {
+  const modelId = typeof model === "string" ? model : model.modelId;
+  try {
+    const result = await transcribe({ model, audio, abortSignal, maxRetries: 1 });
+    await record(db, ctx, { model: modelId, ok: true, providerMetadata: result.providerMetadata });
+    return result.text.trim();
+  } catch (error) {
+    await record(db, ctx, { model: modelId, ok: false });
+    throw error;
   }
 }

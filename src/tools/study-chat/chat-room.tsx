@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { inlinePieces } from "@/components/inline-format";
 import { Button, inputStyles } from "@/components/ui";
+import { DictationButton } from "./dictation";
 import type { Exchange } from "./prompt";
 import { finishChatAction } from "./student-actions";
 import { ENDED, REPLY_FAILED } from "./student-messages";
@@ -47,6 +48,8 @@ export function ChatRoom({
   const [progress, setProgress] = useState(initialProgress);
   const [now, setNow] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
+  // Speaking or typing (D-038): fixed by the teacher, or the student's to switch when they chose "Their choice".
+  const [speaking, setSpeaking] = useState(view.answerWith === "speaking");
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishing, startFinish] = useTransition();
   const end = useRef<HTMLDivElement>(null);
@@ -229,6 +232,23 @@ export function ChatRoom({
             submit();
           }}
           className="flex flex-col gap-2">
+          {view.answerWith === "either" && (
+            <div role="group" aria-label="How you answer" className="flex self-start rounded-control border border-border-strong text-sm">
+              {[false, true].map((speak) => (
+                <button
+                  key={String(speak)}
+                  type="button"
+                  aria-pressed={speaking === speak}
+                  onClick={() => setSpeaking(speak)}
+                  className={`px-3 py-1 first:rounded-l-control last:rounded-r-control ${
+                    speaking === speak ? "bg-accent text-white" : "bg-surface text-accent-text hover:bg-subtle"
+                  }`}
+                >
+                  {speak ? "Speak" : "Type"}
+                </button>
+              ))}
+            </div>
+          )}
           <label htmlFor="chat-message" className="sr-only">
             Your message
           </label>
@@ -244,10 +264,17 @@ export function ChatRoom({
             }}
             maxLength={MAX_MESSAGE_LENGTH}
             rows={3}
-            placeholder={`Write to ${view.persona.name}…`}
+            placeholder={speaking ? `Press Speak and talk to ${view.persona.name}. You can fix any words before you send.` : `Write to ${view.persona.name}…`}
             className={`${inputStyles} resize-y`}
           />
           <div className="flex flex-wrap items-center gap-3">
+            {speaking && (
+              <DictationButton
+                activityId={activityId}
+                disabled={pending !== null}
+                onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
+              />
+            )}
             <Button type="submit" disabled={pending !== null || draft.trim() === ""}>
               {busy ? "Waiting for the reply…" : "Send"}
             </Button>
