@@ -369,6 +369,17 @@ for class from what students said; grading and Canvas come second.
   the students' words go in whole and quotes are still checked. Measured
   locally: 10 conversations for $0.010 (gpt-5.2 would be about $0.06).
   Discussion questions never carry a student label.
+- **Ask about this assignment (2026-11-16, Nathan):** under the takeaways, the
+  teacher asks questions and the chat model answers from the same
+  conversations the brief reads, citing students as [S3] (shown as "Student
+  3", or the name when names are shown, linked to the conversation)
+  (`src/results/ask.ts`). The class comes first in the prompt and is the same
+  for every question, so the provider's prompt cache can serve it; earlier
+  questions live in the page, and the last 6 go back with a follow-up.
+  Reasoning is "low": thinking is billed as output, and answering from the
+  text in front of it doesn't need it (measured: $0.0016 a question against
+  $0.0058). 30 questions a teacher a course a day, counted from the ledger
+  (`insights.ask`).
 
 ### D-036 · Students see their goal and what they're graded on; a Study Chat is three steps
 *2026-11-13, Nathan* (feedback abf69c71, ae27bc44).

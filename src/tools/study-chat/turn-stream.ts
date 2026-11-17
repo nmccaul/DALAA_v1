@@ -6,6 +6,7 @@
  * here so they can't drift. No server imports: the chat page reads with it.
  */
 
+import { jsonLine, ndjson, readJsonLines } from "@/lib/ndjson";
 import type { SendResult } from "./chat";
 import { ENDED, REPLY_FAILED } from "./student-messages";
 import type { StudentProgress } from "./student-view";
@@ -19,11 +20,6 @@ export type TurnEvent =
 type Ending = { status: "in_progress" | "completed"; endedBy: keyof typeof ENDED | null };
 
 const endedReason = (attempt: Ending) => (attempt.status === "completed" && attempt.endedBy ? ENDED[attempt.endedBy] : null);
-
-export const jsonLine = (event: unknown) => new TextEncoder().encode(`${JSON.stringify(event)}\n`);
-
-export const ndjson = (body: ReadableStream<Uint8Array>) =>
-  new Response(body, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" } });
 
 /**
  * The response for a `sendTurn` result. `settled` resolves once the reply is
@@ -75,28 +71,6 @@ export function turnResponse(result: SendResult): { response: Response; settled:
     if (open) controller.close();
   })();
   return { response: ndjson(body), settled };
-}
-
-/** The JSON values in an NDJSON body, one per line, until it ends or drops. Shared with the practice run's stream. */
-export async function* readJsonLines<T>(body: ReadableStream<Uint8Array>): AsyncGenerator<T> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
-        const text = buffer.slice(0, nl);
-        buffer = buffer.slice(nl + 1);
-        if (text.trim() !== "") yield JSON.parse(text) as T;
-      }
-    }
-    if (buffer.trim() !== "") yield JSON.parse(buffer) as T;
-  } catch {
-    // Dropped mid-line: the caller sees the events stop.
-  }
 }
 
 /**
