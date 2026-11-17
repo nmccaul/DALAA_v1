@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { getContent, saveContent } from "./store";
+import { pdf } from "@/test/pdf";
+import { readFile } from "./files";
+import { copyTo, getContent, saveContent, saveTo } from "./store";
 
 describe("saveContent", () => {
   let db: Db;
@@ -60,6 +62,28 @@ describe("saveContent", () => {
     const key = randomUUID();
     await saveContent(db, prof, course, key, paste("x"));
     await expect(saveContent(db, other, await newCourse(other), key, paste("x"))).rejects.toThrow(/someone else/);
+  });
+
+  it("keeps a reading's PDF, and copies it with the reading, but never an AI-only note's", async () => {
+    const file = pdf(["Harbor Bikes"]);
+    const upload = { kind: "file" as const, name: "harbor.pdf", bytes: file };
+    const reading = await saveContent(db, prof, course, randomUUID(), upload);
+    if (!reading.ok) throw new Error(reading.reason);
+    expect(await readFile(db, reading.content.id)).toEqual(file);
+
+    const [copy] = (await copyTo(db, "course_content", prof, course, await newCourse(prof), [reading.content.id])) ?? [];
+    expect(copy).not.toBe(reading.content.id);
+    expect(await readFile(db, copy)).toEqual(file);
+
+    const note = await saveTo(db, "course_guides", prof, course, randomUUID(), upload);
+    expect(note.ok).toBe(true);
+    expect(await db.query("select content_id from content_files")).toHaveLength(2);
+  });
+
+  it("keeps no file for pasted text", async () => {
+    const r = await saveContent(db, prof, course, randomUUID(), paste("Sales fell."));
+    if (!r.ok) throw new Error(r.reason);
+    expect(await readFile(db, r.content.id)).toBeNull();
   });
 
   it("passes on what the reader refuses, saving nothing", async () => {

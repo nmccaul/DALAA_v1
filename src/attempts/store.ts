@@ -39,7 +39,7 @@ export type TakenActivity = {
   /** The student's attempt's copy once they've started (D-031); the activity's current settings before that. */
   settings: Record<string, unknown>;
   /** What the student studies, in the teacher's order (src/activities/materials.ts); never the AI-only notes. */
-  readings: { name: string; body: string }[];
+  readings: { id: string; name: string; body: string; hasFile: boolean }[];
   /** The course's page in real Canvas, for the student's way back; NULL for a practice or unlinked course. */
   canvasCourseUrl: string | null;
 };
@@ -75,7 +75,7 @@ export async function getTakenActivity(db: Db, actor: Actor, activityId: string)
   const readings = await activityReadings(db, activity.id);
   return {
     ...activity,
-    readings: readings.map(({ name, body }) => ({ name, body })),
+    readings: readings.map(({ id, name, body, hasFile }) => ({ id, name, body, hasFile })),
     canvasCourseUrl: canvasCourseUrl(canvasCourseId),
   };
 }

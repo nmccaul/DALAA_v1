@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
+import { saveFile } from "@/content/files";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -110,6 +111,17 @@ describe("activity materials", () => {
       const readings = await activityReadings(db, activity);
       expect(readings.map((r) => r.name)).toEqual(["A"]);
       expect(JSON.stringify(readings)).not.toContain("G body");
+    });
+
+    it("says which readings have their PDF kept, for students to see its pages", async () => {
+      const a = await material("course_content", course, "A");
+      const b = await material("course_content", course, "B");
+      await saveFile(db, b, new TextEncoder().encode("%PDF-1.4"));
+      await setActivityMaterials(db, prof, activity, { contentIds: [a, b], guideIds: [] });
+      expect((await activityReadings(db, activity)).map((r) => [r.name, r.hasFile])).toEqual([
+        ["A", false],
+        ["B", true],
+      ]);
     });
 
     it("refuses an activity the actor doesn't teach", async () => {

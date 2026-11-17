@@ -26,7 +26,15 @@ export type ContentInput =
 export type ContentSource = "paste" | "upload" | "canvas-page" | "canvas-file" | "web";
 
 export type ReadContent =
-  | { ok: true; source: ContentSource; name: string; body: string; url?: string }
+  | {
+      ok: true;
+      source: ContentSource;
+      name: string;
+      body: string;
+      url?: string;
+      /** The PDF itself, kept so students see its pages (src/content/files.ts). */
+      pdf?: Uint8Array;
+    }
   | { ok: false; reason: string };
 
 /** Whether a file of this name is one DALAA can read (used to filter Canvas's file list). */
@@ -107,7 +115,8 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
     if (!cleanText(text)) {
       return { ok: false, reason: `${name} has no text we can read; it may be a scan. Paste the text instead.` };
     }
-    return finish(source, name, text);
+    const read = finish(source, name, text);
+    return read.ok ? { ...read, pdf: input.bytes } : read;
   }
 
   if (ext === "docx" || ext === "pptx") {

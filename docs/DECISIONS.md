@@ -444,3 +444,24 @@ and bc22f7df asked for the same).
   sends students' voices to Google outside our ledger. The audio isn't kept.
   Each transcription is an `ai_calls` row ('chat.dictate'); a student gets
   200 a day.
+
+### D-039 · Students see a PDF reading as its pages
+*2026-11-17, Nathan ("make this PDF actually look like the PDF")*
+- **A reading's PDF is kept** (`content_files`, read and written only by
+  `src/content/files.ts`) and the student's Read step draws its pages with
+  pdf.js (`src/content/pdf-pages.tsx`), so layout, headings, tables and
+  pictures look as the teacher made them in every browser, Canvas's frame
+  included. The browser's own PDF viewer was passed over: Android Chrome and
+  iOS Safari in a frame don't show PDFs inline.
+- **The text stays what the AI reads**, and is one click away ("Show as
+  text") for screen readers, translation and small phones. If the pages
+  can't be drawn, the text shows instead. Pages load only once the reading
+  is on screen.
+- **PDFs only, uploaded or picked from Canvas from now on**; AI-only notes
+  keep no file (students never see them). Earlier readings show as text
+  until re-added: their files were never kept. Word and PowerPoint still
+  show as text.
+- **Stored in Postgres as bytea** (4 MB cap, the upload limit) behind that one
+  module, so it can move to object storage later without touching callers.
+  The file is served only to a student who can take the activity or a
+  teacher of its course, and only when it's a reading of that activity.
