@@ -9,11 +9,11 @@
  * gets that reply back without another model call.
  */
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel, TranscriptionModel } from "ai";
 import { z } from "zod";
 import { completeAttempt, getAttempt, getTakenActivity, startAttempt, type Attempt, type TakenActivity } from "@/attempts/store";
 import { getStudentWork, saveStudentWork, type SaveWorkResult, type StudentWork, type WorkInput } from "@/attempts/work";
-import { generateStructured, streamReply, type AiCallContext } from "@/ai/call";
+import { generateStructured, streamReply, transcribeSpeech, type AiCallContext } from "@/ai/call";
 import { activityGuides } from "@/content/guide";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
@@ -275,6 +275,58 @@ export async function finishChat(
     return { ok: false, reason: `Send at least ${min} ${min === 1 ? "message" : "messages"} before you finish.` };
   }
   return { ok: true, attempt: await completeAttempt(db, attempt.id, "student") };
+}
+
+/** Dictation (D-038): the most audio one message may send (about two minutes), and how many a student may send a day. */
+export const MAX_DICTATION_BYTES = 3_000_000;
+export const DICTATIONS_PER_DAY = 200;
+export const DICTATE_PURPOSE = "chat.dictate";
+
+export const DICTATION_REFUSED = {
+  empty: "We didn't hear anything. Try again, a little closer to the microphone.",
+  long: "That was too long for one message. Say it in shorter parts.",
+  typing: "This chat is typed, not spoken.",
+  ended: "This chat is over.",
+  limit: "You've used speaking a lot today. Type your message instead.",
+  failed: "We couldn't turn that into text. Try again, or type it.",
+} as const;
+
+/**
+ * What a student said, as text for them to check before sending. Only in a
+ * chat the teacher set to speaking or the student's choice, and not once it's
+ * over. The audio goes to the transcriber and is never kept.
+ */
+export async function dictate(
+  db: Db,
+  model: TranscriptionModel,
+  actor: Actor,
+  activityId: string,
+  audio: Uint8Array,
+  abortSignal?: AbortSignal,
+): Promise<{ ok: true; text: string } | { ok: false; reason: string; status: number }> {
+  if (audio.byteLength === 0) return { ok: false, reason: DICTATION_REFUSED.empty, status: 400 };
+  if (audio.byteLength > MAX_DICTATION_BYTES) return { ok: false, reason: DICTATION_REFUSED.long, status: 413 };
+  const chat = await openChat(db, actor, activityId);
+  if ("reason" in chat) return { ok: false, reason: chat.reason, status: 404 };
+  if (chat.settings.answerWith === "typing") return { ok: false, reason: DICTATION_REFUSED.typing, status: 400 };
+  const attempt = await getAttempt(db, actor, activityId);
+  if (attempt?.status === "completed") return { ok: false, reason: DICTATION_REFUSED.ended, status: 400 };
+  const [{ n }] = await db.query<{ n: number }>(
+    `select count(*)::int as n from ai_calls where purpose = $1 and user_id = $2 and created_at > now() - interval '1 day'`,
+    [DICTATE_PURPOSE, actor.userId],
+  );
+  if (n >= DICTATIONS_PER_DAY) return { ok: false, reason: DICTATION_REFUSED.limit, status: 429 };
+
+  const ctx = { purpose: DICTATE_PURPOSE, userId: actor.userId, courseId: chat.activity.courseId };
+  let text: string;
+  try {
+    text = await transcribeSpeech(db, model, ctx, audio, abortSignal);
+  } catch (error) {
+    console.error("dictation failed:", error instanceof Error ? error.message : error);
+    return { ok: false, reason: DICTATION_REFUSED.failed, status: 502 };
+  }
+  if (text === "") return { ok: false, reason: DICTATION_REFUSED.empty, status: 422 };
+  return { ok: true, text: text.slice(0, MAX_MESSAGE_LENGTH) };
 }
 
 /**

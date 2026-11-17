@@ -6,6 +6,7 @@
 import { getTaughtCourse, notTeachingReason } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import { copyFiles, saveFile } from "./files";
 import { readContent, type ContentInput } from "./read";
 
 export type SavedContent = { id: string; source: string; name: string; body: string };
@@ -50,7 +51,11 @@ export async function saveTo(
      returning id, source, name, body`,
     [courseId, read.source, read.name, read.body, creationKey, actor.userId, read.url ?? null],
   );
-  if (inserted) return { ok: true, content: inserted };
+  if (inserted) {
+    // Only readings keep their file: students never see an AI-only note.
+    if (table === "course_content" && read.pdf) await saveFile(db, inserted.id, read.pdf);
+    return { ok: true, content: inserted };
+  }
 
   const [existing] = await db.query<SavedContent & { course_id: string; created_by: string }>(
     `select id, source, name, body, course_id, created_by from ${table} where creation_key = $1`,
@@ -115,6 +120,7 @@ export async function copyTo(
        returning id`,
       [id, fromCourseId, toCourseId, actor.userId],
     );
+    if (table === "course_content") await copyFiles(db, id, inserted.id);
     copied.push(inserted.id);
   }
   return copied;

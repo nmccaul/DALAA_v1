@@ -11,12 +11,17 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-17",
     changes: [
+      "Students can speak instead of type: on Chat options, \"How students answer\" is Typing, Speaking or Their choice. Speaking puts what the student said into their message box to check before sending.",
+      "Fixed: on Insights, \"Weakest\" marked only the first of several criteria with the same low average, even when every criterion scored the same. Now every tied criterion is marked, and none is when they're all level.",
       "Fixed: when a chat's time limit ran out, students saw \"time's up\" but their chat wasn't handed in. It now ends and is graded right away.",
       "The practice run with an AI student shows the conversation as it happens, then \"Grading it…\", then the grade, instead of a spinner. It stops after 3 minutes of chatting so it always finishes, and if it's cut off you keep what it said so far.",
       "Fixed: after a practice run that didn't finish, another couldn't start for 10 minutes.",
       "A draft reopens on the step you were last on. If you step away mid-setup, the Activities tab shows \"You're still setting up …\" with a link back.",
       "Insights is redesigned: pick an assignment to see how the class did at a glance (how many finished, the average, the weakest criterion, the point most students missed) with charts of the scores, the rubric and the key points. \"Analyze conversations\" now leads with a one-sentence summary and the three biggest takeaways, and takes seconds instead of minutes.",
       "On an assignment's Insights you can ask questions about the class (\"What should I reteach?\", \"Who struggled most, and why?\") and get an answer from the students' conversations, with a link to each student it mentions.",
+      "The + Materials menu no longer lists \"Link a Canvas Page\" and \"Link a Canvas File\": those are already in the Materials list, and the menu now just says so.",
+      "Fixed: a PDF's text could read as a long line, then one or two words, then a long line, for students. Lines are now rejoined into paragraphs when the PDF is added. A PDF added before this keeps its old line breaks; remove it and add it again to fix it.",
+      "Students now see a PDF reading as its pages, the way you made it (layout, headings, pictures), with \"Show as text\" and \"Open the PDF\" above it. This works for PDFs uploaded or picked from Canvas from today on; one added earlier shows as text until you remove it and add it again.",
       "Fixed: a Canvas course with no term showed its term name in Arabic. It now says \"Default Term\", as Canvas does.",
     ],
   },

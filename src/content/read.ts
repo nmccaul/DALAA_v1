@@ -6,9 +6,9 @@
  */
 
 import { convert } from "html-to-text";
-import { extractText, getDocumentProxy } from "unpdf";
 import { FILE_TYPES, FILE_TYPES_LABEL } from "./file-types";
 import { docxText, pptxText } from "./office";
+import { pdfText } from "./pdf";
 
 /** Under Vercel's 4.5 MB request body limit, so the refusal is ours, not a 413. */
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -26,7 +26,15 @@ export type ContentInput =
 export type ContentSource = "paste" | "upload" | "canvas-page" | "canvas-file" | "web";
 
 export type ReadContent =
-  | { ok: true; source: ContentSource; name: string; body: string; url?: string }
+  | {
+      ok: true;
+      source: ContentSource;
+      name: string;
+      body: string;
+      url?: string;
+      /** The PDF itself, kept so students see its pages (src/content/files.ts). */
+      pdf?: Uint8Array;
+    }
   | { ok: false; reason: string };
 
 /** Whether a file of this name is one DALAA can read (used to filter Canvas's file list). */
@@ -79,17 +87,6 @@ function finish(source: ContentSource, name: string, raw: string): ReadContent {
   return { ok: true, source, name, body };
 }
 
-async function pdfText(bytes: Uint8Array): Promise<string | null> {
-  try {
-    // pdf.js takes ownership of the buffer it's given; hand it a copy.
-    const pdf = await getDocumentProxy(new Uint8Array(bytes));
-    const { text } = await extractText(pdf, { mergePages: true });
-    return text;
-  } catch {
-    return null;
-  }
-}
-
 export async function readContent(input: ContentInput): Promise<ReadContent> {
   const name = input.name.trim();
 
@@ -118,7 +115,8 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
     if (!cleanText(text)) {
       return { ok: false, reason: `${name} has no text we can read; it may be a scan. Paste the text instead.` };
     }
-    return finish(source, name, text);
+    const read = finish(source, name, text);
+    return read.ok ? { ...read, pdf: input.bytes } : read;
   }
 
   if (ext === "docx" || ext === "pptx") {

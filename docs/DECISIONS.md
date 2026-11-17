@@ -424,3 +424,44 @@ and bc22f7df asked for the same).
 - **"About how long?" moved to Chat options**, as buttons that set "Most
   student messages" (the choice itself isn't stored). New chats start at 12
   messages, no time limit, students can finish.
+
+### D-038 · Students can speak their messages (dictation)
+*2026-11-17, Nathan*
+- **Chat options has "How students answer": Typing, Speaking, or Their
+  choice.** Typing is the default, and chats saved before this are typing.
+  With Their choice, the student switches between Type and Speak above the
+  message box.
+- **Speaking is dictation, not a voice conversation.** The student presses
+  Speak, talks (up to 2 minutes), presses Stop, and what they said lands in
+  the message box for them to check and fix before they send it. The chat,
+  its limits and its grading are exactly the same as typing. A spoken
+  back-and-forth with the character ("Voice conversation", real-time audio)
+  stays Coming soon on Chat options.
+- **The browser records; our server transcribes** through the AI Gateway
+  (`dictationModel()`, `openai/gpt-4o-mini-transcribe` unless
+  `DICTATION_MODEL` says otherwise; about $0.003 a minute). Chosen over the
+  browser's own speech recognition, which is free but missing in Firefox and
+  sends students' voices to Google outside our ledger. The audio isn't kept.
+  Each transcription is an `ai_calls` row ('chat.dictate'); a student gets
+  200 a day.
+
+### D-039 · Students see a PDF reading as its pages
+*2026-11-17, Nathan ("make this PDF actually look like the PDF")*
+- **A reading's PDF is kept** (`content_files`, read and written only by
+  `src/content/files.ts`) and the student's Read step draws its pages with
+  pdf.js (`src/content/pdf-pages.tsx`), so layout, headings, tables and
+  pictures look as the teacher made them in every browser, Canvas's frame
+  included. The browser's own PDF viewer was passed over: Android Chrome and
+  iOS Safari in a frame don't show PDFs inline.
+- **The text stays what the AI reads**, and is one click away ("Show as
+  text") for screen readers, translation and small phones. If the pages
+  can't be drawn, the text shows instead. Pages load only once the reading
+  is on screen.
+- **PDFs only, uploaded or picked from Canvas from now on**; AI-only notes
+  keep no file (students never see them). Earlier readings show as text
+  until re-added: their files were never kept. Word and PowerPoint still
+  show as text.
+- **Stored in Postgres as bytea** (4 MB cap, the upload limit) behind that one
+  module, so it can move to object storage later without touching callers.
+  The file is served only to a student who can take the activity or a
+  teacher of its course, and only when it's a reading of that activity.

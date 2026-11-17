@@ -29,13 +29,17 @@ export function materialsTooLong(lengths: readonly number[]): string | null {
   return `Together these materials are ${total.toLocaleString("en-US")} characters; the limit is ${MAX_MATERIALS_CHARS.toLocaleString("en-US")}. Leave one out or use a shorter excerpt.`;
 }
 
-export type ActivityMaterials = { readings: SavedContent[]; guides: (Guide & { id: string })[] };
+/** A reading, and whether its PDF was kept (src/content/files.ts) so students can see its pages. */
+export type Reading = SavedContent & { hasFile: boolean };
+
+export type ActivityMaterials = { readings: Reading[]; guides: (Guide & { id: string })[] };
 
 /** The readings of an activity, in the teacher's order. Safe for a student request: no AI-only notes. */
-export async function activityReadings(db: Db, activityId: string): Promise<SavedContent[]> {
+export async function activityReadings(db: Db, activityId: string): Promise<Reading[]> {
   if (!UUID.test(activityId)) return [];
-  return db.query<SavedContent>(
-    `select c.id, c.source, c.name, c.body
+  return db.query<Reading>(
+    `select c.id, c.source, c.name, c.body,
+            exists (select 1 from content_files f where f.content_id = c.id) as "hasFile"
        from activity_materials m join course_content c on c.id = m.content_id
       where m.activity_id = $1
       order by m.position`,

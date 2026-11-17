@@ -10,7 +10,7 @@ import { cardOf, type CardKey, FIELDS, fieldId, shownCards } from "./fields";
 import { PickerField } from "./forms";
 import { MODES } from "./modes";
 import { applyParts, isEmpty, partTitle, PARTS, STEP_PARTS, type PartKey } from "./parts";
-import { rubricPoints, settingHelp, settingTitle, STRICTNESS, type StudyChatSettings } from "./schema";
+import { ANSWER_WITH, ANSWER_WITH_LABELS, rubricPoints, settingHelp, settingTitle, STRICTNESS, type AnswerWith, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
 import { MINUTES } from "./wizard/query";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
@@ -283,6 +283,25 @@ export function StudyChatEditor({
         />
       ),
     },
+    answerWith: {
+      id: fieldId(["answerWith"]),
+      label: settingTitle(["answerWith"]),
+      help: settingHelp(["answerWith"]),
+      input: (
+        <select
+          id={fieldId(["answerWith"])}
+          value={s.answerWith}
+          onChange={(e) => change((d) => void (d.answerWith = e.target.value as AnswerWith))}
+          className={`${inputStyles} w-auto min-w-36 shrink-0`}
+        >
+          {ANSWER_WITH.map((value) => (
+            <option key={value} value={value}>
+              {ANSWER_WITH_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      ),
+    },
   };
   const inCard = (sw: (typeof switches)[keyof typeof switches]) =>
     !wizard && (
@@ -503,6 +522,12 @@ export function StudyChatEditor({
               />
               {settingTitle(["completion", "studentCanFinish"])}
             </label>
+            {!wizard && (
+              <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                {switches.answerWith.label}
+                {switches.answerWith.input}
+              </label>
+            )}
           </>,
         )}
         {card(
@@ -581,7 +606,7 @@ export function StudyChatEditor({
         {wizard?.step === STUDENT_SWITCHES_STEP && (
           <OptionTable
             title="What students see and do"
-            rows={[switches.studentWork, switches.showProgress].map((sw) => ({
+            rows={[switches.answerWith, switches.studentWork, switches.showProgress].map((sw) => ({
               label: (
                 <>
                   <label htmlFor={sw.id}>{sw.label}</label>

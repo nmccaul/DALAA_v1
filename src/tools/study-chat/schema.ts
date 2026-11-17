@@ -26,6 +26,15 @@ import { MODE_SLUGS, MODES } from "./modes";
  */
 export const STRICTNESS = ["strict", "balanced", "lenient"] as const;
 
+/** How students write their messages (D-038): typing, speaking into the microphone, or their choice. */
+export const ANSWER_WITH = ["typing", "speaking", "either"] as const;
+export type AnswerWith = (typeof ANSWER_WITH)[number];
+export const ANSWER_WITH_LABELS: Record<AnswerWith, string> = {
+  typing: "Typing",
+  speaking: "Speaking",
+  either: "Their choice",
+};
+
 function settingsSchema(complete: boolean) {
   const text = (max: number) => (complete ? z.string().trim().min(1).max(max) : z.string().trim().max(max));
 
@@ -143,6 +152,12 @@ function settingsSchema(complete: boolean) {
         help: "While they chat, students see how many messages they have left and which points they've covered.",
         description: "As they chat, students see how many touchpoints they've covered and the position they've taken.",
       }),
+      // The teacher's switch, like `showProgress` (D-038). Missing in settings saved before it existed: typing.
+      answerWith: z.enum(ANSWER_WITH).default("typing").meta({
+        title: "How students answer",
+        help: "Speaking: students press the microphone and talk, and what they say appears as their message for them to check before sending. Their choice lets each student switch between typing and speaking.",
+        description: "Typing, speaking (dictated into text), or the student's choice.",
+      }),
       persona: z
         .strictObject({
           name: text(80).meta({ title: "Name" }),
@@ -200,7 +215,7 @@ export const StudyChatFields = complete.StudyChatFields;
  * which create.ts keeps from the suggestion. OpenAI's structured output
  * refuses a schema with any field not required, and those two have defaults.
  */
-export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, typeReason: true }).extend({
+export const StudyChatDraftFields = StudyChatFields.omit({ studentWork: true, showProgress: true, answerWith: true, typeReason: true }).extend({
   completion: complete.DraftCompletion,
 });
 

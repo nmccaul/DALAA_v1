@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { simulateReadableStream } from "ai";
-import { MockLanguageModelV4 } from "ai/test";
+import { MockLanguageModelV4, MockTranscriptionModelV4 } from "ai/test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { countStartedAttempts, getTakenActivity, startAttempt } from "@/attempts/store";
 import { saveContent } from "@/content/store";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { finishChat, readChat, sendTurn, type ChatModels, type SendResult } from "./chat";
+import { dictate, DICTATION_REFUSED, finishChat, MAX_DICTATION_BYTES, readChat, sendTurn, type ChatModels, type SendResult } from "./chat";
 import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
 import { answering, draft, mirrorMaterials } from "./test-fixtures";
@@ -40,6 +40,25 @@ function chatModel() {
     },
   });
   return Object.assign(model, { state });
+}
+
+/** A transcriber that hears `text` (or fails), with the gateway's cost. */
+function transcriber(text: string | Error) {
+  return new MockTranscriptionModelV4({
+    modelId: "test/transcribe",
+    doGenerate: async () => {
+      if (text instanceof Error) throw text;
+      return {
+        text,
+        segments: [],
+        language: "en",
+        durationInSeconds: 4,
+        warnings: [],
+        response: { timestamp: new Date(), modelId: "test/transcribe" },
+        providerMetadata: { gateway: { cost: "0.0002" } },
+      };
+    },
+  });
 }
 
 async function settle(result: SendResult) {
@@ -254,5 +273,42 @@ describe("a student's Study Chat", () => {
     expect(await send("   ")).toEqual({ kind: "refused", reason: "Write a message first." });
     expect(await send("x".repeat(4001))).toMatchObject({ kind: "refused" });
     expect(await db.query("select id from attempts")).toHaveLength(0);
+  });
+  describe("dictation", () => {
+    const audio = new Uint8Array([1, 2, 3]);
+    const speak = (model = transcriber(" I think Maya should wait. ")) => dictate(db, model, student, activity, audio);
+    const dictations = () => db.query<{ ok: boolean; cost_usd: string | null }>("select ok, cost_usd from ai_calls where purpose = 'chat.dictate'");
+
+    it("turns speech into text for the student to check, with a ledger row", async () => {
+      await setSettings(draft({ answerWith: "speaking" }));
+      expect(await speak()).toEqual({ ok: true, text: "I think Maya should wait." });
+      expect(await dictations()).toEqual([{ ok: true, cost_usd: "0.000200" }]);
+    });
+
+    it("refuses a typed chat, an empty or too-long recording, and a chat that's over, without calling the model", async () => {
+      expect(await speak()).toMatchObject({ ok: false, reason: DICTATION_REFUSED.typing });
+      await setSettings(draft({ answerWith: "either" }));
+      expect(await dictate(db, transcriber("x"), student, activity, new Uint8Array())).toMatchObject({ ok: false, reason: DICTATION_REFUSED.empty });
+      expect(await dictate(db, transcriber("x"), student, activity, new Uint8Array(MAX_DICTATION_BYTES + 1))).toMatchObject({
+        ok: false,
+        reason: DICTATION_REFUSED.long,
+      });
+      await send("Hi Maya");
+      expect(await finishChat(db, student, activity)).toMatchObject({ ok: true });
+      expect(await speak()).toMatchObject({ ok: false, reason: DICTATION_REFUSED.ended });
+      expect(await dictations()).toEqual([]);
+    });
+
+    it("refuses a student outside the course", async () => {
+      await setSettings(draft({ answerWith: "speaking" }));
+      expect(await dictate(db, transcriber("x"), outsider, activity, audio)).toMatchObject({ ok: false, status: 404 });
+    });
+
+    it("says so when nothing was heard or the transcriber fails, and records the failure", async () => {
+      await setSettings(draft({ answerWith: "speaking" }));
+      expect(await speak(transcriber("  "))).toMatchObject({ ok: false, reason: DICTATION_REFUSED.empty });
+      expect(await speak(transcriber(new Error("provider down")))).toMatchObject({ ok: false, reason: DICTATION_REFUSED.failed });
+      expect((await dictations()).map((r) => r.ok).sort()).toEqual([false, true]);
+    });
   });
 });
