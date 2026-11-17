@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
-import { classInsights, gradeLine, summarize, type GradedRow } from "./insights";
+import { classInsights, gradeLine, summarize, weakestCriteria, type GradedRow } from "./insights";
 
 const row = (n: number, position: string | null, hits: string[], scores: number[]): GradedRow => ({
   attemptId: `a${n}`,
@@ -94,5 +94,27 @@ describe("classInsights", () => {
     expect(view?.touchpoints[0].quotes[0]).toMatchObject({ studentName: "ana", text: "cash is tight" });
     expect(await classInsights(db, other, activity)).toBeNull();
     expect(await classInsights(db, prof, "nope")).toBeNull();
+  });
+});
+
+describe("weakestCriteria", () => {
+  const c = (label: string, average: number, max: number) => ({ label, average, max, students: 1 });
+
+  it("names the one criterion with the lowest share", () => {
+    expect(weakestCriteria([c("A", 2, 3), c("B", 0.5, 2), c("C", 1, 2)]).map((x) => x.label)).toEqual(["B"]);
+  });
+
+  it("names every criterion tied for lowest, by share not points", () => {
+    expect(weakestCriteria([c("A", 1, 2), c("B", 0, 3), c("C", 0, 2)]).map((x) => x.label)).toEqual(["B", "C"]);
+  });
+
+  it("names none when every criterion scored the same (feedback c1028c69)", () => {
+    expect(weakestCriteria([c("A", 0, 3), c("B", 0, 2), c("C", 0, 2), c("D", 0, 3)])).toEqual([]);
+    expect(weakestCriteria([c("A", 1, 2), c("B", 2, 4)])).toEqual([]);
+  });
+
+  it("names none with fewer than two criteria", () => {
+    expect(weakestCriteria([c("A", 0, 3)])).toEqual([]);
+    expect(weakestCriteria([])).toEqual([]);
   });
 });

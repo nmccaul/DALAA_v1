@@ -92,6 +92,19 @@ export function summarize(rows: readonly GradedRow[]): ClassInsights {
   return { graded: rows.length, scores, average, positions, noPosition: rows.filter((r) => !r.position).length, touchpoints, criteria };
 }
 
+/**
+ * The criteria the class did worst on, by share of points: every one tied for
+ * lowest, and none when there are fewer than two or all are level (all zero
+ * isn't one criterion being weakest).
+ */
+export function weakestCriteria(criteria: readonly CriterionAverage[]): CriterionAverage[] {
+  if (criteria.length < 2) return [];
+  const share = (c: CriterionAverage) => c.average / c.max;
+  const lowest = Math.min(...criteria.map(share));
+  const weakest = criteria.filter((c) => share(c) === lowest);
+  return weakest.length === criteria.length ? [] : weakest;
+}
+
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 /**
