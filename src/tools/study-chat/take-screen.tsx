@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { after } from "next/server";
 import { graderModel } from "@/ai/models";
 import { readingFilePath } from "@/content/files";
@@ -71,21 +72,23 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
     </div>
   );
 
+  // Only the live chat uses the page's full width, for its progress column; the rest stays at reading width.
+  const narrow = (node: ReactNode) => <div className="w-full max-w-3xl">{node}</div>;
   const steps: StudentStep[] = [
     {
       key: "task",
       label: "Your task",
-      content: <TaskCard view={view} hasContent={activity.readings.length > 0} hasWork={chat.work !== null} />,
+      content: narrow(<TaskCard view={view} hasContent={activity.readings.length > 0} hasWork={chat.work !== null} />),
       next: needsWork ? "Add your work →" : hasReading ? "Start reading →" : attempt ? "Go to the chat →" : "Start the chat →",
     },
   ];
-  if (needsWork) steps.push({ key: "work", label: "Your work", content: <WorkForm activityId={activity.id} /> });
+  if (needsWork) steps.push({ key: "work", label: "Your work", content: narrow(<WorkForm activityId={activity.id} />) });
   else {
     if (hasReading) {
       steps.push({
         key: "read",
         label: "Read",
-        content: reading,
+        content: narrow(reading),
         next: ended ? "See your grade →" : attempt ? "Back to the chat →" : "I've read it: start the chat →",
       });
     }
@@ -93,16 +96,16 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
       key: "chat",
       label: ended ? "Your grade" : "Chat",
       link: hasReading ? { label: ended ? "Look at the material again" : "Reread the material", to: "read" } : undefined,
-      content: ended ? (
-        <FinishedChat
-          ended={endedReason ?? ENDED.student}
-          messages={chat.turns.length}
-          result={<StudentResult result={result} attemptId={ended.id} activityId={activity.id} dispute={dispute} />}
-          conversation={room}
-        />
-      ) : (
-        room
-      ),
+      content: ended
+        ? narrow(
+            <FinishedChat
+              ended={endedReason ?? ENDED.student}
+              messages={chat.turns.length}
+              result={<StudentResult result={result} attemptId={ended.id} activityId={activity.id} dispute={dispute} />}
+              conversation={room}
+            />,
+          )
+        : room,
     });
   }
 
