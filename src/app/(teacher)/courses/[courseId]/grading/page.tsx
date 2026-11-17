@@ -16,9 +16,6 @@ import { resultsView, type ResultsView } from "./view";
 
 export const metadata: Metadata = { title: "Results" };
 
-// "Analyze conversations" reads every finished conversation in one AI call.
-export const maxDuration = 300;
-
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 const STATUS: Record<StudentGrade["status"], string> = {
@@ -85,7 +82,7 @@ export default async function ResultsPage({ params, searchParams }: PageProps<"/
         ))}
       </nav>
       {view === "insights" ? (
-        <InsightsView actor={actor} assignments={assignments} base={base} q={q} courseId={course.id} />
+        <InsightsView actor={actor} assignments={assignments} courseId={course.id} />
       ) : view === "grades" ? (
         <Grades assignments={assignments} courseId={course.id} base={base} q={q} openDisputes={open} />
       ) : (

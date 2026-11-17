@@ -20,6 +20,10 @@ export type CriterionAverage = { label: string; average: number; max: number; st
 export type ClassInsights = {
   /** Graded students: what every share is "of". */
   graded: number;
+  /** Each graded student's share of the points (0–1), the score that counts (the teacher's when set). */
+  scores: number[];
+  /** The class's average share of the points; NULL with nothing graded. */
+  average: number | null;
   positions: Tally[];
   /** Graded students who took no position. */
   noPosition: number;
@@ -30,6 +34,9 @@ export type ClassInsights = {
 export type GradedRow = {
   attemptId: string;
   studentName: string;
+  /** The score that counts and what it's out of. */
+  score: number;
+  maxScore: number;
   position: string | null;
   touchpoints: GradedResult["touchpoints"];
   criteria: GradedResult["criteria"];
@@ -54,13 +61,16 @@ export function summarize(rows: readonly GradedRow[]): ClassInsights {
       r.position ? [{ label: r.position, quote: { attemptId: r.attemptId, studentName: r.studentName, text: null } }] : [],
     ),
   );
-  const touchpoints = tally(
+  const raised = tally(
     rows.flatMap((r) =>
       r.touchpoints
         .filter((t) => t.hit)
         .map((t) => ({ label: t.label, quote: { attemptId: r.attemptId, studentName: r.studentName, text: t.evidence } })),
     ),
   );
+  // A point nobody raised is listed too, last: often the one the teacher most needs to see.
+  const never = [...new Set(rows.flatMap((r) => r.touchpoints.map((t) => t.label)))].filter((label) => !raised.some((t) => t.label === label));
+  const touchpoints = [...raised, ...never.map((label) => ({ label, students: 0, quotes: [] }))];
   const sums = new Map<string, { total: number; max: number; students: number }>();
   for (const r of rows) {
     for (const c of r.criteria) {
@@ -77,7 +87,42 @@ export function summarize(rows: readonly GradedRow[]): ClassInsights {
     // The average share of the criterion earned, in the criterion's latest points.
     average: Math.round((s.total / s.students) * s.max * 100) / 100,
   }));
-  return { graded: rows.length, positions, noPosition: rows.filter((r) => !r.position).length, touchpoints, criteria };
+  const scores = rows.map((r) => r.score / r.maxScore);
+  const average = scores.length === 0 ? null : scores.reduce((sum, x) => sum + x, 0) / scores.length;
+  return { graded: rows.length, scores, average, positions, noPosition: rows.filter((r) => !r.position).length, touchpoints, criteria };
+}
+
+const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+
+/**
+ * One student's grade in a line, for the AI reading the class's
+ * conversations: it gets the numbers instead of working them out, which is
+ * cheaper and right. Exported for tests.
+ */
+export function gradeLine(row: GradedRow): string {
+  const missed = row.touchpoints.filter((t) => !t.hit).map((t) => t.label);
+  return [
+    `Scored ${pointsFormat.format(row.score)} of ${pointsFormat.format(row.maxScore)}`,
+    ...(row.position ? [`position: ${row.position}`] : []),
+    ...(missed.length > 0 ? [`missed: ${missed.join("; ")}`] : []),
+  ].join(". ");
+}
+
+/** An activity's graded results, first graded first (Canvas's Student View left out). For a caller that has checked who's asking. */
+export async function gradedRows(db: Db, activityId: string): Promise<GradedRow[]> {
+  return db.query<GradedRow>(
+    `select t.id as "attemptId", u.display_name as "studentName",
+            coalesce(r.teacher_score, r.score)::float8 as score, r.max_score::float8 as "maxScore",
+            r.position, r.touchpoints, r.criteria
+       from results r
+       join attempts t on t.id = r.attempt_id
+       join activities a on a.id = t.activity_id
+       join users u on u.id = t.user_id
+       left join course_members m on m.course_id = a.course_id and m.user_id = t.user_id
+      where a.id = $1 and r.status = 'graded' and m.student_view is not true
+      order by r.graded_at, t.id`,
+    [activityId],
+  );
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,16 +136,6 @@ export async function classInsights(db: Db, actor: Actor, activityId: string): P
     where.values,
   );
   if (!activity) return null;
-  const rows = await db.query<GradedRow>(
-    `select t.id as "attemptId", u.display_name as "studentName", r.position, r.touchpoints, r.criteria
-       from results r
-       join attempts t on t.id = r.attempt_id
-       join activities a on a.id = t.activity_id
-       join users u on u.id = t.user_id
-       left join course_members m on m.course_id = a.course_id and m.user_id = t.user_id
-      where a.id = $1 and r.status = 'graded' and m.student_view is not true
-      order by r.graded_at, t.id`,
-    [activity.id],
-  );
+  const rows = await gradedRows(db, activity.id);
   return summarize(rows);
 }

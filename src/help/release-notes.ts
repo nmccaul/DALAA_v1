@@ -15,6 +15,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "The practice run with an AI student shows the conversation as it happens, then \"Grading it…\", then the grade, instead of a spinner. It stops after 3 minutes of chatting so it always finishes, and if it's cut off you keep what it said so far.",
       "Fixed: after a practice run that didn't finish, another couldn't start for 10 minutes.",
       "A draft reopens on the step you were last on. If you step away mid-setup, the Activities tab shows \"You're still setting up …\" with a link back.",
+      "Insights is redesigned: pick an assignment to see how the class did at a glance (how many finished, the average, the weakest criterion, the point most students missed) with charts of the scores, the rubric and the key points. \"Analyze conversations\" now leads with a one-sentence summary and the three biggest takeaways, and takes seconds instead of minutes.",
     ],
   },
   {
