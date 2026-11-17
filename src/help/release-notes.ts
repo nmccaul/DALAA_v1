@@ -22,6 +22,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "The + Materials menu no longer lists \"Link a Canvas Page\" and \"Link a Canvas File\": those are already in the Materials list, and the menu now just says so.",
       "Fixed: a PDF's text could read as a long line, then one or two words, then a long line, for students. Lines are now rejoined into paragraphs when the PDF is added. A PDF added before this keeps its old line breaks; remove it and add it again to fix it.",
       "The student chat looks like the chat apps students know: a slim header with who they're talking to and how many messages are left, the character's messages beside its initials, their own in bubbles on the right, dots while the reply comes, and one message box with the microphone and a send arrow inside it.",
+      "Students see their progress in its own \"Your progress\" panel, beside the chat on a wide screen and above it otherwise: messages left, time left and key points made, each as a big number with a bar, plus the minimum and their position. It turns red near the end.",
       "Students now see a PDF reading as its pages, the way you made it (layout, headings, pictures), with \"Show as text\" and \"Open the PDF\" above it. This works for PDFs uploaded or picked from Canvas from today on; one added earlier shows as text until you remove it and add it again.",
     ],
   },
