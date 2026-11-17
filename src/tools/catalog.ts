@@ -27,8 +27,10 @@ export type ToolInfo = {
   accent: string;
   /** Query that opens the tool's create screen at its first step, when it has one. */
   start?: string;
-  /** Where a draft opens, and where Edit goes, under the activity's own path, when the tool has setup steps (`setup/[step]`). */
+  /** Where a draft opens, under the activity's own path, when the tool has setup steps (`setup/[step]`): where the teacher left off. */
   draftOpens?: string;
+  /** Where Edit opens a published one: its first setup step. */
+  editOpens?: string;
 };
 
 export const TOOLS: readonly ToolInfo[] = [
@@ -44,7 +46,8 @@ export const TOOLS: readonly ToolInfo[] = [
     draft: "the goal, the scenario, the AI's character, when the chat ends, and a rubric",
     accent: "#0b7f74",
     start: "?step=materials",
-    draftOpens: "/setup/scenario",
+    draftOpens: "/setup/resume",
+    editOpens: "/setup/scenario",
   },
   {
     slug: "quizzer",
@@ -91,8 +94,9 @@ export function newActivityPath(courseId: string, tool: ToolInfo): string {
  * setup steps when the tool has them, anything else the activity's page.
  */
 /** Where an activity's Edit button goes: its tool's setup steps, or its page when the tool has none. */
-export function editActivityPath(courseId: string, a: { id: string; tool: string }): string {
-  const opens = findTool(a.tool)?.draftOpens;
+export function editActivityPath(courseId: string, a: { id: string; tool: string; status: "draft" | "published" }): string {
+  const tool = findTool(a.tool);
+  const opens = a.status === "draft" ? tool?.draftOpens : tool?.editOpens;
   return `/courses/${courseId}/activities/${a.id}${opens ?? ""}`;
 }
 

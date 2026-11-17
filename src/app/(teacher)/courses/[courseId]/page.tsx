@@ -55,6 +55,8 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const base = `/courses/${course.id}`;
   const assignOn = assignToCanvasOn();
   const view = activitiesView(q.show, { assigned: assigned.length, notAssigned: notAssigned.length, other: elsewhere.length });
+  // The draft last worked on, so a teacher who stepped away finds it again (feedback 391261a8).
+  const lastDraft = notAssigned.filter((a) => a.status === "draft").sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
   const views = [
     { key: "assigned", label: "Assigned", count: assigned.length },
     { key: "unassigned", label: "Not assigned", count: notAssigned.length },
@@ -91,6 +93,16 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           ))}
         </nav>
       </div>
+      {lastDraft && view !== "unassigned" && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-border bg-accent-soft px-4 py-3">
+          <span className="min-w-0 break-words">
+            You&apos;re still setting up <b>{lastDraft.title}</b>. Drafts are under Not assigned.
+          </span>
+          <Link href={teacherActivityPath(course.id, lastDraft)} className="font-medium text-accent-text underline">
+            Continue setting it up →
+          </Link>
+        </p>
+      )}
       {q.copyerror && (
         <p role="alert" className="rounded-control border border-border-strong bg-subtle px-4 py-3">
           We couldn&apos;t copy that activity. You can copy only from courses you teach.

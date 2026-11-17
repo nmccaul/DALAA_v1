@@ -35,15 +35,16 @@ describe("tool registry", () => {
   });
 
   it("opens a draft at its tool's setup steps, and anything else (or a tool without them) at the activity", () => {
-    expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "draft" })).toBe("/courses/c1/activities/a1/setup/scenario");
+    expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "draft" })).toBe("/courses/c1/activities/a1/setup/resume");
     expect(teacherActivityPath("c1", { id: "a1", tool: "study-chat", status: "published" })).toBe("/courses/c1/activities/a1");
     expect(teacherActivityPath("c1", { id: "a1", tool: "quizzer", status: "draft" })).toBe("/courses/c1/activities/a1");
     expect(teacherActivityPath("c1", { id: "a1", tool: "gone", status: "draft" })).toBe("/courses/c1/activities/a1");
   });
 
-  it("sends Edit to the tool's setup steps whatever the status, else the activity's page", () => {
-    expect(editActivityPath("c1", { id: "a1", tool: "study-chat" })).toBe("/courses/c1/activities/a1/setup/scenario");
-    expect(editActivityPath("c1", { id: "a1", tool: "quizzer" })).toBe("/courses/c1/activities/a1");
-    expect(editActivityPath("c1", { id: "a1", tool: "gone" })).toBe("/courses/c1/activities/a1");
+  it("sends Edit to where a draft was left, or a published one's first setup step, else the activity's page", () => {
+    expect(editActivityPath("c1", { id: "a1", tool: "study-chat", status: "draft" })).toBe("/courses/c1/activities/a1/setup/resume");
+    expect(editActivityPath("c1", { id: "a1", tool: "study-chat", status: "published" })).toBe("/courses/c1/activities/a1/setup/scenario");
+    expect(editActivityPath("c1", { id: "a1", tool: "quizzer", status: "draft" })).toBe("/courses/c1/activities/a1");
+    expect(editActivityPath("c1", { id: "a1", tool: "gone", status: "published" })).toBe("/courses/c1/activities/a1");
   });
 });

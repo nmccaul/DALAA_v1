@@ -30,6 +30,8 @@ export type TaughtActivity = {
   assigned: boolean;
   /** The course's page in Canvas; NULL for a course not in Canvas or a practice one. */
   canvasCourseUrl: string | null;
+  /** The setup step the teacher was last on; NULL before setup was opened. */
+  setupStep: string | null;
 };
 
 /** SQL for "this activity (alias `a`) is in Canvas Assignments". The one definition. */
@@ -88,7 +90,7 @@ export async function getTaughtActivity(db: Db, actor: Actor, activityId: string
   const where = and({ text: "a.id = $1", values: [activityId] }, coursesTaughtBy(actor, "c"));
   const [row] = await db.query<Omit<TaughtActivity, "canvasCourseUrl"> & { canvasCourseId: string | null }>(
     `select a.id, a.course_id as "courseId", a.tool, a.title, a.status, a.points::float8 as points,
-            a.settings, ${ASSIGNED_SQL} as assigned,
+            a.settings, ${ASSIGNED_SQL} as assigned, a.setup_step as "setupStep",
             case when c.is_practice then null else c.canvas_course_id end as "canvasCourseId"
        from activities a
        join courses c on c.id = a.course_id
@@ -98,6 +100,12 @@ export async function getTaughtActivity(db: Db, actor: Actor, activityId: string
   if (!row) return null;
   const { canvasCourseId, ...activity } = row;
   return { ...activity, canvasCourseUrl: canvasCourseUrl(canvasCourseId) };
+}
+
+/** Keeps the setup step a teacher is on, so the draft reopens there (feedback 391261a8). */
+export async function rememberSetupStep(db: Db, activity: Pick<TaughtActivity, "id" | "setupStep">, step: string): Promise<void> {
+  if (activity.setupStep === step) return;
+  await db.query("update activities set setup_step = $2 where id = $1", [activity.id, step]);
 }
 
 /** Makes a draft visible to students. Publishing twice is a no-op; an activity without points can't be published. */

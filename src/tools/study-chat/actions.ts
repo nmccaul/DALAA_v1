@@ -22,7 +22,6 @@ import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
 import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
 import { typeRequestFrom } from "./wizard/type-request";
-import { runTrial, trialEnding, TRIAL_LEVELS, type Trial, type TrialLevel } from "./trial";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
 
@@ -231,22 +230,4 @@ export async function removeGuideAction(_prev: FormState, form: FormData): Promi
   const removed = await removeActivityGuide(db(), actor, activityId, String(form.get("guideId") ?? ""));
   if (!removed.ok) return { error: removed.reason };
   redirect(keepPicker(reviewPath(courseId, activityId), pickerRequest(form.get(PICKER_PARAM))));
-}
-
-export type TrialState = { error?: string; trial?: Trial & { ending: string } };
-
-/** The review screen's "Try it with a sample student": runs one trial of the saved settings. */
-export async function trialAction(_prev: TrialState, form: FormData): Promise<TrialState> {
-  const actor = await requireActor();
-  const choice = String(form.get("level") ?? "");
-  if (!(TRIAL_LEVELS as readonly string[]).includes(choice)) return { error: "Pick a struggling or a strong student." };
-  const chat = chatModel();
-  const outcome = await runTrial(
-    db(),
-    { student: chat, reply: chat, check: chat, grader: graderModel() },
-    actor,
-    String(form.get("activityId") ?? ""),
-    choice as TrialLevel,
-  );
-  return outcome.ok ? { trial: { ...outcome.trial, ending: trialEnding(outcome.trial) } } : { error: outcome.reason };
 }

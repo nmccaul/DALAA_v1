@@ -37,6 +37,15 @@ export function isSetupStep(value: unknown): value is SetupStep {
   return (SETUP_STEPS as readonly unknown[]).includes(value);
 }
 
+/**
+ * The URL step that opens a draft where the teacher left off: the setup step
+ * they were last on, else the first (feedback 391261a8).
+ */
+export const RESUME_STEP = "resume";
+
+/** Where `resume` goes: the step last stored, when it's still a setup step. */
+export const resumeStep = (stored: string | null): SetupStep => (isSetupStep(stored) ? stored : SETUP_STEPS[0]);
+
 export const setupPath = (courseId: string, activityId: string, step: SetupStep) =>
   `/courses/${courseId}/activities/${activityId}/setup/${step}`;
 

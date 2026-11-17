@@ -24,6 +24,7 @@ export type ActivityRow = {
   assigned: boolean;
   /** The Canvas assignment DALAA made for it (Assign), if any. */
   canvasAssignmentId: string | null;
+  updatedAt: Date;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,7 +42,7 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
               where t.activity_id = a.id and r.status = 'graded') as graded,
             ${ASSIGNED_SQL} as assigned,
-            a.canvas_assignment_id as "canvasAssignmentId"
+            a.canvas_assignment_id as "canvasAssignmentId", a.updated_at as "updatedAt"
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}

@@ -9,7 +9,18 @@ import type { Db } from "@/db/types";
 import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
 import { answering, draft, mirrorMaterials } from "./test-fixtures";
-import { runTrial, studentPrompt, trialEnding, TRIAL_BUSY, TRIAL_FAILED, TRIAL_MAX_TURNS, type TrialModels } from "./trial";
+import {
+  runTrial,
+  studentPrompt,
+  trialEnding,
+  TRIAL_BUSY,
+  TRIAL_CHAT_MS,
+  TRIAL_FAILED,
+  TRIAL_MAX_TURNS,
+  TRIAL_STOPPED,
+  type TrialModels,
+  type TrialStep,
+} from "./trial";
 
 const GUIDE = "ANSWER KEY: the winter cash squeeze sinks a second store.";
 const READING = "Harbor Bikes sells bikes in a beach town.";
@@ -103,6 +114,35 @@ describe("trying a Study Chat with a sample student", () => {
     expect(new Set(calls.map((c) => `${c.purpose} ${c.course_id} ${c.user_id}`))).toEqual(new Set([`trial ${course} ${prof.userId}`]));
   });
 
+  it("reports each step as it happens, so the teacher watches it (feedback 21b68dd3)", async () => {
+    const id = await activity(draft({ completion: completion({ maxTurns: 2 }) }));
+    const steps: TrialStep[] = [];
+    const outcome = await runTrial(db, models(), prof, id, "strong", { onStep: (step) => steps.push(step) });
+    expect(outcome.ok).toBe(true);
+    const turn = { message: "I'd wait until cash flow is steadier.", reply: "Why do you say that?" };
+    expect(steps).toEqual([
+      { type: "start", opening: draft().scenarios[0].opening },
+      { type: "turn", turn },
+      { type: "turn", turn },
+      { type: "grading" },
+    ]);
+  });
+
+  it("stops chatting after its time so grading fits the route's limit, and stops when the teacher leaves", async () => {
+    const id = await activity(draft({ completion: completion({ maxTurns: null }) }));
+    let clock = 0;
+    const timed = await runTrial(db, models(), prof, id, "strong", { now: () => (clock += TRIAL_CHAT_MS / 2) });
+    expect(timed).toMatchObject({ ok: true, trial: { endedBy: "time" } });
+    expect(timed.ok && trialEnding(timed.trial)).toBe("Ended after 1 message from the sample student: a practice run stops after 3 minutes of chatting.");
+
+    const left = new AbortController();
+    const m = models();
+    const stopped = await runTrial(db, m, prof, id, "strong", { onStep: (step) => step.type === "turn" && left.abort(), signal: left.signal });
+    expect(stopped).toEqual({ ok: false, reason: TRIAL_STOPPED });
+    expect((m.grader as MockLanguageModelV4).doGenerateCalls).toHaveLength(0);
+    expect(await db.query("select 1 from sample_trials")).toEqual([]);
+  });
+
   it("stops at the chat's turn limit, or at the trial's cap when the chat has none", async () => {
     const limited = await runTrial(db, models(), prof, await activity(draft({ completion: completion({ maxTurns: 3 }) })), "strong");
     expect(limited).toMatchObject({ ok: true, trial: { endedBy: "turns" } });
@@ -148,7 +188,7 @@ describe("trying a Study Chat with a sample student", () => {
     expect(await runTrial(db, models(), prof, id, "strong")).toEqual({ ok: false, reason: TRIAL_BUSY });
     expect(await db.query("select 1 from ai_calls")).toEqual([]);
 
-    await db.query("update sample_trials set started_at = now() - interval '11 minutes'");
+    await db.query("update sample_trials set started_at = now() - interval '7 minutes'");
     expect(await runTrial(db, models(), prof, id, "strong")).toMatchObject({ ok: true });
     expect(await db.query("select 1 from sample_trials")).toEqual([]);
   });
