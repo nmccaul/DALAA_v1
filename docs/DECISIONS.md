@@ -424,3 +424,23 @@ and bc22f7df asked for the same).
 - **"About how long?" moved to Chat options**, as buttons that set "Most
   student messages" (the choice itself isn't stored). New chats start at 12
   messages, no time limit, students can finish.
+
+### D-038 · Students can speak their messages (dictation)
+*2026-11-17, Nathan*
+- **Chat options has "How students answer": Typing, Speaking, or Their
+  choice.** Typing is the default, and chats saved before this are typing.
+  With Their choice, the student switches between Type and Speak above the
+  message box.
+- **Speaking is dictation, not a voice conversation.** The student presses
+  Speak, talks (up to 2 minutes), presses Stop, and what they said lands in
+  the message box for them to check and fix before they send it. The chat,
+  its limits and its grading are exactly the same as typing. A spoken
+  back-and-forth with the character ("Voice conversation", real-time audio)
+  stays Coming soon on Chat options.
+- **The browser records; our server transcribes** through the AI Gateway
+  (`dictationModel()`, `openai/gpt-4o-mini-transcribe` unless
+  `DICTATION_MODEL` says otherwise; about $0.003 a minute). Chosen over the
+  browser's own speech recognition, which is free but missing in Firefox and
+  sends students' voices to Google outside our ledger. The audio isn't kept.
+  Each transcription is an `ai_calls` row ('chat.dictate'); a student gets
+  200 a day.

@@ -13,6 +13,7 @@ export const draft = (over: Partial<StudyChatSettings> = {}): StudyChatSettings 
   mode: "case-chat",
   studentWork: false,
   showProgress: false,
+  answerWith: "typing",
   goal: "Recommend whether Harbor Bikes should open a second store, using evidence from the case.",
   scenarios: [
     {
@@ -47,7 +48,7 @@ export const draft = (over: Partial<StudyChatSettings> = {}): StudyChatSettings 
 /** What the model answers when drafting: `draft` without the teacher's own switches, which it isn't asked for. */
 export function drafted(over: Partial<StudyChatSettings> = {}) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { studentWork, showProgress, ...answer } = draft(over);
+  const { studentWork, showProgress, answerWith, ...answer } = draft(over);
   // The model never fills the minimum (schema.ts DraftCompletion).
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { minTurns, ...completion } = answer.completion;
