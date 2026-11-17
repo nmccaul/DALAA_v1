@@ -465,3 +465,17 @@ and bc22f7df asked for the same).
   module, so it can move to object storage later without touching callers.
   The file is served only to a student who can take the activity or a
   teacher of its course, and only when it's a reading of that activity.
+
+### D-040 · The student chat looks like a chat app
+*2026-11-17, Nathan ("make this chat more inviting … similar to ChatGPT, Claude or Gemini")*
+- **One slim header** with the character's initials, name and role, and the
+  meters as small labelled pills ("Messages left 11 of 12", "10 min left").
+  The big meter card is gone.
+- **The character's messages are open text beside its initials; the
+  student's sit in a bubble on the right.** Three dots show while the reply
+  is coming. Teachers' transcripts and the practice run use the same look.
+- **One rounded message box** that grows as the student writes, with the
+  microphone and a round send arrow inside it. This replaces D-038's
+  Type/Speak switch: with Speaking or Their choice the microphone is simply
+  there, and the student can always type or fix words.
+
