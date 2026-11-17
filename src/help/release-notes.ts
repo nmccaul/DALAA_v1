@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-17",
     changes: [
+      "Fixed: on Insights, \"Weakest\" marked only the first of several criteria with the same low average, even when every criterion scored the same. Now every tied criterion is marked, and none is when they're all level.",
       "Fixed: when a chat's time limit ran out, students saw \"time's up\" but their chat wasn't handed in. It now ends and is graded right away.",
       "The practice run with an AI student shows the conversation as it happens, then \"Grading it…\", then the grade, instead of a spinner. It stops after 3 minutes of chatting so it always finishes, and if it's cut off you keep what it said so far.",
       "Fixed: after a practice run that didn't finish, another couldn't start for 10 minutes.",
