@@ -39,6 +39,24 @@ describe("canvas client against practice Canvas", () => {
     ]);
   });
 
+  it("asks Canvas for English, so built-in names like the default term aren't translated at random", async () => {
+    // Node's fetch sends `Accept-Language: *`, and Canvas answers a wildcard
+    // with its first locale (Arabic): "Default Term" came back as
+    // "فصل دراسي افتراضي" (feedback 1f9a1ae0).
+    const seen: (string | null)[] = [];
+    const client = canvasClient({
+      baseUrl: BASE,
+      token: PRACTICE_TOKEN,
+      fetch: async (input, init) => {
+        const req = new Request(input, init);
+        seen.push(req.headers.get("accept-language"));
+        return practiceCanvas(req);
+      },
+    });
+    await client.coursesTaught();
+    expect(seen).toEqual(["en"]);
+  });
+
   it("includes a cross-listed section", async () => {
     const sections = await practice().client.sections(1101);
     expect(sections.filter((s) => s.nonxlist_course_id !== null)).toHaveLength(1);

@@ -189,7 +189,14 @@ export function canvasClient(config: CanvasConfig) {
     try {
       res = await doFetch(url, {
         method: send ? (send.method ?? "POST") : "GET",
-        headers: { Authorization: `Bearer ${config.token}`, Accept: accept, ...(send && { "Content-Type": send.type }) },
+        headers: {
+          Authorization: `Bearer ${config.token}`,
+          Accept: accept,
+          // Node's fetch sends `Accept-Language: *`, and Canvas answers that with
+          // its first locale (Arabic), so "Default Term" arrived translated.
+          "Accept-Language": "en",
+          ...(send && { "Content-Type": send.type }),
+        },
         body: send ? JSON.stringify(send.body) : undefined,
         signal: AbortSignal.timeout(timeoutMs),
         cache: "no-store",
