@@ -175,11 +175,14 @@ export function ChatRoom({
   const canSend = pending === null && !dictating && draft.trim() !== "";
 
   return (
-    <section aria-label="Chat" className="relative flex flex-col gap-5">
-      {/* Progress sits apart from the chat (Nathan, 2026-11-17): in the margin beside it on a wide screen, above it
-          otherwise. A finished chat is folded under the grade, so it has none. */}
+    <section
+      aria-label="Chat"
+      className={`flex flex-col gap-5 ${over ? "" : "md:grid md:grid-cols-[minmax(0,1fr)_13rem] md:items-start md:gap-8"}`}
+    >
+      {/* Progress sits apart from the chat, beside it, so the chat comes first (Nathan, 2026-11-17); on a phone, a
+          slim strip above it. A finished chat is folded under the grade, so it has none. */}
       {!over && (
-        <aside aria-label="Your progress" className="xl:absolute xl:inset-y-0 xl:left-full xl:ml-6 xl:w-56">
+        <aside aria-label="Your progress" className="md:sticky md:top-4 md:order-2">
           <ProgressPanel
             messagesLeft={maxTurns === null ? null : Math.max(0, maxTurns - sent)}
             maxTurns={maxTurns}
@@ -191,121 +194,123 @@ export function ChatRoom({
           />
         </aside>
       )}
-      <header className="flex min-w-0 items-center gap-3 border-b border-border pb-4">
-        <Avatar name={view.persona.name} />
-        <div className="min-w-0 leading-tight">
-          <p className="truncate font-semibold">{view.persona.name}</p>
-          <p className="truncate text-sm text-muted">{view.persona.role}</p>
-        </div>
-      </header>
-
-      <div role="log" aria-live="polite" className="flex flex-col gap-6">
-        <Bubble from={view.persona.name} text={view.opening} />
-        {turns.map((t, i) => (
-          <div key={i} className="flex flex-col gap-6">
-            <Bubble mine text={t.message} />
-            <Bubble from={view.persona.name} text={t.reply} />
+      <div className="flex min-w-0 flex-col gap-5">
+        <header className="flex min-w-0 items-center gap-3 border-b border-border pb-4">
+          <Avatar name={view.persona.name} />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate font-semibold">{view.persona.name}</p>
+            <p className="truncate text-sm text-muted">{view.persona.role}</p>
           </div>
-        ))}
-        {pending && (
-          <div className="flex flex-col gap-6">
-            <Bubble mine text={pending.message} />
-            {pending.failed === null ? (
-              pending.reply ? (
-                <Bubble from={view.persona.name} text={pending.reply} />
-              ) : (
-                <Typing name={view.persona.name} />
-              )
-            ) : (
-              <div className="ml-11 flex flex-col items-start gap-2 rounded-2xl border border-danger/40 bg-danger-soft px-4 py-3">
-                <p className="text-sm">{pending.failed}</p>
-                <Button variant="secondary" onClick={() => void send(pending.key, pending.message)}>
-                  Send again
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-        <div ref={end} />
-      </div>
+        </header>
 
-      {over ? (
-        <p className="rounded-2xl bg-subtle px-5 py-4 text-center font-medium">{over}</p>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-          className="flex flex-col gap-2 sm:sticky sm:bottom-3"
-        >
-          <div className="flex flex-col rounded-3xl border border-border-strong bg-surface shadow-md focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
-            <label htmlFor="chat-message" className="sr-only">
-              Your message to {view.persona.name}
-            </label>
-            <textarea
-              ref={box}
-              id="chat-message"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-              maxLength={MAX_MESSAGE_LENGTH}
-              rows={1}
-              placeholder={placeholder}
-              className="max-h-60 min-h-12 resize-none bg-transparent px-5 pt-4 pb-1 leading-relaxed outline-none! placeholder:text-muted"
-            />
-            <div className="flex items-center justify-between gap-3 px-3 pb-3">
-              <div className="min-w-0">
-                {canSpeak && (
-                  <DictationButton
-                    activityId={activityId}
-                    disabled={pending !== null}
-                    onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
-                    onBusy={setDictating}
-                  />
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={!canSend}
-                aria-label={busy ? "Waiting for the reply" : "Send"}
-                title={busy ? "Waiting for the reply" : "Send"}
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover disabled:bg-border-strong"
-              >
-                {busy ? <Stop size={16} weight="fill" aria-hidden /> : <ArrowUp size={20} weight="bold" aria-hidden />}
-              </button>
+        <div role="log" aria-live="polite" className="flex flex-col gap-6">
+          <Bubble from={view.persona.name} text={view.opening} />
+          {turns.map((t, i) => (
+            <div key={i} className="flex flex-col gap-6">
+              <Bubble mine text={t.message} />
+              <Bubble from={view.persona.name} text={t.reply} />
             </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 text-sm text-muted">
-            <span className="hidden sm:inline">Enter to send · Shift + Enter for a new line</span>
-            <span className="flex flex-wrap items-center gap-2">
-              {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && <span>You can finish after {minTurns} messages.</span>}
-              {studentCanFinish && turns.length >= Math.max(1, minTurns ?? 1) && !confirming && (
-                <button type="button" onClick={() => setConfirming(true)} disabled={pending !== null} className="underline hover:text-text disabled:opacity-50">
-                  Finish the chat
-                </button>
-              )}
-              {confirming && (
-                <>
-                  <span className="text-text">Finish now? You can&apos;t send more messages after this.</span>
-                  <Button type="button" variant="secondary" onClick={finish} disabled={finishing}>
-                    Finish chat
+          ))}
+          {pending && (
+            <div className="flex flex-col gap-6">
+              <Bubble mine text={pending.message} />
+              {pending.failed === null ? (
+                pending.reply ? (
+                  <Bubble from={view.persona.name} text={pending.reply} />
+                ) : (
+                  <Typing name={view.persona.name} />
+                )
+              ) : (
+                <div className="ml-11 flex flex-col items-start gap-2 rounded-2xl border border-danger/40 bg-danger-soft px-4 py-3">
+                  <p className="text-sm">{pending.failed}</p>
+                  <Button variant="secondary" onClick={() => void send(pending.key, pending.message)}>
+                    Send again
                   </Button>
-                  <button type="button" onClick={() => setConfirming(false)} className="underline hover:text-text">
-                    Keep chatting
-                  </button>
-                </>
+                </div>
               )}
-            </span>
-          </div>
-          {finishError && <p className="px-2 text-sm text-danger">{finishError}</p>}
-        </form>
-      )}
+            </div>
+          )}
+          <div ref={end} />
+        </div>
+
+        {over ? (
+          <p className="rounded-2xl bg-subtle px-5 py-4 text-center font-medium">{over}</p>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
+            }}
+            className="flex flex-col gap-2 sm:sticky sm:bottom-3"
+          >
+            <div className="flex flex-col rounded-3xl border border-border-strong bg-surface shadow-md focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+              <label htmlFor="chat-message" className="sr-only">
+                Your message to {view.persona.name}
+              </label>
+              <textarea
+                ref={box}
+                id="chat-message"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
+                maxLength={MAX_MESSAGE_LENGTH}
+                rows={1}
+                placeholder={placeholder}
+                className="max-h-60 min-h-12 resize-none bg-transparent px-5 pt-4 pb-1 leading-relaxed outline-none! placeholder:text-muted"
+              />
+              <div className="flex items-center justify-between gap-3 px-3 pb-3">
+                <div className="min-w-0">
+                  {canSpeak && (
+                    <DictationButton
+                      activityId={activityId}
+                      disabled={pending !== null}
+                      onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
+                      onBusy={setDictating}
+                    />
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={!canSend}
+                  aria-label={busy ? "Waiting for the reply" : "Send"}
+                  title={busy ? "Waiting for the reply" : "Send"}
+                  className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover disabled:bg-border-strong"
+                >
+                  {busy ? <Stop size={16} weight="fill" aria-hidden /> : <ArrowUp size={20} weight="bold" aria-hidden />}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 text-sm text-muted">
+              <span className="hidden sm:inline">Enter to send · Shift + Enter for a new line</span>
+              <span className="flex flex-wrap items-center gap-2">
+                {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && <span>You can finish after {minTurns} messages.</span>}
+                {studentCanFinish && turns.length >= Math.max(1, minTurns ?? 1) && !confirming && (
+                  <button type="button" onClick={() => setConfirming(true)} disabled={pending !== null} className="underline hover:text-text disabled:opacity-50">
+                    Finish the chat
+                  </button>
+                )}
+                {confirming && (
+                  <>
+                    <span className="text-text">Finish now? You can&apos;t send more messages after this.</span>
+                    <Button type="button" variant="secondary" onClick={finish} disabled={finishing}>
+                      Finish chat
+                    </Button>
+                    <button type="button" onClick={() => setConfirming(false)} className="underline hover:text-text">
+                      Keep chatting
+                    </button>
+                  </>
+                )}
+              </span>
+            </div>
+            {finishError && <p className="px-2 text-sm text-danger">{finishError}</p>}
+          </form>
+        )}
+      </div>
     </section>
   );
 }
@@ -367,7 +372,6 @@ function ProgressPanel({
         unit={`of ${points.total}`}
         share={points.total === 0 ? 0 : points.covered / points.total}
         good
-        wide
         note={points.covered === 0 ? "They show up here as you make them." : null}
       >
         {points.names.length > 0 && (
@@ -385,27 +389,52 @@ function ProgressPanel({
   ].filter(Boolean);
 
   if (stats.length === 0 && minTurns === null && !progress?.position) return null;
+  const minimum = minTurns !== null && (
+    <p className={`flex gap-1.5 text-sm ${minimumMet ? "font-medium text-success" : "text-muted"}`}>
+      <span aria-hidden>{minimumMet ? "✓" : "○"}</span>
+      <span>
+        {minimumMet
+          ? `Minimum reached: ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
+          : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end (${sent} so far)`}
+      </span>
+    </p>
+  );
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm xl:sticky xl:top-6">
-      <h2 className="text-xs font-bold tracking-wide text-accent-text uppercase">Your progress</h2>
-      {stats.length > 0 && <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] xl:grid-cols-1">{stats}</div>}
-      {minTurns !== null && (
-        <p className={`flex gap-1.5 text-sm ${minimumMet ? "font-medium text-success" : "text-muted"}`}>
-          <span aria-hidden>{minimumMet ? "✓" : "○"}</span>
-          <span>
-            {minimumMet
-              ? `Minimum reached: ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
-              : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end (${sent} so far)`}
-          </span>
-        </p>
-      )}
-      {progress?.position && (
-        <p className="text-sm">
-          <span className="text-muted">Your position: </span>
-          <span className="font-medium">{progress.position}</span>
-        </p>
-      )}
-    </div>
+    <>
+      {/* A phone: one slim strip, so the chat stays in view. */}
+      <div className="flex flex-col gap-2 rounded-2xl bg-subtle px-3 py-2.5 md:hidden">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {messagesLeft !== null && maxTurns !== null && (
+            <span className={messagesLeft <= 2 ? "text-danger" : ""}>
+              <span className="font-semibold tabular-nums">{messagesLeft}</span> of {maxTurns} messages left
+            </span>
+          )}
+          {timeLimitMinutes !== null && (
+            <span className={left !== null && left <= 2 ? "text-danger" : ""}>
+              <span className="font-semibold tabular-nums">{left ?? timeLimitMinutes}</span> min {left === null ? "once you start" : "left"}
+            </span>
+          )}
+          {points && (
+            <span className="text-success">
+              <span className="font-semibold tabular-nums">{points.covered}</span> of {points.total} key points
+            </span>
+          )}
+        </div>
+        {minTurns !== null && !minimumMet && <span className="text-sm text-muted">Send at least {minTurns} before the chat can end ({sent} so far)</span>}
+      </div>
+      {/* Beside the chat. */}
+      <div className="hidden flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm md:flex">
+        <h2 className="text-xs font-bold tracking-wide text-accent-text uppercase">Your progress</h2>
+        {stats}
+        {minimum}
+        {progress?.position && (
+          <p className="text-sm">
+            <span className="text-muted">Your position: </span>
+            <span className="font-medium">{progress.position}</span>
+          </p>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -417,7 +446,6 @@ function Stat({
   share,
   low = false,
   good = false,
-  wide = false,
   note,
   children,
 }: {
@@ -427,17 +455,15 @@ function Stat({
   share: number;
   low?: boolean;
   good?: boolean;
-  /** Takes the whole row on a phone, for its list. */
-  wide?: boolean;
   note?: string | null;
   children?: ReactNode;
 }) {
   const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
   return (
-    <div className={`flex min-w-0 flex-col gap-1.5 ${wide ? "col-span-2 sm:col-span-1" : ""}`}>
+    <div className="flex min-w-0 flex-col gap-1.5">
       <span className="text-sm text-muted">{label}</span>
       <span className={`flex items-baseline gap-1.5 ${low ? "text-danger" : ""}`}>
-        <span className="text-3xl leading-none font-semibold tabular-nums">{value}</span>
+        <span className="text-2xl leading-none font-semibold tabular-nums">{value}</span>
         <span className="text-sm text-muted">{unit}</span>
       </span>
       <span

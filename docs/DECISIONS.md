@@ -478,11 +478,14 @@ and bc22f7df asked for the same).
   microphone and a round send arrow inside it. This replaces D-038's
   Type/Speak switch: with Speaking or Their choice the microphone is simply
   there, and the student can always type or fix words.
-- **Progress gets its own "Your progress" panel, apart from the chat**
-  (Nathan, same day: "better indicators … separate from the chat"). Beside
-  the chat in the page margin on a wide screen (it stays in view while the
-  chat scrolls); above the chat otherwise, Canvas's frame included. Each
-  count is a big number with what it's out of and a bar: messages left, time
-  left, key points made (only the ones made are named). The minimum and the
-  position sit under them. It turns red at 2 messages or 2 minutes left.
+- **Progress gets its own "Your progress" column beside the chat**
+  (Nathan, same day: "better indicators … separate from the chat", then
+  "put it on the side so the chat is the first area of interest"). From
+  tablet width up, Canvas's frame included, it's a slim column to the right
+  that stays in view; the student pages are `max-w-5xl` to make room, and
+  every other step keeps to reading width (`max-w-3xl`). On a phone it's one
+  slim strip above the chat ("11 of 12 messages left · 30 min left · 2 of 5
+  key points"). Each count is a number, what it's out of, and a bar: messages
+  left, time left, key points made (only the ones made are named); the
+  minimum and the position sit under them. Red at 2 messages or 2 minutes.
 

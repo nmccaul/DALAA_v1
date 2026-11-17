@@ -7,7 +7,8 @@ import { signOut } from "../sign-in/actions";
 
 /**
  * The student shell: logo, who's signed in, and the activity. No areas to
- * navigate; a student is here for one thing. Inside Canvas (a frame) Canvas
+ * navigate; a student is here for one thing. Wide enough for the chat and its
+ * progress side by side; reading-width steps keep to `max-w-3xl` themselves. Inside Canvas (a frame) Canvas
  * draws the header, so only the activity shows (D-032).
  */
 export default async function StudentLayout({ children }: LayoutProps<"/activities">) {
@@ -18,7 +19,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/activiti
     <>
       {!framed && (
         <header className="border-b border-border bg-surface">
-          <div className="mx-auto flex h-14 max-w-3xl items-center gap-4 px-4 sm:px-6">
+          <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4 sm:px-6">
             <Link href="/" className="shrink-0" aria-label="DALAA home">
               <Logo />
             </Link>
@@ -31,7 +32,7 @@ export default async function StudentLayout({ children }: LayoutProps<"/activiti
           </div>
         </header>
       )}
-      <main id="main" className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-8 pb-24 sm:px-6">
+      <main id="main" className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pt-8 pb-24 sm:px-6">
         {children}
       </main>
       <FeedbackButton />
