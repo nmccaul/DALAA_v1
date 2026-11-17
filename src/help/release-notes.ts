@@ -19,6 +19,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "A draft reopens on the step you were last on. If you step away mid-setup, the Activities tab shows \"You're still setting up …\" with a link back.",
       "Insights is redesigned: pick an assignment to see how the class did at a glance (how many finished, the average, the weakest criterion, the point most students missed) with charts of the scores, the rubric and the key points. \"Analyze conversations\" now leads with a one-sentence summary and the three biggest takeaways, and takes seconds instead of minutes.",
       "On an assignment's Insights you can ask questions about the class (\"What should I reteach?\", \"Who struggled most, and why?\") and get an answer from the students' conversations, with a link to each student it mentions.",
+      "The + Materials menu no longer lists \"Link a Canvas Page\" and \"Link a Canvas File\": those are already in the Materials list, and the menu now just says so.",
     ],
   },
   {
