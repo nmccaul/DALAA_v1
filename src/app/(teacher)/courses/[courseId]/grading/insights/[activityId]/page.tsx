@@ -6,7 +6,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { finishedCount, getBrief, type ClassBrief, type SavedBrief } from "@/results/brief";
 import { listCourseGrades } from "@/results/grading";
-import { classInsights, type ClassInsights } from "@/results/insights";
+import { classInsights, weakestCriteria, type ClassInsights } from "@/results/insights";
 import {
   BarRow,
   Histogram,
@@ -106,7 +106,8 @@ export default async function AssignmentInsightsPage({ params, searchParams }: P
 
 /** Four numbers a teacher reads first, all from saved grades. */
 function Stats({ view, points, finished, students }: { view: ClassInsights; points: number; finished: number; students: number }) {
-  const weakest = view.criteria.length > 1 ? view.criteria.reduce((w, c) => (c.average / c.max < w.average / w.max ? c : w)) : null;
+  const lowest = weakestCriteria(view.criteria);
+  const weakest = lowest.length === 1 ? lowest[0] : null;
   const missed = view.touchpoints.length > 0 ? view.touchpoints[view.touchpoints.length - 1] : null;
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -118,9 +119,17 @@ function Stats({ view, points, finished, students }: { view: ClassInsights; poin
       />
       <StatTile
         label="Weakest criterion"
-        value={<span className="text-lg leading-snug">{weakest?.label ?? "—"}</span>}
-        note={weakest ? `${pointsFormat.format(weakest.average)} of ${pointsFormat.format(weakest.max)} on average` : undefined}
-        tone={weakest && weakest.average / weakest.max < 0.7 ? "warn" : "plain"}
+        value={<span className="text-lg leading-snug">{weakest ? weakest.label : lowest.length > 1 ? `${lowest.length} tied` : "—"}</span>}
+        note={
+          weakest
+            ? `${pointsFormat.format(weakest.average)} of ${pointsFormat.format(weakest.max)} on average`
+            : lowest.length > 1
+              ? `${share(lowest[0].average, lowest[0].max)}% on average each`
+              : view.criteria.length > 1 && view.graded > 0
+                ? "Every criterion scored the same"
+                : undefined
+        }
+        tone={lowest.length > 0 && lowest[0].average / lowest[0].max < 0.7 ? "warn" : "plain"}
       />
       <StatTile
         label="Most-missed point"
@@ -272,6 +281,7 @@ function Takeaways({
 /** The class's grades as pictures: the spread, each criterion, each point raised, each position. */
 function Numbers({ view, quoteHref, nameOf }: { view: ClassInsights; quoteHref: (attemptId: string) => string; nameOf: (attemptId: string) => string | null }) {
   const criteria = [...view.criteria].sort((a, b) => a.average / a.max - b.average / b.max);
+  const weakest = new Set(weakestCriteria(view.criteria).map((c) => c.label));
   const positions = [...view.positions.map((p) => ({ label: p.label, count: p.students })), ...(view.noPosition > 0 ? [{ label: "No position", count: view.noPosition }] : [])];
   return (
     <section aria-labelledby="numbers-title" className="flex flex-col gap-4">
@@ -287,14 +297,14 @@ function Numbers({ view, quoteHref, nameOf }: { view: ClassInsights; quoteHref: 
         </Panel>
         {criteria.length > 0 && (
           <Panel title="Rubric" note="The class average on each criterion, weakest first.">
-            {criteria.map((c, i) => (
+            {criteria.map((c) => (
               <BarRow
                 key={c.label}
                 label={c.label}
                 value={`${pointsFormat.format(c.average)} of ${pointsFormat.format(c.max)}`}
                 percent={share(c.average, c.max)}
                 tone={c.average / c.max < 0.7 ? "warn" : "accent"}
-                badge={i === 0 && criteria.length > 1 ? "Weakest" : undefined}
+                badge={weakest.has(c.label) ? "Weakest" : undefined}
               />
             ))}
           </Panel>
