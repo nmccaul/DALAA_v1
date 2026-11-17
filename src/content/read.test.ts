@@ -91,6 +91,17 @@ describe("readContent: .pdf files", () => {
     expect(r.ok && r.body).toMatch(/Harbor Bikes\s+Sales fell 20 percent\./);
   });
 
+  it("rejoins a paragraph's printed lines into one", async () => {
+    const r = await readContent({
+      kind: "file",
+      name: "harbor.pdf",
+      bytes: pdf(["Sales fell twenty percent last year as the company lost its biggest", "retail partner.", "The board met in March."]),
+    });
+    expect(r.ok && r.body).toBe(
+      "Sales fell twenty percent last year as the company lost its biggest retail partner.\nThe board met in March.",
+    );
+  });
+
   it("says a PDF without text may be a scan", async () => {
     expect(await readContent({ kind: "file", name: "scan.pdf", bytes: pdf() })).toEqual({
       ok: false,
