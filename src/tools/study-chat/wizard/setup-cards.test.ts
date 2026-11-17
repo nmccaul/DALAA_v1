@@ -4,7 +4,7 @@ import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
 import { blankSettings, STUDY_CHAT } from "../create";
 import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupCards, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
-import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
+import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, RESUME_STEP, resumeStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
 
 describe("shownCards", () => {
   it("shows every card without a filter, and only the asked-for ones in screen order with one", () => {
@@ -76,8 +76,11 @@ describe("wizard steps 4–6 extras", () => {
     expect(SETUP_COMING_SOON.grading).toContain("Use a saved rubric");
   });
 
-  it("opens a Study Chat draft from the Activities tab at the first setup step", () => {
-    expect(teacherActivityPath("c1", { id: "a1", tool: STUDY_CHAT, status: "draft" })).toBe(setupPath("c1", "a1", SETUP_STEPS[0]));
+  it("opens a Study Chat draft from the Activities tab where the teacher left it, else at the first setup step (feedback 391261a8)", () => {
+    expect(teacherActivityPath("c1", { id: "a1", tool: STUDY_CHAT, status: "draft" })).toBe(`/courses/c1/activities/a1/setup/${RESUME_STEP}`);
+    expect(setupPath("c1", "a1", resumeStep("review"))).toBe(setupPath("c1", "a1", "review"));
+    expect(resumeStep(null)).toBe(SETUP_STEPS[0]);
+    expect(resumeStep("type")).toBe(SETUP_STEPS[0]);
   });
 });
 

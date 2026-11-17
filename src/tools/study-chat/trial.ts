@@ -8,6 +8,10 @@
  * The simulated student knows only what a real student sees (student-view.ts)
  * and the reading: never the situation, the guide, the positions, the
  * touchpoints or the rubric. A teacher runs one trial at a time.
+ *
+ * Each step is reported as it happens (`onStep`), so the teacher watches the
+ * conversation instead of a spinner (feedback 21b68dd3), and the run stops
+ * when they leave (`signal`).
  */
 
 import type { LanguageModel, ModelMessage } from "ai";
@@ -32,8 +36,15 @@ export type TrialLevel = (typeof TRIAL_LEVELS)[number];
 /** A trial stops here even when the chat has no limit of its own. */
 export const TRIAL_MAX_TURNS = 12;
 
-/** A trial row this old belongs to a request that died; the next trial takes it over. */
-const STALE_TRIAL_MINUTES = 10;
+/**
+ * A trial row this old belongs to a request that died; the next trial takes
+ * it over. Just past the trial route's 5-minute limit: a run cut off there
+ * never frees its row, and the teacher was locked out for 10 minutes.
+ */
+const STALE_TRIAL_MINUTES = 6;
+
+/** The sample student stops chatting after this long, so grading finishes inside the route's 5 minutes. */
+export const TRIAL_CHAT_MS = 180_000;
 
 /** Why the trial stopped, for the teacher. */
 export function trialEnding(trial: Pick<Trial, "endedBy" | "turns">): string {
@@ -41,6 +52,7 @@ export function trialEnding(trial: Pick<Trial, "endedBy" | "turns">): string {
   const after = `Ended after ${n} ${n === 1 ? "message" : "messages"} from the sample student`;
   if (trial.endedBy === "turns") return `${after}: it reached the chat's message limit.`;
   if (trial.endedBy === "question") return `${after}: they answered the chat's question.`;
+  if (trial.endedBy === "time") return `${after}: a practice run stops after 3 minutes of chatting.`;
   return `${after}: a sample student stops at ${TRIAL_MAX_TURNS}.`;
 }
 
@@ -52,8 +64,8 @@ export type Trial = {
   /** The work the sample student brought, when the chat asks for it. */
   work: StudentWork | null;
   turns: Exchange[];
-  /** What ended it: the chat's turn limit, its question answered, or the trial's cap. */
-  endedBy: "turns" | "question" | "cap";
+  /** What ended it: the chat's turn limit, its question answered, the trial's cap, or its time. */
+  endedBy: "turns" | "question" | "cap" | "time";
   /** NULL when the grader's answer never fit the rubric. */
   grade: GradedResult | null;
 };
@@ -62,6 +74,14 @@ export type TrialOutcome = { ok: true; trial: Trial } | { ok: false; reason: str
 
 export const TRIAL_BUSY = "A sample student is already running. Wait for it to finish.";
 export const TRIAL_FAILED = "The sample student couldn't finish: the AI didn't answer. Try again in a minute.";
+export const TRIAL_STOPPED = "The practice run stopped.";
+
+/** What the run reports as it goes: its start, the work brought, each exchange, then grading. */
+export type TrialStep =
+  | { type: "start"; opening: string }
+  | { type: "work"; work: StudentWork } | { type: "turn"; turn: Exchange } | { type: "grading" };
+
+export type TrialOptions = { onStep?: (step: TrialStep) => void; signal?: AbortSignal; now?: () => number };
 
 const LEVEL: Record<TrialLevel, string> = {
   struggling:
@@ -135,6 +155,7 @@ export async function runTrial(
   actor: Actor,
   activityId: string,
   level: TrialLevel,
+  { onStep = () => {}, signal, now = Date.now }: TrialOptions = {},
 ): Promise<TrialOutcome> {
   const activity = await getTaughtActivity(db, actor, activityId);
   if (!activity || activity.tool !== STUDY_CHAT) return { ok: false, reason: "We couldn't find that activity." };
@@ -143,6 +164,9 @@ export async function runTrial(
   const settings = parsed.data;
   if (!(await claimTrial(db, actor.userId))) return { ok: false, reason: TRIAL_BUSY };
 
+  const started = now();
+  const { opening } = settings.scenarios[0];
+  onStep({ type: "start", opening });
   try {
     const ctx: AiCallContext = { purpose: "trial", userId: actor.userId, courseId: activity.courseId };
     // The guides go to the chat model and the grader only, never to the sample student.
@@ -156,12 +180,17 @@ export async function runTrial(
           }),
         }
       : null;
+    if (work) onStep({ type: "work", work });
 
-    const { opening } = settings.scenarios[0];
     const { maxTurns, question } = settings.completion;
     const turns: Exchange[] = [];
     let endedBy: Trial["endedBy"] = "cap";
     while (turns.length < TRIAL_MAX_TURNS) {
+      if (signal?.aborted) return { ok: false, reason: TRIAL_STOPPED };
+      if (now() - started >= TRIAL_CHAT_MS) {
+        endedBy = "time";
+        break;
+      }
       const message = await say(db, models.student, ctx, {
         system: studentPrompt(settings, level, readings, work),
         messages: studentMessages(opening, turns),
@@ -171,6 +200,7 @@ export async function runTrial(
         messages: chatMessages(turns, message),
       });
       turns.push({ message, reply });
+      onStep({ type: "turn", turn: { message, reply } });
       if (maxTurns !== null && turns.length >= maxTurns) {
         endedBy = "turns";
         break;
@@ -181,6 +211,8 @@ export async function runTrial(
       }
     }
 
+    if (signal?.aborted) return { ok: false, reason: TRIAL_STOPPED };
+    onStep({ type: "grading" });
     const grade = await gradeTurns(db, models.grader, ctx, settings, turns, guides, work, null);
     return { ok: true, trial: { opening, work, turns, endedBy, grade } };
   } catch (error) {

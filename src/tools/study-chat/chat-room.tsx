@@ -64,6 +64,16 @@ export function ChatRoom({
     return () => clearInterval(timer);
   }, [startedAt, timeLimitMinutes, ended]);
 
+  // Time ran out with the page open: the chat ends here too, so the refresh
+  // below has the server close it and grade it (feedback f945b103). Waits for
+  // a reply on its way, which may end the chat itself, and a few seconds more:
+  // this page's clock started a moment before the server's.
+  useEffect(() => {
+    if (!timeUp || ended !== null || busy) return;
+    const wait = setTimeout(() => setEnded(ENDED.time), 5_000);
+    return () => clearTimeout(wait);
+  }, [timeUp, ended, busy]);
+
   // The chat ended here: fetch the page again so the grade (or "Being graded…") shows under it.
   useEffect(() => {
     if (ended !== null && initialEnded === null) router.refresh();

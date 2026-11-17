@@ -9,6 +9,15 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-17",
+    changes: [
+      "Fixed: when a chat's time limit ran out, students saw \"time's up\" but their chat wasn't handed in. It now ends and is graded right away.",
+      "The practice run with an AI student shows the conversation as it happens, then \"Grading it…\", then the grade, instead of a spinner. It stops after 3 minutes of chatting so it always finishes, and if it's cut off you keep what it said so far.",
+      "Fixed: after a practice run that didn't finish, another couldn't start for 10 minutes.",
+      "A draft reopens on the step you were last on. If you step away mid-setup, the Activities tab shows \"You're still setting up …\" with a link back.",
+    ],
+  },
+  {
     date: "2026-11-16",
     changes: [
       "Creating a Study Chat no longer writes everything for you. After step 2 the AI's role and the grading open empty: write them yourself, or click \"Draft this page with DALAA\". If you've written some boxes, DALAA fills in only the empty ones and keeps to what you wrote.",

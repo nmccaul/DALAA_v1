@@ -20,9 +20,9 @@ type Ending = { status: "in_progress" | "completed"; endedBy: keyof typeof ENDED
 
 const endedReason = (attempt: Ending) => (attempt.status === "completed" && attempt.endedBy ? ENDED[attempt.endedBy] : null);
 
-const line = (event: TurnEvent) => new TextEncoder().encode(`${JSON.stringify(event)}\n`);
+export const jsonLine = (event: unknown) => new TextEncoder().encode(`${JSON.stringify(event)}\n`);
 
-const ndjson = (body: ReadableStream<Uint8Array>) =>
+export const ndjson = (body: ReadableStream<Uint8Array>) =>
   new Response(body, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" } });
 
 /**
@@ -37,7 +37,7 @@ export function turnResponse(result: SendResult): { response: Response; settled:
   if (result.kind === "replay") {
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(line({ type: "reply", reply: result.reply, ended: endedReason(result.attempt), progress: result.progress }));
+        controller.enqueue(jsonLine({ type: "reply", reply: result.reply, ended: endedReason(result.attempt), progress: result.progress }));
         controller.close();
       },
     });
@@ -59,7 +59,7 @@ export function turnResponse(result: SendResult): { response: Response; settled:
   const send = (event: TurnEvent) => {
     if (!open) return;
     try {
-      controller.enqueue(line(event));
+      controller.enqueue(jsonLine(event));
     } catch {
       open = false;
     }
@@ -77,37 +77,38 @@ export function turnResponse(result: SendResult): { response: Response; settled:
   return { response: ndjson(body), settled };
 }
 
-/**
- * The events in a turn response's body. A body that stops before its last
- * event (a dropped connection) ends with `failed`, so the page always offers
- * to send again.
- */
-export async function* readTurnEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<TurnEvent> {
+/** The JSON values in an NDJSON body, one per line, until it ends or drops. Shared with the practice run's stream. */
+export async function* readJsonLines<T>(body: ReadableStream<Uint8Array>): AsyncGenerator<T> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let finished = false;
-  const parse = (text: string): TurnEvent | null => {
-    if (text.trim() === "") return null;
-    const event = JSON.parse(text) as TurnEvent;
-    if (event.type !== "text") finished = true;
-    return event;
-  };
   try {
     for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
-        const event = parse(buffer.slice(0, nl));
+        const text = buffer.slice(0, nl);
         buffer = buffer.slice(nl + 1);
-        if (event) yield event;
+        if (text.trim() !== "") yield JSON.parse(text) as T;
       }
     }
-    const last = parse(buffer);
-    if (last) yield last;
+    if (buffer.trim() !== "") yield JSON.parse(buffer) as T;
   } catch {
-    // Dropped mid-reply: reported below.
+    // Dropped mid-line: the caller sees the events stop.
+  }
+}
+
+/**
+ * The events in a turn response's body. A body that stops before its last
+ * event (a dropped connection) ends with `failed`, so the page always offers
+ * to send again.
+ */
+export async function* readTurnEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<TurnEvent> {
+  let finished = false;
+  for await (const event of readJsonLines<TurnEvent>(body)) {
+    if (event.type !== "text") finished = true;
+    yield event;
   }
   if (!finished) yield { type: "failed", reason: REPLY_FAILED };
 }

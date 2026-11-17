@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { activityMaterials } from "@/activities/materials";
-import { getTaughtActivity } from "@/activities/store";
+import { getTaughtActivity, rememberSetupStep } from "@/activities/store";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { testDb } from "@/test/db";
@@ -66,8 +66,13 @@ describe("creating a Study Chat", () => {
       settings: draft(),
       assigned: false,
       canvasCourseUrl: null,
+      setupStep: null,
     });
     expect(await getTaughtActivity(db, other, result.activityId)).toBeNull();
+
+    // The setup step the teacher is on is kept, so the draft reopens there (feedback 391261a8).
+    await rememberSetupStep(db, (await getTaughtActivity(db, prof, result.activityId))!, "review");
+    expect((await getTaughtActivity(db, prof, result.activityId))?.setupStep).toBe("review");
     // Written through the materials list only; the retired columns stay empty.
     expect((await activityMaterials(db, result.activityId)).readings.map((r) => r.id)).toEqual([content]);
     const [columns] = await db.query<{ content_id: string | null; guide_id: string | null }>(

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Fragment } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
 import { activityMaterials } from "@/activities/materials";
+import { rememberSetupStep } from "@/activities/store";
 import { countStartedAttempts } from "@/attempts/store";
 import { ButtonLink } from "@/components/ui";
 import { db } from "@/db/client";
@@ -16,7 +17,17 @@ import { StudyChatSettings, StudyChatSetupSettings } from "../schema";
 import { TrialPanel } from "../trial-panel";
 import { reviewSummary, setupCards, setupNote } from "./setup-cards";
 import { WizardShell } from "./shell";
-import { finishLaterPath, isSetupStep, previousSetupStep, SETUP_STEPS, setupPath, WIZARD_STEPS, type SetupStep } from "./steps";
+import {
+  finishLaterPath,
+  isSetupStep,
+  previousSetupStep,
+  RESUME_STEP,
+  resumeStep,
+  SETUP_STEPS,
+  setupPath,
+  WIZARD_STEPS,
+  type SetupStep,
+} from "./steps";
 
 /**
  * Wizard steps 4–7 on the drafted activity: each editing step shows its own
@@ -26,7 +37,9 @@ import { finishLaterPath, isSetupStep, previousSetupStep, SETUP_STEPS, setupPath
  * (ASSIGN_TO_CANVAS) or publishes it. The panel's note comes from the stored settings.
  */
 export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScreenProps) {
+  if (step === RESUME_STEP) redirect(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas));
   if (!isSetupStep(step)) notFound();
+  if (activity.status === "draft") await rememberSetupStep(db(), activity, step);
   const title = WIZARD_STEPS.find((s) => s.slug === step)!.question;
   // A draft may be part-written (the teacher writes, or asks DALAA); a published chat is complete.
   const parsed = (activity.status === "published" ? StudyChatSettings : StudyChatSetupSettings).safeParse(activity.settings);
