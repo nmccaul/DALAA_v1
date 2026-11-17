@@ -22,16 +22,21 @@ export function DictationButton({
   activityId,
   disabled,
   onText,
+  onBusy,
 }: {
   activityId: string;
   disabled: boolean;
   onText: (text: string) => void;
+  /** True while it's listening or writing it out, so the page holds Send until the words are in. */
+  onBusy: (busy: boolean) => void;
 }) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const abort = useRef<AbortController | null>(null);
+
+  useEffect(() => onBusy(state.kind !== "idle"), [state.kind, onBusy]);
 
   // Leaving the page stops the microphone and any upload.
   useEffect(
@@ -112,7 +117,7 @@ export function DictationButton({
         }`}
       >
         {recording ? <Stop size={18} weight="fill" aria-hidden /> : <Microphone size={18} aria-hidden />}
-        {recording ? "Stop" : state.kind === "transcribing" ? "Writing it out…" : "Speak"}
+        {recording ? "Stop" : state.kind === "transcribing" ? "Writing it out…" : "Start talking"}
       </button>
       {recording && (
         <span className="text-sm text-muted" aria-live="polite">

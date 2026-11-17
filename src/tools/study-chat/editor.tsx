@@ -292,7 +292,7 @@ export function StudyChatEditor({
           id={fieldId(["answerWith"])}
           value={s.answerWith}
           onChange={(e) => change((d) => void (d.answerWith = e.target.value as AnswerWith))}
-          className={`${inputStyles} w-auto`}
+          className={`${inputStyles} w-auto min-w-36 shrink-0`}
         >
           {ANSWER_WITH.map((value) => (
             <option key={value} value={value}>

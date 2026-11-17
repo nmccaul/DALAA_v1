@@ -50,6 +50,7 @@ export function ChatRoom({
   const [confirming, setConfirming] = useState(false);
   // Speaking or typing (D-038): fixed by the teacher, or the student's to switch when they chose "Their choice".
   const [speaking, setSpeaking] = useState(view.answerWith === "speaking");
+  const [dictating, setDictating] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishing, startFinish] = useTransition();
   const end = useRef<HTMLDivElement>(null);
@@ -142,7 +143,7 @@ export function ChatRoom({
 
   function submit() {
     const message = draft.trim();
-    if (message === "" || pending || over) return;
+    if (message === "" || pending || over || dictating) return;
     setDraft("");
     void send(crypto.randomUUID(), message);
   }
@@ -264,7 +265,7 @@ export function ChatRoom({
             }}
             maxLength={MAX_MESSAGE_LENGTH}
             rows={3}
-            placeholder={speaking ? `Press Speak and talk to ${view.persona.name}. You can fix any words before you send.` : `Write to ${view.persona.name}…`}
+            placeholder={speaking ? `Press Start talking and talk to ${view.persona.name}. You can fix any words before you send.` : `Write to ${view.persona.name}…`}
             className={`${inputStyles} resize-y`}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -273,9 +274,10 @@ export function ChatRoom({
                 activityId={activityId}
                 disabled={pending !== null}
                 onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
+                onBusy={setDictating}
               />
             )}
-            <Button type="submit" disabled={pending !== null || draft.trim() === ""}>
+            <Button type="submit" disabled={pending !== null || dictating || draft.trim() === ""}>
               {busy ? "Waiting for the reply…" : "Send"}
             </Button>
             {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && (
