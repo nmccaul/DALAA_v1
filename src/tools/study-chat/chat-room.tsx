@@ -2,7 +2,7 @@
 
 import { ArrowUp, Stop } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { inlinePieces } from "@/components/inline-format";
 import { Button } from "@/components/ui";
 import { DictationButton } from "./dictation";
@@ -175,50 +175,28 @@ export function ChatRoom({
   const canSend = pending === null && !dictating && draft.trim() !== "";
 
   return (
-    <section aria-label="Chat" className="flex flex-col gap-5">
-      {/* Who the student is talking with, and how far along they are, each meter naming what it counts (feedback abf69c71). */}
-      <header className="z-10 flex flex-col gap-2.5 border-b border-border bg-bg/95 py-3 backdrop-blur sm:sticky sm:top-0">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={view.persona.name} />
-            <div className="min-w-0 leading-tight">
-              <p className="truncate font-semibold">{view.persona.name}</p>
-              <p className="truncate text-sm text-muted">{view.persona.role}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {/* The message limit is a maximum, so it counts down to the end of the chat (Nathan, 2026-11-13). */}
-            {maxTurns !== null && <Meter label="Messages left" value={Math.max(0, maxTurns - sent)} of={maxTurns} />}
-            {progress?.points && <Meter label="Key points made" value={progress.points.covered} of={progress.points.total} />}
-            {timeLimitMinutes !== null && !over && (
-              <span className="rounded-full bg-subtle px-3 py-1 text-muted">
-                {left === null ? `${timeLimitMinutes} min limit, starting when you send` : `${left} min left`}
-              </span>
-            )}
-          </div>
+    <section aria-label="Chat" className="relative flex flex-col gap-5">
+      {/* Progress sits apart from the chat (Nathan, 2026-11-17): in the margin beside it on a wide screen, above it
+          otherwise. A finished chat is folded under the grade, so it has none. */}
+      {!over && (
+        <aside aria-label="Your progress" className="xl:absolute xl:inset-y-0 xl:left-full xl:ml-6 xl:w-56">
+          <ProgressPanel
+            messagesLeft={maxTurns === null ? null : Math.max(0, maxTurns - sent)}
+            maxTurns={maxTurns}
+            sent={turns.length}
+            minTurns={minTurns}
+            minutesLeft={left}
+            timeLimitMinutes={timeLimitMinutes}
+            progress={progress}
+          />
+        </aside>
+      )}
+      <header className="flex min-w-0 items-center gap-3 border-b border-border pb-4">
+        <Avatar name={view.persona.name} />
+        <div className="min-w-0 leading-tight">
+          <p className="truncate font-semibold">{view.persona.name}</p>
+          <p className="truncate text-sm text-muted">{view.persona.role}</p>
         </div>
-        {/* The fewest messages before the question or Finish can end the chat, named so "sent" makes sense. */}
-        {minTurns !== null && !over && (
-          <p className={`text-sm ${turns.length >= minTurns ? "font-medium text-success" : "text-muted"}`}>
-            {turns.length >= minTurns
-              ? `✓ Minimum reached: you've sent at least ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
-              : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end: ${turns.length} so far`}
-          </p>
-        )}
-        {progress?.points && progress.points.names.length > 0 && (
-          <ul aria-label="Key points you've made" className="flex flex-wrap gap-1.5">
-            {progress.points.names.map((name) => (
-              <li key={name} className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[13px] text-accent-text">
-                ✓ {name}
-              </li>
-            ))}
-          </ul>
-        )}
-        {progress?.position && (
-          <p className="text-sm">
-            Your position: <span className="font-medium">{progress.position}</span>
-          </p>
-        )}
       </header>
 
       <div role="log" aria-live="polite" className="flex flex-col gap-6">
@@ -332,26 +310,153 @@ export function ChatRoom({
   );
 }
 
-/** A compact labelled count with a small bar: "Messages left 4 of 6". */
-function Meter({ label, value, of }: { label: string; value: number; of: number }) {
-  const percent = of === 0 ? 0 : Math.round((value / of) * 100);
+/**
+ * How far along the student is, each line naming what it counts (feedback
+ * abf69c71): messages left (a maximum, so it counts down: Nathan,
+ * 2026-11-13), time left, the minimum, and, when the teacher shows progress,
+ * the key points made and the position taken. Only key points already made
+ * are named; the rest stay a count, so the panel never gives answers away.
+ */
+function ProgressPanel({
+  messagesLeft,
+  maxTurns,
+  sent,
+  minTurns,
+  minutesLeft: left,
+  timeLimitMinutes,
+  progress,
+}: {
+  messagesLeft: number | null;
+  maxTurns: number | null;
+  sent: number;
+  minTurns: number | null;
+  minutesLeft: number | null;
+  timeLimitMinutes: number | null;
+  progress: StudentProgress | null;
+}) {
+  const points = progress?.points ?? null;
+  const minimumMet = minTurns !== null && sent >= minTurns;
+  const stats = [
+    messagesLeft !== null && maxTurns !== null && (
+      <Stat
+        key="messages"
+        label="Messages left"
+        value={messagesLeft}
+        unit={`of ${maxTurns}`}
+        share={maxTurns === 0 ? 0 : messagesLeft / maxTurns}
+        low={messagesLeft <= 2}
+        note={messagesLeft === 1 ? "Your next message is your last." : null}
+      />
+    ),
+    timeLimitMinutes !== null && (
+      <Stat
+        key="time"
+        label="Time left"
+        value={left ?? timeLimitMinutes}
+        unit="min"
+        share={left === null ? 1 : left / timeLimitMinutes}
+        low={left !== null && left <= 2}
+        note={left === null ? "The clock starts with your first message." : null}
+      />
+    ),
+    points && (
+      <Stat
+        key="points"
+        label="Key points you've made"
+        value={points.covered}
+        unit={`of ${points.total}`}
+        share={points.total === 0 ? 0 : points.covered / points.total}
+        good
+        wide
+        note={points.covered === 0 ? "They show up here as you make them." : null}
+      >
+        {points.names.length > 0 && (
+          <ul className="flex flex-col gap-1 text-sm">
+            {points.names.map((name) => (
+              <li key={name} className="flex gap-1.5">
+                <span aria-hidden className="text-success">✓</span>
+                <span className="min-w-0 break-words">{name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Stat>
+    ),
+  ].filter(Boolean);
+
+  if (stats.length === 0 && minTurns === null && !progress?.position) return null;
   return (
-    <span className="flex items-center gap-2 rounded-full bg-subtle px-3 py-1">
-      <span>{label}</span>
+    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm xl:sticky xl:top-6">
+      <h2 className="text-xs font-bold tracking-wide text-accent-text uppercase">Your progress</h2>
+      {stats.length > 0 && <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] xl:grid-cols-1">{stats}</div>}
+      {minTurns !== null && (
+        <p className={`flex gap-1.5 text-sm ${minimumMet ? "font-medium text-success" : "text-muted"}`}>
+          <span aria-hidden>{minimumMet ? "✓" : "○"}</span>
+          <span>
+            {minimumMet
+              ? `Minimum reached: ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
+              : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end (${sent} so far)`}
+          </span>
+        </p>
+      )}
+      {progress?.position && (
+        <p className="text-sm">
+          <span className="text-muted">Your position: </span>
+          <span className="font-medium">{progress.position}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One counted thing: a big number, what it's out of, and a bar. `low` turns it to a warning; `good` fills toward done. */
+function Stat({
+  label,
+  value,
+  unit,
+  share,
+  low = false,
+  good = false,
+  wide = false,
+  note,
+  children,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  share: number;
+  low?: boolean;
+  good?: boolean;
+  /** Takes the whole row on a phone, for its list. */
+  wide?: boolean;
+  note?: string | null;
+  children?: ReactNode;
+}) {
+  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
+  return (
+    <div className={`flex min-w-0 flex-col gap-1.5 ${wide ? "col-span-2 sm:col-span-1" : ""}`}>
+      <span className="text-sm text-muted">{label}</span>
+      <span className={`flex items-baseline gap-1.5 ${low ? "text-danger" : ""}`}>
+        <span className="text-3xl leading-none font-semibold tabular-nums">{value}</span>
+        <span className="text-sm text-muted">{unit}</span>
+      </span>
       <span
         role="progressbar"
         aria-label={label}
         aria-valuemin={0}
-        aria-valuemax={of}
-        aria-valuenow={value}
-        className="h-1.5 w-12 overflow-hidden rounded-full bg-border"
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-valuetext={`${value} ${unit}`}
+        className="h-2 overflow-hidden rounded-full bg-subtle"
       >
-        <span className="block h-full rounded-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
+        <span
+          className={`block h-full rounded-full transition-[width] ${low ? "bg-danger" : good ? "bg-success" : "bg-accent"}`}
+          style={{ width: `${percent}%` }}
+        />
       </span>
-      <span className="font-medium tabular-nums">
-        {value} of {of}
-      </span>
-    </span>
+      {note && <span className={`text-sm ${low ? "text-danger" : "text-muted"}`}>{note}</span>}
+      {children}
+    </div>
   );
 }
 
