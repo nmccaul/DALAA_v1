@@ -21,6 +21,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "On an assignment's Insights you can ask questions about the class (\"What should I reteach?\", \"Who struggled most, and why?\") and get an answer from the students' conversations, with a link to each student it mentions.",
       "The + Materials menu no longer lists \"Link a Canvas Page\" and \"Link a Canvas File\": those are already in the Materials list, and the menu now just says so.",
       "Fixed: a PDF's text could read as a long line, then one or two words, then a long line, for students. Lines are now rejoined into paragraphs when the PDF is added. A PDF added before this keeps its old line breaks; remove it and add it again to fix it.",
+      "The student chat looks like the chat apps students know: a slim header with who they're talking to and how many messages are left, the character's messages beside its initials, their own in bubbles on the right, dots while the reply comes, and one message box with the microphone and a send arrow inside it.",
       "Students now see a PDF reading as its pages, the way you made it (layout, headings, pictures), with \"Show as text\" and \"Open the PDF\" above it. This works for PDFs uploaded or picked from Canvas from today on; one added earlier shows as text until you remove it and add it again.",
     ],
   },

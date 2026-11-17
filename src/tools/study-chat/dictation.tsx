@@ -79,7 +79,7 @@ export function DictationButton({
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      setError("Allow the microphone for this page in your browser, then press Speak again.");
+      setError("Allow the microphone for this page in your browser, then press the microphone again.");
       return;
     }
     const type = recordingType();
@@ -105,24 +105,32 @@ export function DictationButton({
 
   const recording = state.kind === "recording";
   const clock = recording ? `${Math.floor(state.seconds / 60)}:${String(state.seconds % 60).padStart(2, "0")}` : "";
+  const label = recording ? "Stop and write it out" : state.kind === "transcribing" ? "Writing it out…" : "Talk instead of typing";
   return (
-    <span className="flex flex-wrap items-center gap-2">
+    <span className="flex min-w-0 items-center gap-2">
       <button
         type="button"
         onClick={() => (recording ? recorder.current?.stop() : void start())}
         disabled={(disabled && !recording) || state.kind === "transcribing"}
         aria-pressed={recording}
-        className={`inline-flex items-center gap-1.5 rounded-control border px-3 py-2 text-sm font-medium disabled:opacity-50 ${
-          recording ? "border-danger bg-danger-soft text-danger" : "border-border-strong bg-surface text-accent-text hover:bg-subtle"
+        aria-label={label}
+        title={label}
+        className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-50 ${
+          recording ? "bg-danger text-white" : "text-accent-text hover:bg-subtle"
         }`}
       >
-        {recording ? <Stop size={18} weight="fill" aria-hidden /> : <Microphone size={18} aria-hidden />}
-        {recording ? "Stop" : state.kind === "transcribing" ? "Writing it out…" : "Start talking"}
+        {recording ? <Stop size={16} weight="fill" aria-hidden /> : <Microphone size={20} aria-hidden />}
       </button>
       {recording && (
+        <span className="flex items-center gap-1.5 text-sm text-muted" aria-live="polite">
+          <span className="inline-block size-2 animate-pulse rounded-full bg-danger" aria-hidden />
+          <span className="tabular-nums">{clock}</span>
+          <span className="hidden sm:inline">Listening. Press stop when you&apos;re done.</span>
+        </span>
+      )}
+      {state.kind === "transcribing" && (
         <span className="text-sm text-muted" aria-live="polite">
-          <span className="mr-1 inline-block size-2 animate-pulse rounded-full bg-danger align-middle" aria-hidden />
-          Listening {clock}. Press Stop when you&apos;re done.
+          Writing it out…
         </span>
       )}
       {error && (

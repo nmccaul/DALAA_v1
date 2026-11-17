@@ -1,9 +1,10 @@
 "use client";
 
+import { ArrowUp, Stop } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { inlinePieces } from "@/components/inline-format";
-import { Button, inputStyles } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { DictationButton } from "./dictation";
 import type { Exchange } from "./prompt";
 import { finishChatAction } from "./student-actions";
@@ -48,12 +49,11 @@ export function ChatRoom({
   const [progress, setProgress] = useState(initialProgress);
   const [now, setNow] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
-  // Speaking or typing (D-038): fixed by the teacher, or the student's to switch when they chose "Their choice".
-  const [speaking, setSpeaking] = useState(view.answerWith === "speaking");
   const [dictating, setDictating] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [finishing, startFinish] = useTransition();
   const end = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
 
   const { maxTurns, minTurns, timeLimitMinutes, studentCanFinish } = view.limits;
@@ -86,6 +86,14 @@ export function ChatRoom({
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest" });
   }, [turns.length, pending?.reply, pending?.failed]);
+
+  // The message box grows with what's in it, up to its max height, then scrolls.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
 
   async function send(key: string, message: string) {
     setPending({ key, message, reply: "", failed: null });
@@ -159,31 +167,42 @@ export function ChatRoom({
   }
 
   const sent = turns.length + (busy ? 1 : 0);
+  const canSpeak = view.answerWith !== "typing";
+  const placeholder =
+    view.answerWith === "speaking"
+      ? `Press the microphone and talk to ${view.persona.name}`
+      : `Message ${view.persona.name}${canSpeak ? ", or press the microphone to talk" : ""}`;
+  const canSend = pending === null && !dictating && draft.trim() !== "";
 
   return (
-    <section aria-label="Chat" className="flex flex-col gap-4">
-      {/* How far along the student is, each meter naming what it counts (feedback abf69c71). */}
-      <div className="z-10 flex flex-col gap-3 rounded-panel border border-border bg-surface px-4 py-3 text-sm shadow-sm sm:sticky sm:top-2">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {/* The message limit is a maximum, so it counts down to the end of the chat (Nathan, 2026-11-13). */}
-          {maxTurns !== null && (
-            <Meter label="Messages left before the chat ends" value={Math.max(0, maxTurns - sent)} of={maxTurns} />
-          )}
-          {progress?.points && <Meter label="Key points you've made" value={progress.points.covered} of={progress.points.total} />}
+    <section aria-label="Chat" className="flex flex-col gap-5">
+      {/* Who the student is talking with, and how far along they are, each meter naming what it counts (feedback abf69c71). */}
+      <header className="z-10 flex flex-col gap-2.5 border-b border-border bg-bg/95 py-3 backdrop-blur sm:sticky sm:top-0">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={view.persona.name} />
+            <div className="min-w-0 leading-tight">
+              <p className="truncate font-semibold">{view.persona.name}</p>
+              <p className="truncate text-sm text-muted">{view.persona.role}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {/* The message limit is a maximum, so it counts down to the end of the chat (Nathan, 2026-11-13). */}
+            {maxTurns !== null && <Meter label="Messages left" value={Math.max(0, maxTurns - sent)} of={maxTurns} />}
+            {progress?.points && <Meter label="Key points made" value={progress.points.covered} of={progress.points.total} />}
+            {timeLimitMinutes !== null && !over && (
+              <span className="rounded-full bg-subtle px-3 py-1 text-muted">
+                {left === null ? `${timeLimitMinutes} min limit, starting when you send` : `${left} min left`}
+              </span>
+            )}
+          </div>
         </div>
         {/* The fewest messages before the question or Finish can end the chat, named so "sent" makes sense. */}
         {minTurns !== null && !over && (
-          <p className={turns.length >= minTurns ? "font-medium text-success" : "text-muted"}>
+          <p className={`text-sm ${turns.length >= minTurns ? "font-medium text-success" : "text-muted"}`}>
             {turns.length >= minTurns
               ? `✓ Minimum reached: you've sent at least ${minTurns} ${minTurns === 1 ? "message" : "messages"}`
               : `Send at least ${minTurns} ${minTurns === 1 ? "message" : "messages"} before the chat can end: ${turns.length} so far`}
-          </p>
-        )}
-        {timeLimitMinutes !== null && !over && (
-          <p className="text-muted">
-            {left === null
-              ? `Time limit: ${timeLimitMinutes} minutes, starting with your first message`
-              : `Time left: ${left} ${left === 1 ? "minute" : "minutes"}`}
           </p>
         )}
         {progress?.points && progress.points.names.length > 0 && (
@@ -195,24 +214,32 @@ export function ChatRoom({
             ))}
           </ul>
         )}
-        {progress?.position && <p>Your position: <span className="font-medium">{progress.position}</span></p>}
-      </div>
+        {progress?.position && (
+          <p className="text-sm">
+            Your position: <span className="font-medium">{progress.position}</span>
+          </p>
+        )}
+      </header>
 
-      <div role="log" aria-live="polite" className="flex flex-col gap-3">
+      <div role="log" aria-live="polite" className="flex flex-col gap-6">
         <Bubble from={view.persona.name} text={view.opening} />
         {turns.map((t, i) => (
-          <div key={i} className="flex flex-col gap-3">
+          <div key={i} className="flex flex-col gap-6">
             <Bubble mine text={t.message} />
             <Bubble from={view.persona.name} text={t.reply} />
           </div>
         ))}
         {pending && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-6">
             <Bubble mine text={pending.message} />
             {pending.failed === null ? (
-              <Bubble from={view.persona.name} text={pending.reply || "…"} />
+              pending.reply ? (
+                <Bubble from={view.persona.name} text={pending.reply} />
+              ) : (
+                <Typing name={view.persona.name} />
+              )
             ) : (
-              <div className="flex flex-col items-start gap-2 rounded-panel border border-danger/40 bg-danger-soft px-4 py-3">
+              <div className="ml-11 flex flex-col items-start gap-2 rounded-2xl border border-danger/40 bg-danger-soft px-4 py-3">
                 <p className="text-sm">{pending.failed}</p>
                 <Button variant="secondary" onClick={() => void send(pending.key, pending.message)}>
                   Send again
@@ -225,108 +252,106 @@ export function ChatRoom({
       </div>
 
       {over ? (
-        <p className="rounded-panel border border-border bg-surface px-4 py-3 font-medium">{over}</p>
+        <p className="rounded-2xl bg-subtle px-5 py-4 text-center font-medium">{over}</p>
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
-          className="flex flex-col gap-2">
-          {view.answerWith === "either" && (
-            <div role="group" aria-label="How you answer" className="flex self-start rounded-control border border-border-strong text-sm">
-              {[false, true].map((speak) => (
-                <button
-                  key={String(speak)}
-                  type="button"
-                  aria-pressed={speaking === speak}
-                  onClick={() => setSpeaking(speak)}
-                  className={`px-3 py-1 first:rounded-l-control last:rounded-r-control ${
-                    speaking === speak ? "bg-accent text-white" : "bg-surface text-accent-text hover:bg-subtle"
-                  }`}
-                >
-                  {speak ? "Speak" : "Type"}
-                </button>
-              ))}
-            </div>
-          )}
-          <label htmlFor="chat-message" className="sr-only">
-            Your message
-          </label>
-          <textarea
-            id="chat-message"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            maxLength={MAX_MESSAGE_LENGTH}
-            rows={3}
-            placeholder={speaking ? `Press Start talking and talk to ${view.persona.name}. You can fix any words before you send.` : `Write to ${view.persona.name}…`}
-            className={`${inputStyles} resize-y`}
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            {speaking && (
-              <DictationButton
-                activityId={activityId}
-                disabled={pending !== null}
-                onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
-                onBusy={setDictating}
-              />
-            )}
-            <Button type="submit" disabled={pending !== null || dictating || draft.trim() === ""}>
-              {busy ? "Waiting for the reply…" : "Send"}
-            </Button>
-            {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && (
-              <span className="text-sm text-muted">You can finish after {minTurns} messages.</span>
-            )}
-            {studentCanFinish && turns.length >= Math.max(1, minTurns ?? 1) && !confirming && (
+          className="flex flex-col gap-2 sm:sticky sm:bottom-3"
+        >
+          <div className="flex flex-col rounded-3xl border border-border-strong bg-surface shadow-md focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+            <label htmlFor="chat-message" className="sr-only">
+              Your message to {view.persona.name}
+            </label>
+            <textarea
+              ref={box}
+              id="chat-message"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              maxLength={MAX_MESSAGE_LENGTH}
+              rows={1}
+              placeholder={placeholder}
+              className="max-h-60 min-h-12 resize-none bg-transparent px-5 pt-4 pb-1 leading-relaxed outline-none! placeholder:text-muted"
+            />
+            <div className="flex items-center justify-between gap-3 px-3 pb-3">
+              <div className="min-w-0">
+                {canSpeak && (
+                  <DictationButton
+                    activityId={activityId}
+                    disabled={pending !== null}
+                    onText={(text) => setDraft((d) => (d.trim() === "" ? text : `${d.trimEnd()} ${text}`).slice(0, MAX_MESSAGE_LENGTH))}
+                    onBusy={setDictating}
+                  />
+                )}
+              </div>
               <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                disabled={pending !== null}
-                className="text-sm text-muted underline hover:text-text disabled:opacity-50"
+                type="submit"
+                disabled={!canSend}
+                aria-label={busy ? "Waiting for the reply" : "Send"}
+                title={busy ? "Waiting for the reply" : "Send"}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover disabled:bg-border-strong"
               >
-                Finish
+                {busy ? <Stop size={16} weight="fill" aria-hidden /> : <ArrowUp size={20} weight="bold" aria-hidden />}
               </button>
-            )}
-            {confirming && (
-              <span className="flex flex-wrap items-center gap-2 text-sm">
-                <span>Finish now? You can&apos;t send more messages after this.</span>
-                <Button type="button" variant="secondary" onClick={finish} disabled={finishing}>
-                  Finish chat
-                </Button>
-                <button type="button" onClick={() => setConfirming(false)} className="text-muted underline hover:text-text">
-                  Keep chatting
-                </button>
-              </span>
-            )}
+            </div>
           </div>
-          {finishError && <p className="text-sm text-danger">{finishError}</p>}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 text-sm text-muted">
+            <span className="hidden sm:inline">Enter to send · Shift + Enter for a new line</span>
+            <span className="flex flex-wrap items-center gap-2">
+              {studentCanFinish && turns.length > 0 && turns.length < (minTurns ?? 1) && <span>You can finish after {minTurns} messages.</span>}
+              {studentCanFinish && turns.length >= Math.max(1, minTurns ?? 1) && !confirming && (
+                <button type="button" onClick={() => setConfirming(true)} disabled={pending !== null} className="underline hover:text-text disabled:opacity-50">
+                  Finish the chat
+                </button>
+              )}
+              {confirming && (
+                <>
+                  <span className="text-text">Finish now? You can&apos;t send more messages after this.</span>
+                  <Button type="button" variant="secondary" onClick={finish} disabled={finishing}>
+                    Finish chat
+                  </Button>
+                  <button type="button" onClick={() => setConfirming(false)} className="underline hover:text-text">
+                    Keep chatting
+                  </button>
+                </>
+              )}
+            </span>
+          </div>
+          {finishError && <p className="px-2 text-sm text-danger">{finishError}</p>}
         </form>
       )}
     </section>
   );
 }
 
-/** A labelled bar: "Messages left before the chat ends — 4 of 6". */
+/** A compact labelled count with a small bar: "Messages left 4 of 6". */
 function Meter({ label, value, of }: { label: string; value: number; of: number }) {
   const percent = of === 0 ? 0 : Math.round((value / of) * 100);
   return (
-    <div className="flex flex-col gap-1">
-      <span className="flex justify-between gap-2">
-        <span>{label}</span>
-        <span className="text-muted tabular-nums">
-          {value} of {of}
-        </span>
+    <span className="flex items-center gap-2 rounded-full bg-subtle px-3 py-1">
+      <span>{label}</span>
+      <span
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={of}
+        aria-valuenow={value}
+        className="h-1.5 w-12 overflow-hidden rounded-full bg-border"
+      >
+        <span className="block h-full rounded-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
       </span>
-      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={of} aria-valuenow={value} className="h-2 overflow-hidden rounded-full bg-subtle">
-        <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
-      </div>
-    </div>
+      <span className="font-medium tabular-nums">
+        {value} of {of}
+      </span>
+    </span>
   );
 }
 
@@ -338,29 +363,71 @@ function Formatted({ text }: { text: string }) {
     ) : p.kind === "em" ? (
       <em key={i}>{p.text}</em>
     ) : p.kind === "code" ? (
-      <code key={i} className="rounded bg-bg px-1 font-mono text-[0.9em]">{p.text}</code>
+      <code key={i} className="rounded bg-subtle px-1 font-mono text-[0.9em]">{p.text}</code>
     ) : (
       p.text
     ),
   );
 }
 
+/** A round badge with the speaker's initials ("Jordan Leigh" → "JL"). */
+function Avatar({ name }: { name: string }) {
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("") || "AI";
+  return (
+    <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-white">
+      {initials}
+    </span>
+  );
+}
+
+/** Three dots while the character is writing, like any chat app. */
+function Typing({ name }: { name: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Avatar name={name} />
+      <span className="sr-only">{name} is writing…</span>
+      <span aria-hidden className="mt-1 flex gap-1 rounded-2xl bg-subtle px-4 py-3">
+        {[0, 150, 300].map((delay) => (
+          <span key={delay} className="size-2 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${delay}ms` }} />
+        ))}
+      </span>
+    </div>
+  );
+}
+
 /**
- * One message; the student's own (`mine`) sits on the right, labeled `from` or
- * "You". The AI's messages show its bold and italics; the student's show
- * exactly what they typed.
+ * One message, chat-app style: the character's on the left beside its
+ * initials, as open text; the student's own (`mine`) in a bubble on the
+ * right, labeled with `from` when given (a teacher reading a transcript). The
+ * AI's messages show its bold and italics; the student's show exactly what
+ * they typed.
  */
 export function Bubble({ text, from, mine = false }: { text: string; from?: string; mine?: boolean }) {
+  if (mine) {
+    return (
+      <div className="flex flex-col items-end gap-1 pl-10">
+        {from && <span className="px-1 text-xs text-muted">{from}</span>}
+        <p className="max-w-[85%] rounded-3xl rounded-br-lg bg-accent-soft px-5 py-3 leading-relaxed whitespace-pre-wrap break-words">
+          {text}
+        </p>
+      </div>
+    );
+  }
   return (
-    <div className={`flex flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
-      <span className="text-xs text-muted">{from ?? (mine ? "You" : "")}</span>
-      <p
-        className={`max-w-[85%] rounded-panel px-4 py-2 leading-relaxed whitespace-pre-wrap break-words ${
-          mine ? "bg-accent text-white" : "border border-border bg-surface"
-        }`}
-      >
-        {mine ? text : <Formatted text={text} />}
-      </p>
+    <div className="flex items-start gap-3 pr-4 sm:pr-10">
+      <Avatar name={from ?? ""} />
+      <div className="flex min-w-0 flex-col gap-1">
+        {from && <span className="text-sm font-semibold">{from}</span>}
+        <p className="leading-relaxed whitespace-pre-wrap break-words">
+          <Formatted text={text} />
+        </p>
+      </div>
     </div>
   );
 }
