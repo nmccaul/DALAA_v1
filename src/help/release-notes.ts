@@ -31,6 +31,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "The student chat looks like the chat apps students know: a slim header with who they're talking to and how many messages are left, the character's messages beside its initials, their own in bubbles on the right, dots while the reply comes, and one message box with the microphone and a send arrow inside it.",
       "Students see their progress beside the chat, so the conversation comes first: messages left, time left and key points made, each with a bar, plus the minimum and their position. On a phone it's one slim line above the chat. It turns red near the end.",
       "Students now see a PDF reading as its pages, the way you made it (layout, headings, pictures), with \"Show as text\" and \"Open the PDF\" above it. This works for PDFs uploaded or picked from Canvas from today on; one added earlier shows as text until you remove it and add it again.",
+      "Fixed: a Canvas course with no term showed its term name in Arabic. It now says \"Default Term\", as Canvas does.",
     ],
   },
   {
