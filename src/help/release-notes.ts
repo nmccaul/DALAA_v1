@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-18",
     changes: [
+      "Release notes fold by day: the newest day is open, and each earlier day opens with a click.",
       "Feedback is now a yellow tab on the right edge of the screen, halfway down, so it no longer covers Next or Send at the bottom.",
       "The \"DALAA wizard\" box on the right of the new-activity steps is gone, so each step has more room. Its tip is now a short line under the step's title; use Draft or Tweak on any box to have DALAA write it.",
     ],

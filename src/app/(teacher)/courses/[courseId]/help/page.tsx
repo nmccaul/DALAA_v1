@@ -1,3 +1,4 @@
+import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
@@ -26,22 +27,31 @@ export default async function HelpTabPage({ params }: PageProps<"/courses/[cours
         <h3 className="text-lg font-bold">Give feedback</h3>
         <p>
           Something broken, confusing, or missing? Tell us. A picture of the page goes with your note, and you can mark it
-          up or leave it out. The Feedback button at the bottom right of every page does the same.
+          up or leave it out. The yellow Feedback tab on the right edge of every page does the same.
         </p>
         <GiveFeedback />
       </section>
 
       <section className={section}>
         <h3 className="text-lg font-bold">Latest release notes</h3>
-        <ol className="flex flex-col gap-5">
-          {RELEASE_NOTES.map((note) => (
-            <li key={note.date} className="flex flex-col gap-1.5">
-              <h4 className="font-bold">{noteDate(note.date)}</h4>
-              <ul className="flex list-disc flex-col gap-1 pl-5">
-                {note.changes.map((change) => (
-                  <li key={change}>{change}</li>
-                ))}
-              </ul>
+        {/* One row per day, newest open; the rest fold away so the list stays short (Nathan, 2026-11-18). */}
+        <ol className="flex flex-col divide-y divide-border rounded-panel border border-border">
+          {RELEASE_NOTES.map((note, i) => (
+            <li key={note.date}>
+              <details open={i === 0} className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-subtle [&::-webkit-details-marker]:hidden">
+                  <CaretRight size={14} weight="bold" aria-hidden className="shrink-0 text-muted transition-transform group-open:rotate-90" />
+                  <span className="font-bold">{noteDate(note.date)}</span>
+                  <span className="ml-auto text-sm text-muted">
+                    {note.changes.length} {note.changes.length === 1 ? "change" : "changes"}
+                  </span>
+                </summary>
+                <ul className="flex list-disc flex-col gap-1 pr-4 pb-4 pl-12">
+                  {note.changes.map((change) => (
+                    <li key={change}>{change}</li>
+                  ))}
+                </ul>
+              </details>
             </li>
           ))}
         </ol>
