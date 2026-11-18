@@ -31,6 +31,9 @@
   --warn-text: #8a4a06;
   --danger: #b42318;
   --danger-soft: #fdecea;
+  /* The Feedback tab: bright so it's easy to find, on the edge so it covers nothing. */
+  --highlight: #ffcf33;
+  --highlight-hover: #f5bd00;
 }
 
 @theme inline {
@@ -50,6 +53,8 @@
   --color-warn-text: var(--warn-text);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-highlight: var(--highlight);
+  --color-highlight-hover: var(--highlight-hover);
   --font-sans: var(--font-lato);
   --font-display: var(--font-lato);
   --radius-control: 3px;

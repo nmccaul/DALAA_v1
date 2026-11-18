@@ -176,9 +176,10 @@ export function FeedbackButton() {
         type="button"
         onPointerDown={prime}
         onClick={open}
-        className="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-text shadow-lg hover:bg-accent-soft print:hidden"
+        // A tab on the right edge, halfway down, so it never covers Next or Send at the bottom (Nathan, 2026-11-18).
+        className="fixed top-1/2 right-0 z-30 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-l-panel bg-highlight px-2 py-3 text-sm font-bold text-text shadow-lg [writing-mode:vertical-rl] hover:bg-highlight-hover print:hidden"
       >
-        <ChatCircleDots size={18} weight="duotone" aria-hidden />
+        <ChatCircleDots size={18} weight="duotone" aria-hidden className="rotate-90" />
         Feedback
       </button>
       <dialog
