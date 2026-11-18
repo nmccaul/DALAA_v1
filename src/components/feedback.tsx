@@ -1,6 +1,5 @@
 "use client";
 
-import { ChatCircleDots } from "@phosphor-icons/react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { dataUrlBytes } from "@/feedback/annotate";
 import { KINDS, NOTE_MAX, SCREENSHOT_MAX_BYTES, type Kind, type ReportInput } from "@/feedback/report";
@@ -176,10 +175,10 @@ export function FeedbackButton() {
         type="button"
         onPointerDown={prime}
         onClick={open}
-        // A tab on the right edge, halfway down, so it never covers Next or Send at the bottom (Nathan, 2026-11-18).
-        className="fixed top-1/2 right-0 z-30 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-l-panel bg-highlight px-2 py-3 text-sm font-bold text-text shadow-lg [writing-mode:vertical-rl] hover:bg-highlight-hover print:hidden"
+        // A thin tab on the right edge, halfway down, so it never covers Next or Send (Nathan, 2026-11-18). Sideways
+        // text swaps inline and block, so the padding is set per side.
+        className="fixed top-1/2 right-0 z-30 -translate-y-1/2 rounded-l-control bg-highlight pt-2.5 pr-0.5 pb-2.5 pl-1 text-xs leading-none font-semibold tracking-wide text-text shadow-md [writing-mode:vertical-rl] hover:bg-highlight-hover hover:pl-2 print:hidden"
       >
-        <ChatCircleDots size={18} weight="duotone" aria-hidden className="rotate-90" />
         Feedback
       </button>
       <dialog
