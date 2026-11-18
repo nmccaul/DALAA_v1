@@ -10,9 +10,10 @@ export type StepLink = { href: string; save?: boolean };
 
 /**
  * The frame every wizard step sits in: the step list on the left (done steps
- * checked, the current one highlighted), the step itself in the middle, and
- * the "DALAA wizard" panel on the right with a note about this step and what's
- * coming soon. The panel has no input box yet (ralph/PLAN.md). Steps in `go`
+ * checked, the current one highlighted) and the step beside it, with a short
+ * note under its title on what to do here. (A "DALAA wizard" panel on the right
+ * held only that note and "Coming soon" tags, so it went (Nathan,
+ * 2026-11-18): each box has its own Draft and Tweak, D-037.) Steps in `go`
  * can be clicked to go straight there (feedback a142d729, d6010bfd).
  * `later` puts "Save and finish later" at the top right, away from Next.
  */
@@ -20,15 +21,14 @@ export function WizardShell({
   step,
   title,
   note,
-  comingSoon = [],
   go = {},
   later,
   children,
 }: {
   step: WizardStep;
   title: string;
+  /** What to do on this step, in a sentence or two; none when the step says it already. */
   note: ReactNode;
-  comingSoon?: string[];
   go?: Partial<Record<WizardStep, StepLink>>;
   /** "Save and finish later", top right, away from Next (feedback deea6853). */
   later?: StepLink;
@@ -36,7 +36,7 @@ export function WizardShell({
 }) {
   const current = stepIndex(step);
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[13rem_minmax(0,1fr)_16rem]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
       <nav aria-label="Steps">
         <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm lg:flex-col">
           {WIZARD_STEPS.map((s, i) => {
@@ -83,6 +83,7 @@ export function WizardShell({
               Step {current + 1} of {WIZARD_STEPS.length}
             </p>
             <h3 className="font-display text-xl font-semibold">{title}</h3>
+            {note && <div className="max-w-prose text-sm text-muted">{note}</div>}
           </div>
           {later &&
             (later.save ? (
@@ -97,20 +98,6 @@ export function WizardShell({
         </div>
         {children}
       </section>
-
-      <aside aria-label="DALAA wizard" className="flex flex-col gap-3 self-start rounded-panel border border-border bg-surface p-4">
-        <h4 className="font-bold">DALAA wizard</h4>
-        <div className="text-sm text-text">{note}</div>
-        {comingSoon.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5">
-            {comingSoon.map((label) => (
-              <li key={label} className="rounded-control border border-border px-2.5 py-0.5 text-xs text-muted">
-                {label} · Coming soon
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
     </div>
   );
 }

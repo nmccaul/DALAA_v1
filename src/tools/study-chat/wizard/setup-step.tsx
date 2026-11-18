@@ -135,7 +135,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
   // Edit can open an activity students have started: say changes reach new attempts only (D-031).
   const started = startedNote(await countStartedAttempts(db(), activity.id));
   return (
-    <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} comingSoon={["Ask the wizard for changes"]} go={go(true)} later={{ href: later, save: true }}>
+    <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} go={go(true)} later={{ href: later, save: true }}>
       {started && (
         <p role="status" className="mb-4 rounded-control border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
           {started}

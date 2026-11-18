@@ -32,7 +32,6 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
           from them next.
         </p>
       }
-      comingSoon={["Ask the wizard for changes"]}
     >
       {canvas === "not-connected" ? (
         <p className="text-sm text-muted">

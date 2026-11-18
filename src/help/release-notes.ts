@@ -9,6 +9,12 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-18",
+    changes: [
+      "The \"DALAA wizard\" box on the right of the new-activity steps is gone, so each step has more room. Its tip is now a short line under the step's title; use Draft or Tweak on any box to have DALAA write it.",
+    ],
+  },
+  {
     date: "2026-11-17",
     changes: [
       "Students can speak instead of type: on Chat options, \"How students answer\" is Typing, Speaking or Their choice. Speaking puts what the student said into their message box to check before sending.",

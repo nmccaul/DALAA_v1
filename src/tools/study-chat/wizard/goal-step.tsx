@@ -59,7 +59,6 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
           <p>Pick how students will work with the AI, then write the goal. Next, you&apos;ll set up the AI&apos;s role.</p>
         )
       }
-      comingSoon={["Ask the wizard for changes", "Start from a copy", "Activity group"]}
     >
       <GoalTypeForm
         courseId={course.id}
