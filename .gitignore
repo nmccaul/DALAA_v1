@@ -57,3 +57,7 @@ skills-lock.json
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# Agent worktrees and playwright-cli snapshots (local scratch)
+/.claude/worktrees/
+/.playwright-cli/
