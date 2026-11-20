@@ -169,8 +169,9 @@ Detailed design: `docs/CANVAS.md`. Non-negotiables:
 - Local setup and deploying: `README.md`.
 - Before committing: `npm run lint && npm run typecheck && npm test`. Check UI
   changes in a real browser at desktop width and 390px mobile (the app is
-  light-only, D-032). Local Node 20 fails the `Array.fromAsync` tests; CI on
-  Node 22 is the gate.
+  light-only, D-032). Use Node 22 locally (`nvm use`, from `.nvmrc`): Node 20
+  fails the `Array.fromAsync` tests and can't read PDF uploads. CI on Node 22
+  is the gate. Never run Prettier; the repo isn't formatted with it.
 
 ## Working rules learned the hard way
 

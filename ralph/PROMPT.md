@@ -88,7 +88,7 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
   `.env.local` except to add a missing **non-secret** var named in PLAN.
 - Don't touch `docs/DALAA-VS-CANVAS.md` (Nathan's uncommitted file), other
   repos (read them only), or the gitgrade instance's other tools and keys.
-- **Don't copy code from `../previous_builds/scholarly`.** Write LTI fresh from
+- **Don't copy code from `../reference/previous_builds/scholarly`.** Write LTI fresh from
   the spec. MakeTheCase and agent-team-kit are references for ideas only.
 - If you need something only Nathan can give (a secret, a decision, a click in
   Canvas), mark the task `BLOCKED: needs Nathan — <what>`, record it, and move on
