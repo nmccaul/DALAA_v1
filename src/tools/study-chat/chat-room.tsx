@@ -54,6 +54,7 @@ export function ChatRoom({
   const [finishing, startFinish] = useTransition();
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  const composer = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
   const { maxTurns, minTurns, timeLimitMinutes, studentCanFinish } = view.limits;
@@ -83,8 +84,13 @@ export function ChatRoom({
     if (ended !== null && initialEnded === null) router.refresh();
   }, [ended, initialEnded, router]);
 
+  // Keep the newest message in view as it arrives, above the message box: on wider screens the box stays pinned
+  // to the bottom of the window and would cover the reply's last lines (feedback 14b84d11).
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "nearest" });
+    const el = end.current;
+    if (!el) return;
+    el.style.scrollMarginBottom = `${(composer.current?.offsetHeight ?? 0) + 24}px`;
+    el.scrollIntoView({ block: "nearest" });
   }, [turns.length, pending?.reply, pending?.failed]);
 
   // The message box grows with what's in it, up to its max height, then scrolls.
@@ -237,6 +243,7 @@ export function ChatRoom({
           <p className="rounded-2xl bg-subtle px-5 py-4 text-center font-medium">{over}</p>
         ) : (
           <form
+            ref={composer}
             onSubmit={(e) => {
               e.preventDefault();
               submit();

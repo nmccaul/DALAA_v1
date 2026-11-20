@@ -9,6 +9,12 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-20",
+    changes: [
+      "Fixed: in the student chat, a new reply could sit behind the message box at the bottom of the screen, so it looked like nothing came back. The chat now scrolls so the whole reply shows above the box.",
+    ],
+  },
+  {
     date: "2026-11-18",
     changes: [
       "Release notes fold by day: the newest day is open, and each earlier day opens with a click.",
