@@ -61,6 +61,7 @@ describe("listCourseActivities", () => {
       status: "published",
       points: 12.5,
       dueAt: new Date("2027-01-20T23:59:00Z"),
+      started: 3,
       submitted: 2,
       graded: 1,
       assigned: false,

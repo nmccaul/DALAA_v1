@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { SeenByPill } from "@/components/seen-by-pill";
-import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL } from "@/content/materials";
+import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL, type MaterialRow } from "@/content/materials";
 import { SOURCE_FILTERS } from "@/content/material-sources";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
+import { deleteMaterialAction } from "./actions";
 import { MaterialsMenu } from "./materials-menu";
 
 export const metadata: Metadata = { title: "Materials" };
@@ -44,9 +46,9 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
         </nav>
       </div>
 
-      {q.added && (
+      {(q.added || q.deleted) && (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
-          Material added.
+          {q.deleted ? "Material deleted." : "Material added."}
         </p>
       )}
       {canvas === "not-connected" ? (
@@ -75,6 +77,9 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
                     <th className="px-3 py-2.5 font-bold whitespace-nowrap">Seen by</th>
                     <th className="px-3 py-2.5 font-bold whitespace-nowrap">Used in</th>
                     <th className="px-3 py-2.5 font-bold whitespace-nowrap">Updated</th>
+                    <th className="w-0 px-1 py-2.5">
+                      <span className="sr-only">Delete</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -116,6 +121,9 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
                         <td className="px-3 py-3 whitespace-nowrap text-muted">
                           <LocalTime value={r.date} style="day" />
                         </td>
+                        <td className="px-1 py-1.5">
+                          {r.savedId && r.seenBy !== "canvas" && <DeleteMaterial courseId={course.id} row={r} id={r.savedId} seenBy={r.seenBy} />}
+                        </td>
                       </tr>
                     </SearchItem>
                   ))}
@@ -132,5 +140,36 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
         DALAA can read them: PDF, Word, PowerPoint, .txt and .md.
       </p>
     </ListSearch>
+  );
+}
+
+/**
+ * A saved material's trash button. One that an activity students can open
+ * uses can't go (D-041); drafts that use it just lose it. A Canvas Page or
+ * File keeps being listed from Canvas: only DALAA's copy goes.
+ */
+function DeleteMaterial({ courseId, row, id, seenBy }: { courseId: string; row: MaterialRow; id: string; seenBy: "students" | "ai" }) {
+  const live = row.usedIn.filter((a) => a.published);
+  const drafts = row.usedIn.filter((a) => !a.published);
+  const titles = (list: typeof row.usedIn) => list.map((a) => `"${a.title}"`).join(", ");
+  return (
+    <ConfirmDelete
+      action={deleteMaterialAction}
+      fields={{ courseId, materialId: id, seenBy }}
+      name={row.name}
+      blocked={
+        live.length > 0
+          ? `It's in ${titles(live)}, which students can already open. Take it out of ${live.length === 1 ? "that activity" : "those activities"} first (Edit, then Materials), then delete it.`
+          : undefined
+      }
+    >
+      <p>It&apos;s removed from this course for good.</p>
+      {row.canvas && <p className="text-muted">It stays in your Canvas course; only DALAA&apos;s copy goes.</p>}
+      {drafts.length > 0 && (
+        <p className="text-muted">
+          {drafts.length === 1 ? "The draft" : "The drafts"} {titles(drafts)} will no longer use it.
+        </p>
+      )}
+    </ConfirmDelete>
   );
 }

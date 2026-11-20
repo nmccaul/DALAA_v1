@@ -22,7 +22,8 @@ export type Material = {
   /** "students": students and the AI read it; "ai": only the AI does. */
   seenBy: "students" | "ai";
   createdAt: Date;
-  usedIn: { id: string; title: string }[];
+  /** The activities that use it; `published` ones students can already open. */
+  usedIn: { id: string; title: string; published: boolean }[];
 };
 
 /** Newest first; empty for a course the actor doesn't teach. */
@@ -30,7 +31,7 @@ export async function listCourseMaterials(db: Db, actor: Actor, courseId: string
   if (!(await getTaughtCourse(db, actor, courseId))) return [];
   return db.query<Material>(
     `select m.id, m.name, m.source, m.source_url as url, m.seen_by as "seenBy", m.created_at as "createdAt",
-            coalesce((select json_agg(json_build_object('id', a.id, 'title', a.title) order by a.title)
+            coalesce((select json_agg(json_build_object('id', a.id, 'title', a.title, 'published', a.status = 'published') order by a.title)
                         from activities a
                        where a.course_id = m.course_id
                          and exists (select 1 from activity_materials am

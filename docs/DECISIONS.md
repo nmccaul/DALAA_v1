@@ -489,3 +489,26 @@ and bc22f7df asked for the same).
   left, time left, key points made (only the ones made are named); the
   minimum and the position sit under them. Red at 2 messages or 2 minutes.
 
+
+### D-041 · Teachers can delete materials and activities, after a confirm
+
+*2026-11-20, Nathan ("let the teacher delete materials and assignments …
+there should be a popup to confirm deletion"), from Lucy's feedback 2a78bb40
+and 13e17f3f*
+- **A trash button on each Materials row and each Activities row** opens a
+  dialog that says what goes. Cancel has the focus, and only its red Delete
+  deletes. Deleting is permanent; nothing is kept for undo.
+- **A material that a published activity uses can't be deleted.** The dialog
+  names the activity, and the teacher takes the material out of it first, so
+  students partway through never lose their reading. Drafts that use it just
+  lose it. For a Canvas Page or File, only DALAA's saved copy goes; it's
+  still listed from Canvas.
+- **Deleting an activity deletes everything students did in it** (chats,
+  grades, disputes, records of grades sent). Once anyone has started it, the
+  dialog shows how many, and Delete stays off until the teacher ticks "Also
+  delete N students' chats and grades". The server checks this too.
+- **DALAA doesn't change Canvas when deleting.** An activity in Canvas
+  Assignments stays there until the teacher deletes it in Canvas (the dialog
+  says so), and grades already sent stay in the gradebook.
+- Not yet: deleting several at once, and moving them into modules (also in
+  that feedback).

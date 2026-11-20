@@ -16,6 +16,8 @@ export type ActivityRow = {
   points: number | null;
   /** NULL: no due date. */
   dueAt: Date | null;
+  /** Students who have opened it (finished or not): deleting it deletes their work. */
+  started: number;
   /** Students who have finished their attempt. */
   submitted: number;
   /** Finished attempts with a grade saved. */
@@ -38,6 +40,7 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
   const where = and({ text: "a.course_id = $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
   return db.query<ActivityRow>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points, a.due_at as "dueAt",
+            (select count(*)::int from attempts t where t.activity_id = a.id) as started,
             (select count(*)::int from attempts t where t.activity_id = a.id and t.status = 'completed') as submitted,
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
               where t.activity_id = a.id and r.status = 'graded') as graded,

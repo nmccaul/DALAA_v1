@@ -55,7 +55,7 @@ describe("listCourseMaterials", () => {
     const materials = await listCourseMaterials(db, prof, course);
     const byName = Object.fromEntries(materials.map((m) => [m.name, m]));
     expect(materials).toHaveLength(3);
-    expect(byName["Harbor Bikes case"]).toMatchObject({ seenBy: "students", source: "paste", usedIn: [{ title: "Second store" }] });
+    expect(byName["Harbor Bikes case"]).toMatchObject({ seenBy: "students", source: "paste", usedIn: [{ title: "Second store", published: false }] });
     expect(byName["Teaching note"]).toMatchObject({ seenBy: "ai", usedIn: [{ title: "Second store" }] });
     expect(byName["Unused reading"].usedIn).toEqual([]);
   });
@@ -117,8 +117,8 @@ describe("mergeMaterials", () => {
   it("shows a Canvas item an activity uses once, with its activities, matching a file by either name", () => {
     const rows = mergeMaterials(
       [
-        saved({ usedIn: [{ id: "a1", title: "Second store" }] }),
-        saved({ name: "syllabus.pdf", source: "canvas-file", usedIn: [{ id: "a2", title: "Policies" }] }),
+        saved({ usedIn: [{ id: "a1", title: "Second store", published: false }] }),
+        saved({ name: "syllabus.pdf", source: "canvas-file", usedIn: [{ id: "a2", title: "Policies", published: true }] }),
       ],
       { pages: [page], files: [file] },
     );
