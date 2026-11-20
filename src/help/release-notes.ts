@@ -12,6 +12,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     date: "2026-11-20",
     changes: [
       "Fixed: in the student chat, a new reply could sit behind the message box at the bottom of the screen, so it looked like nothing came back. The chat now scrolls so the whole reply shows above the box.",
+      "You can delete a material or an activity with the trash button on its row. A box asks you to confirm first. A material that a published activity uses can't be deleted until you take it out of that activity. If students have started an activity, you tick a box to delete their chats and grades too. Deleting doesn't change Canvas: remove an assigned activity there as well.",
     ],
   },
   {

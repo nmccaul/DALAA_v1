@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
+import type { DeleteState } from "@/components/confirm-delete";
+import { deleteMaterial } from "@/content/delete";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { readContent } from "@/content/read";
@@ -55,4 +57,14 @@ export async function addWebPageAction(_prev: WebPageState, form: FormData): Pro
   const saved = await (aiOnly ? saveGuide : saveContent)(db(), actor, courseId, String(form.get("creationKey") ?? ""), fetched.input);
   if (!saved.ok) return { error: saved.reason };
   redirect(afterAddPath(form.get("next"), courseId, { id: saved.content.id, aiOnly }));
+}
+
+/** The trash button on a Materials row, after the teacher confirms (D-041). */
+export async function deleteMaterialAction(_prev: DeleteState, form: FormData): Promise<DeleteState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const seenBy = form.get("seenBy") === "ai" ? "ai" : "students";
+  const deleted = await deleteMaterial(db(), actor, courseId, seenBy, String(form.get("materialId") ?? ""));
+  if (!deleted.ok) return { error: deleted.reason };
+  redirect(`/courses/${courseId}/materials?deleted=1`);
 }

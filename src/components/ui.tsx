@@ -12,6 +12,8 @@ const base =
 export const buttonStyles = {
   primary: `${base} border-accent-hover bg-accent text-white hover:bg-accent-hover`,
   secondary: `${base} border-border-strong bg-subtle text-text hover:bg-border`,
+  /** Only for the final step of deleting something, after the teacher has been asked. */
+  danger: `${base} border-danger bg-danger text-white hover:bg-danger/90`,
 } as const;
 
 type Variant = keyof typeof buttonStyles;

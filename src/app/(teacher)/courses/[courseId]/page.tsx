@@ -6,6 +6,7 @@ import { assignToCanvasOn } from "@/activities/assign";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { ActivityMenu } from "@/components/activity-menu";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
@@ -13,7 +14,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
 import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
-import { copyActivityAction } from "./actions";
+import { copyActivityAction, deleteActivityAction } from "./actions";
 import { activitiesView } from "./view";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -103,6 +104,11 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           </Link>
         </p>
       )}
+      {q.deleted && (
+        <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
+          Activity deleted.
+        </p>
+      )}
       {q.copyerror && (
         <p role="alert" className="rounded-control border border-border-strong bg-subtle px-4 py-3">
           We couldn&apos;t copy that activity. You can copy only from courses you teach.
@@ -130,6 +136,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                       </Link>
                     )}
                     <EditButton href={editActivityPath(course.id, a)} />
+                    <DeleteActivity activity={a} show="assigned" />
                   </>
                 }
               />
@@ -159,6 +166,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                   )}
                   <EditButton href={editActivityPath(course.id, a)} />
                   <CopyButton activityId={a.id} courseId={course.id} label="Copy" />
+                  <DeleteActivity activity={a} show="unassigned" />
                 </>
               }
             />
@@ -336,5 +344,30 @@ function CopyButton({ activityId, courseId, label }: { activityId: string; cours
         {label}
       </Button>
     </form>
+  );
+}
+
+/**
+ * An activity's trash button (D-041). Once students have started it, Delete
+ * waits for the teacher to tick that their work goes too. DALAA doesn't touch
+ * Canvas, so an assigned one says to remove it there as well.
+ */
+function DeleteActivity({ activity: a, show }: { activity: ActivityRow; show: "assigned" | "unassigned" }) {
+  const students = `${a.started} ${a.started === 1 ? "student's" : "students'"}`;
+  return (
+    <ConfirmDelete
+      action={deleteActivityAction}
+      fields={{ activityId: a.id, show }}
+      name={a.title}
+      mustTick={a.started > 0 ? `Also delete ${students} chats and grades. This can't be undone.` : undefined}
+    >
+      <p>It&apos;s deleted for good. Its materials stay in Materials.</p>
+      {a.assigned && (
+        <p className="text-muted">
+          It&apos;s also in Canvas Assignments: delete it there too, or students will get an error opening it. Grades
+          already sent to Canvas stay there.
+        </p>
+      )}
+    </ConfirmDelete>
   );
 }
