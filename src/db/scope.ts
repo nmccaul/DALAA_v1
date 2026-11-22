@@ -107,3 +107,11 @@ export function coursesTakenBy(actor: Actor, alias = "c"): Scope {
 export function feedbackReadableBy(actor: Actor): Scope {
   return actor.isAdmin ? MATCH_ALL : MATCH_NOTHING;
 }
+
+/**
+ * Feedback reports the actor sent themselves: the Help tab's "Your feedback"
+ * (feedback 3df5d2ca). Admin doesn't widen it; this is "mine", not the inbox.
+ */
+export function feedbackSentBy(actor: Actor, alias = "f"): Scope {
+  return { text: `${checkAlias(alias)}.user_id = $1`, values: [actor.userId] };
+}

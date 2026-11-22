@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataUrlBytes, drawMarks, flatten, lineWidth, MARK_COLOR, undo, type Mark, type Sheet } from "./annotate";
+import { dataUrlBytes, drawMarks, flatten, INKS, lineWidth, MARK_COLOR, undo, type Mark, type Sheet } from "./annotate";
 import { SCREENSHOT_MAX_BYTES } from "./report";
 
 /** A context that writes down what it was asked to draw. */
@@ -58,6 +58,16 @@ describe("drawMarks", () => {
       ["stroke"],
       ["strokeRect", 20, 10, 30, 30],
     ]);
+  });
+
+  it("draws each mark in its own ink", () => {
+    const strokes: unknown[] = [];
+    const { sheet } = fakeSheet();
+    const pen = sheet.pen;
+    pen.stroke = () => void strokes.push(pen.strokeStyle);
+    pen.strokeRect = () => void strokes.push(pen.strokeStyle);
+    drawMarks(pen, [{ ...circle, ink: "blue" }, box, { ...box, ink: "green" }], 4);
+    expect(strokes).toEqual([INKS[1].color, MARK_COLOR, INKS[2].color]);
   });
 
   it("leaves a dot for a tap and skips an empty line", () => {

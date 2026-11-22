@@ -2,7 +2,7 @@
 
 import { ArrowCounterClockwise, PencilSimple, Square } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { drawMarks, flatten, lineWidth, undo, type Mark, type Point, type Tool } from "@/feedback/annotate";
+import { drawMarks, flatten, INKS, lineWidth, undo, type Ink, type Mark, type Point, type Tool } from "@/feedback/annotate";
 import { Button } from "./ui";
 
 const TOOLS: { value: Tool; label: string; Icon: typeof PencilSimple }[] = [
@@ -22,6 +22,7 @@ export function ScreenshotEditor({ src, onDone, onCancel }: { src: string; onDon
   const canvas = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [tool, setTool] = useState<Tool>("pen");
+  const [ink, setInk] = useState<Ink>("red");
   const [marks, setMarks] = useState<Mark[]>([]);
   const [drawing, setDrawing] = useState<Mark | null>(null);
 
@@ -52,7 +53,7 @@ export function ScreenshotEditor({ src, onDone, onCancel }: { src: string; onDon
   function down(event: React.PointerEvent<HTMLCanvasElement>) {
     event.currentTarget.setPointerCapture(event.pointerId);
     const p = at(event);
-    setDrawing(tool === "pen" ? { tool, points: [p] } : { tool, from: p, to: p });
+    setDrawing(tool === "pen" ? { tool, points: [p], ink } : { tool, from: p, to: p, ink });
   }
 
   function move(event: React.PointerEvent<HTMLCanvasElement>) {
@@ -89,7 +90,7 @@ export function ScreenshotEditor({ src, onDone, onCancel }: { src: string; onDon
     >
       <div className="flex h-full flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-3">
-          <p className="mr-auto text-sm text-muted">Circle or box what&apos;s wrong.</p>
+          <p className="mr-auto text-sm text-muted">Circle or box what&apos;s wrong. Use colors to point at different things in your note.</p>
           <div role="group" aria-label="Tool" className="flex gap-1">
             {TOOLS.map(({ value, label, Icon }) => (
               <button
@@ -103,6 +104,21 @@ export function ScreenshotEditor({ src, onDone, onCancel }: { src: string; onDon
               >
                 <Icon size={16} aria-hidden />
                 {label}
+              </button>
+            ))}
+          </div>
+          <div role="group" aria-label="Color" className="flex gap-1">
+            {INKS.map((i) => (
+              <button
+                key={i.value}
+                type="button"
+                aria-pressed={ink === i.value}
+                aria-label={i.label}
+                title={i.label}
+                onClick={() => setInk(i.value)}
+                className={`grid size-8 place-items-center rounded-full border-2 ${ink === i.value ? "border-text" : "border-transparent hover:border-border-strong"}`}
+              >
+                <span className="size-5 rounded-full" style={{ backgroundColor: i.color }} />
               </button>
             ))}
           </div>

@@ -10,12 +10,27 @@ import { SCREENSHOT_MAX_BYTES } from "./report";
 
 export type Point = { x: number; y: number };
 
-export type Mark = { tool: "pen"; points: Point[] } | { tool: "rect"; from: Point; to: Point };
+/**
+ * The inks, named so a note can point at one ("the blue box", feedback
+ * deead2c3). Each reads on light and dark pages alike.
+ */
+export const INKS = [
+  { value: "red", label: "Red", color: "#e5191b" },
+  { value: "blue", label: "Blue", color: "#1a5fd6" },
+  { value: "green", label: "Green", color: "#138a36" },
+] as const;
+
+export type Ink = (typeof INKS)[number]["value"];
+
+/** A mark drawn before inks existed, or without one picked, is red. */
+export type Mark = ({ tool: "pen"; points: Point[] } | { tool: "rect"; from: Point; to: Point }) & { ink?: Ink };
 
 export type Tool = Mark["tool"];
 
-/** The ink: a red that reads on light and dark pages alike. */
-export const MARK_COLOR = "#e5191b";
+/** The default ink. */
+export const MARK_COLOR = INKS[0].color;
+
+const inkColor = (ink: Ink | undefined) => INKS.find((i) => i.value === ink)?.color ?? MARK_COLOR;
 
 /** Line width in picture pixels, so a mark is as visible on a small capture as on a big one. */
 export const lineWidth = (width: number, height: number) => Math.max(3, Math.round(Math.max(width, height) / 300));
@@ -31,11 +46,11 @@ export type Pen = Pick<
 
 /** Draws the marks onto a context whose pixels are the picture's. */
 export function drawMarks(pen: Pen, marks: readonly Mark[], width: number) {
-  pen.strokeStyle = MARK_COLOR;
   pen.lineWidth = width;
   pen.lineCap = "round";
   pen.lineJoin = "round";
   for (const mark of marks) {
+    pen.strokeStyle = inkColor(mark.ink);
     if (mark.tool === "rect") {
       pen.strokeRect(Math.min(mark.from.x, mark.to.x), Math.min(mark.from.y, mark.to.y), Math.abs(mark.to.x - mark.from.x), Math.abs(mark.to.y - mark.from.y));
       continue;
