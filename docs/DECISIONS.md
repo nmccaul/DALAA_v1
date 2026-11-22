@@ -512,3 +512,20 @@ and 13e17f3f*
   says so), and grades already sent stay in the gradebook.
 - Not yet: deleting several at once, and moving them into modules (also in
   that feedback).
+
+### D-042 · "Your feedback" on the Help tab, and colored markup
+
+*2026-11-22, Nathan ("add a list of open feedback in the help section …
+crossed off/marked resolved when they are fixed … still different than
+release notes"), from Lucy's feedback 3df5d2ca, 107d2eb9 and deead2c3*
+- **The Help tab lists the reports the signed-in teacher sent**, under Open
+  and Done. Each says where it stands: Received, Being worked on, Waiting on a
+  decision, Fixed and coming in the next update, Fixed (crossed off, with the
+  date), or Closed without a change. It shows their own reports only (admins
+  included: the inbox stays in Settings), with no screenshots and none of the
+  fixer's notes, which are written for the team.
+- **It's not the release notes.** A report is crossed off when it's resolved
+  (`npm run feedback -- resolve` or the admin inbox). The release notes still
+  list every change, whether or not someone asked for it.
+- **Screenshot markup has three named colors**, red, blue and green, so a
+  note can say "the blue box". Red is the default.

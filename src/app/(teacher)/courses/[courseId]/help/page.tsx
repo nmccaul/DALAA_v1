@@ -2,15 +2,19 @@ import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
+import { db } from "@/db/client";
+import { listMyReports } from "@/feedback/mine";
 import { noteDate, RELEASE_NOTES } from "@/help/release-notes";
 import { GiveFeedback } from "./give-feedback";
+import { YourFeedback } from "./your-feedback";
 
 export const metadata: Metadata = { title: "Help" };
 
-/** The course's Help tab (D-032): the AI wizard (coming), feedback, and what's new. */
+/** The course's Help tab (D-032): the AI wizard (coming), feedback and what became of it, and what's new. */
 export default async function HelpTabPage({ params }: PageProps<"/courses/[courseId]/help">) {
   // Only the course's teachers see its tabs.
-  await loadTaughtCourse((await params).courseId);
+  const { actor } = await loadTaughtCourse((await params).courseId);
+  const mine = await listMyReports(db(), actor);
 
   const section = "flex flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0";
   return (
@@ -30,6 +34,15 @@ export default async function HelpTabPage({ params }: PageProps<"/courses/[cours
           up or leave it out. The yellow Feedback tab on the right edge of every page does the same.
         </p>
         <GiveFeedback />
+      </section>
+
+      <section className={section}>
+        <h3 className="text-lg font-bold">Your feedback</h3>
+        <p className="text-muted">
+          Everything you&apos;ve sent, and where it stands. When one is fixed, it&apos;s crossed off and moves to Done.
+          Release notes below list every change, whether or not someone asked for it.
+        </p>
+        <YourFeedback reports={mine} />
       </section>
 
       <section className={section}>
