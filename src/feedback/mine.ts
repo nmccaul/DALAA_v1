@@ -3,11 +3,12 @@
  * the signed-in person sent, and where each one stands, so they can see what
  * was fixed and check before sending the same thing twice. Only their own
  * reports; no screenshots, and none of the fixer's notes (they're written for
- * the team). Release notes stay separate: they list what changed, asked for
- * or not.
+ * the team). An admin can also list everyone's there (D-042), the same rows
+ * the Settings inbox reads. Release notes stay separate: they list what
+ * changed, asked for or not.
  */
 
-import { feedbackSentBy, type Actor } from "@/db/scope";
+import { feedbackReadableBy, feedbackSentBy, type Actor, type Scope } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { FixStatus } from "./fixes";
 import type { Kind } from "./report";
@@ -16,6 +17,8 @@ export type MyReport = {
   id: string;
   kind: Kind;
   note: string;
+  /** Who sent it, as their account names them. */
+  reporter: string;
   createdAt: Date;
   status: "open" | "resolved";
   resolvedAt: Date | null;
@@ -53,12 +56,21 @@ export function standing(r: Pick<MyReport, "status" | "resolvedAt" | "fixStatus"
 }
 
 /** The actor's own reports, newest first. */
-export async function listMyReports(db: Db, actor: Actor): Promise<MyReport[]> {
-  const scope = feedbackSentBy(actor, "f");
+export function listMyReports(db: Db, actor: Actor): Promise<MyReport[]> {
+  return listReportsIn(db, feedbackSentBy(actor, "f"));
+}
+
+/** Everyone's reports, newest first: an admin's view; nothing for anyone else. */
+export function listEveryonesReports(db: Db, actor: Actor): Promise<MyReport[]> {
+  return listReportsIn(db, feedbackReadableBy(actor));
+}
+
+function listReportsIn(db: Db, scope: Scope): Promise<MyReport[]> {
   return db.query<MyReport>(
-    `select f.id, f.kind, f.note, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
+    `select f.id, f.kind, f.note, u.display_name as reporter, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
             x.status as "fixStatus", x.updated_at as "fixAt"
        from feedback_reports f
+       join users u on u.id = f.user_id
        left join feedback_fixes x on x.report_id = f.id
       where ${scope.text}
       order by f.created_at desc, f.id`,

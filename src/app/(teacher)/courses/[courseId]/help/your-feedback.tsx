@@ -1,4 +1,5 @@
 import { CaretRight, Check } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
 import { standing, type MyReport, type Standing } from "@/feedback/mine";
 import type { Kind } from "@/feedback/report";
@@ -23,24 +24,41 @@ function pill(s: Standing): string {
 /**
  * The Help tab's "Your feedback" (feedback 3df5d2ca, 107d2eb9): what the
  * teacher sent and where it stands. Open ones first; fixed ones are crossed
- * off under Done, which folds away.
+ * off under Done, which folds away. `everyone` is an admin's view of all
+ * reports: it names who sent each, and each opens in the Settings inbox.
  */
-export function YourFeedback({ reports }: { reports: MyReport[] }) {
+export function YourFeedback({ reports, everyone = false }: { reports: MyReport[]; everyone?: boolean }) {
   if (reports.length === 0) {
-    return <p className="text-muted">Nothing yet. What you send shows up here, and is crossed off when it&apos;s fixed.</p>;
+    return (
+      <p className="text-muted">
+        {everyone ? "No one has sent feedback yet." : "Nothing yet. What you send shows up here, and is crossed off when it's fixed."}
+      </p>
+    );
   }
   const rows = reports.map((r) => ({ r, s: standing(r) }));
   const open = rows.filter((x) => !x.s.done);
   const done = rows.filter((x) => x.s.done).sort((a, b) => (b.s.at?.getTime() ?? 0) - (a.s.at?.getTime() ?? 0));
   return (
     <div className="flex flex-col divide-y divide-border rounded-panel border border-border">
-      <Group title="Open" rows={open} open empty="Nothing open: everything you sent has been dealt with." />
-      <Group title="Done" rows={done} open={false} empty="Nothing fixed yet." />
+      <Group title="Open" rows={open} open everyone={everyone} empty={everyone ? "Nothing open." : "Nothing open: everything you sent has been dealt with."} />
+      <Group title="Done" rows={done} open={false} everyone={everyone} empty="Nothing fixed yet." />
     </div>
   );
 }
 
-function Group({ title, rows, open, empty }: { title: string; rows: { r: MyReport; s: Standing }[]; open: boolean; empty: string }) {
+function Group({
+  title,
+  rows,
+  open,
+  everyone,
+  empty,
+}: {
+  title: string;
+  rows: { r: MyReport; s: Standing }[];
+  open: boolean;
+  everyone: boolean;
+  empty: string;
+}) {
   return (
     <details open={open} className="group">
       <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-subtle [&::-webkit-details-marker]:hidden">
@@ -55,9 +73,18 @@ function Group({ title, rows, open, empty }: { title: string; rows: { r: MyRepor
           {rows.map(({ r, s }) => (
             <li key={r.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:gap-4 sm:pl-11">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <p className={`break-words whitespace-pre-line ${s.done === "fixed" ? "text-muted line-through" : ""}`}>{r.note}</p>
+                <p className={`break-words whitespace-pre-line ${s.done === "fixed" ? "text-muted line-through" : ""}`}>
+                  {everyone ? (
+                    <Link href={`/settings/feedback/${r.id}`} className="hover:text-accent hover:underline">
+                      {r.note}
+                    </Link>
+                  ) : (
+                    r.note
+                  )}
+                </p>
                 <p className="text-[13px] text-muted">
-                  {KIND[r.kind]} · Sent <LocalTime value={r.createdAt} style="day" />
+                  {KIND[r.kind]}
+                  {everyone && <> · {r.reporter}</>} · Sent <LocalTime value={r.createdAt} style="day" />
                 </p>
               </div>
               <span className={`inline-flex shrink-0 items-center gap-1 self-start rounded-full px-2.5 py-0.5 text-[13px] font-bold ${pill(s)}`}>

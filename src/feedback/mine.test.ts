@@ -3,7 +3,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { recordFix, resolveFixed } from "./fixes";
-import { listMyReports, standing } from "./mine";
+import { listEveryonesReports, listMyReports, standing } from "./mine";
 import { saveReport } from "./store";
 
 let db: Db;
@@ -63,9 +63,22 @@ describe("listMyReports", () => {
     expect((await listMyReports(db, lucy))[1]).toMatchObject({ status: "resolved", resolvedAt: expect.any(Date) });
   });
 
-  it("doesn't widen for an admin: the inbox is elsewhere", async () => {
+  it("doesn't widen for an admin: their own list is theirs", async () => {
     await send(lucy, "Lucy's");
     expect(await listMyReports(db, admin)).toEqual([]);
+  });
+});
+
+describe("listEveryonesReports", () => {
+  it("lists every report with who sent it for an admin, and nothing for anyone else", async () => {
+    await send(lucy, "Lucy's");
+    await send(scott, "Scott's");
+    const all = await listEveryonesReports(db, admin);
+    expect(all.map((r) => [r.reporter, r.note]).sort()).toEqual([
+      ["lucy", "Lucy's"],
+      ["scott", "Scott's"],
+    ]);
+    expect(await listEveryonesReports(db, lucy)).toEqual([]);
   });
 });
 
