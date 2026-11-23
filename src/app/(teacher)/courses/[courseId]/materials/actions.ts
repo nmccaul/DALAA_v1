@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireActor } from "@/auth/current";
 import type { DeleteState } from "@/components/confirm-delete";
 import { deleteMaterial } from "@/content/delete";
+import { updateMaterial } from "@/content/material";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { readContent } from "@/content/read";
@@ -67,4 +68,18 @@ export async function deleteMaterialAction(_prev: DeleteState, form: FormData): 
   const deleted = await deleteMaterial(db(), actor, courseId, seenBy, String(form.get("materialId") ?? ""));
   if (!deleted.ok) return { error: deleted.reason };
   redirect(`/courses/${courseId}/materials?deleted=1`);
+}
+
+export type EditMaterialState = { error?: string };
+
+/** Save on a material's page (feedback 8697eb90): its new name and text, then back to reading it. */
+export async function editMaterialAction(_prev: EditMaterialState, form: FormData): Promise<EditMaterialState> {
+  const courseId = String(form.get("courseId") ?? "");
+  const id = String(form.get("id") ?? "");
+  const saved = await updateMaterial(db(), await requireActor(), courseId, id, {
+    name: String(form.get("name") ?? ""),
+    body: String(form.get("body") ?? ""),
+  });
+  if (!saved.ok) return { error: saved.reason };
+  redirect(`/courses/${courseId}/materials/${id}?saved=1`);
 }

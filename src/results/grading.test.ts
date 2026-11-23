@@ -5,7 +5,7 @@ import { listStudentAssignments } from "@/activities/queries";
 import { getResult } from "./store";
 import { getTaughtAttempt } from "./attempt";
 import { latestDispute, listCourseDisputes, openDispute, resolveDispute } from "./disputes";
-import { listCourseGrades, setTeacherScore } from "./grading";
+import { listCourseGrades, setTeacherScore, testChats, testChatsNote } from "./grading";
 
 async function setup() {
   const db = await testDb();
@@ -110,6 +110,17 @@ describe("listCourseGrades and Canvas Student View", () => {
       ["Zed", false],
       ["Test Student", true],
     ]);
+  });
+});
+
+describe("testChats", () => {
+  const student = (studentView: boolean, status: "not_started" | "in_progress" | "submitted" | "graded") => ({ studentView, status });
+  it("counts finished Student View chats only, and says so in a sentence", () => {
+    const students = [student(true, "graded"), student(true, "in_progress"), student(false, "graded"), student(true, "submitted")];
+    expect(testChats({ students: students as never })).toBe(2);
+    expect(testChats({ students: [student(false, "graded")] as never })).toBe(0);
+    expect(testChatsNote(1)).toBe("1 test chat from Canvas Student View isn't counted here, so the class numbers stay real. See it under Grades.");
+    expect(testChatsNote(2)).toContain("2 test chats from Canvas Student View aren't counted");
   });
 });
 

@@ -38,6 +38,18 @@ export type AssignmentGrades = {
   students: StudentGrade[];
 };
 
+/**
+ * Finished chats from Canvas's Student View on an assignment: a teacher's own
+ * tests, which Insights leaves out of the class (feedback 309e6e3a), so the
+ * page can say so instead of looking like the chat went missing.
+ */
+export const testChats = (a: Pick<AssignmentGrades, "students">): number =>
+  a.students.filter((s) => s.studentView && (s.status === "graded" || s.status === "submitted")).length;
+
+/** The sentence Insights shows when it left test chats out. */
+export const testChatsNote = (n: number): string =>
+  `${n} test ${n === 1 ? "chat" : "chats"} from Canvas Student View ${n === 1 ? "isn't" : "aren't"} counted here, so the class numbers stay real. See ${n === 1 ? "it" : "them"} under Grades.`;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**

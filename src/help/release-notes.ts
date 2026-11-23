@@ -11,6 +11,8 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "Open any material from Materials to read it the way students do (a PDF as its pages) and to edit its name and text, with a preview beside it. The list shows when each was last edited.",
+      "Insights now says when it leaves out test chats from Canvas Student View (\"1 test chat … isn't counted here\"), with a link to Grades, where they still show.",
       "Help now lists the feedback you've sent, under Open and Done, with where each one stands. When one is fixed, it's crossed off.",
       "When you mark up the picture in Feedback, you can draw in red, blue or green, so your note can point at \"the blue box\".",
       "Feedback asks how soon it needs fixing: Urgent, Soon or Can wait. Your feedback in Help shows it, and filters by tab (Activities, Materials, Results, Setup, Help, Other), then by section, type and priority.",
