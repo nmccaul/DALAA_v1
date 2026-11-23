@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
+import { activityMaterials } from "@/activities/materials";
 import { graderModel } from "@/ai/models";
 import { db } from "@/db/client";
-import { PICKER_PARAM, pickerRequest } from "@/lti/picker";
+import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
+import { StudyChatSetupSettings } from "../schema";
 import { suggestTypes } from "../suggest";
 import { GoalTypeForm } from "./goal-type-form";
 import { pickedMaterials } from "./picks";
 import { goalFromQuery, materialsFromQuery, materialsStepPath } from "./query";
-import { WizardShell } from "./shell";
-import { WIZARD_STEPS } from "./steps";
+import { WizardShell, type SavedStepProps } from "./shell";
+import { setupPath, WIZARD_STEPS } from "./steps";
 import { groupOf } from "./types";
 
 const title = WIZARD_STEPS.find((s) => s.slug === "goal")!.question;
@@ -70,6 +72,52 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
         kept={kept.goal}
         suggested={suggested}
         back={back}
+      />
+    </WizardShell>
+  );
+}
+
+/**
+ * Step 2 on a saved activity (Lucy, feedback 21e8c594): its kind leads and
+ * its goal is in the box. Changing them saves in place; the later steps keep
+ * what's written, and their Draft and Tweak rewrite it for the new kind.
+ */
+export async function SavedGoalStep({ activity, addToCanvas, go, later, started }: SavedStepProps) {
+  const settings = StudyChatSetupSettings.safeParse(activity.settings);
+  const { readings, guides } = await activityMaterials(db(), activity.id);
+  const back = keepPicker(setupPath(activity.courseId, activity.id, "materials"), addToCanvas);
+  if (!settings.success) {
+    return (
+      <WizardShell step="goal" title={title} note={null} go={go}>
+        <p className="text-danger">Some of this chat&apos;s settings don&apos;t fit any more. Create it again.</p>
+      </WizardShell>
+    );
+  }
+  const { mode, goal, typeReason } = settings.data;
+  return (
+    <WizardShell
+      step="goal"
+      title={title}
+      note={
+        <p>
+          Change the kind of chat or its goal. What you&apos;ve written on the later steps stays; use Draft or Tweak there to
+          rewrite it for a new kind.
+        </p>
+      }
+      go={go}
+      later={later}
+    >
+      {started}
+      <GoalTypeForm
+        courseId={activity.courseId}
+        creationKey={randomUUID()}
+        addToCanvas={addToCanvas}
+        contentIds={readings.map((r) => r.id)}
+        guideIds={guides.map((g) => g.id)}
+        kept={goal}
+        suggested={[{ mode, reason: typeReason ?? null, goal: null }]}
+        back={back}
+        activityId={activity.id}
       />
     </WizardShell>
   );

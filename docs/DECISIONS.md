@@ -430,6 +430,10 @@ and bc22f7df asked for the same).
   teacher's goal as asked). Picking another kind never changes the goal.
 - **New chats start with progress shown and students choosing typing or
   speaking** (*2026-11-22*, Lucy's 9abab88c: what she picks every time).
+- **Steps 1–2 open on a saved chat** (*2026-11-22*, Lucy's 21e8c594): its
+  materials (ticked as they are) and its kind and goal ("Current kind" leads)
+  can change in place. Nothing on steps 3–6 is redrafted; Draft and Tweak
+  there rewrite for a new kind. Step 3's Back goes to step 2.
 
 ### D-038 · Students can speak their messages (dictation)
 *2026-11-17, Nathan*

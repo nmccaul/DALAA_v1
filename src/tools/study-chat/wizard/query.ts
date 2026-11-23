@@ -56,9 +56,18 @@ export function materialsStepPath(courseId: string, ids: MaterialIds, picker: st
 
 export type AddKind = "upload" | "paste" | "web";
 
-/** Add a material from step 1, coming back to step 1 with what was ticked (and the new material) afterwards. */
-export function addMaterialPath(courseId: string, kind: AddKind, ids: MaterialIds, picker: string | null): string {
-  const next = materialsStepPath(courseId, ids, picker);
+/**
+ * Add a material from step 1, coming back to step 1 with what was ticked
+ * (and the new material) afterwards; `stepPath` builds step 1 on a saved activity.
+ */
+export function addMaterialPath(
+  courseId: string,
+  kind: AddKind,
+  ids: MaterialIds,
+  picker: string | null,
+  stepPath: (ids: MaterialIds) => string = (picked) => materialsStepPath(courseId, picked, picker),
+): string {
+  const next = stepPath(ids);
   return `/courses/${courseId}/materials/new?kind=${kind}&next=${encodeURIComponent(next)}`;
 }
 

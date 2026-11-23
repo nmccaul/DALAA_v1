@@ -36,7 +36,12 @@ describe("setup steps", () => {
     expect(nextSetupStep("options")).toBe("review");
     expect(nextSetupStep("review")).toBeNull();
     expect(previousSetupStep("grading")).toBe("scenario");
-    expect(previousSetupStep("scenario")).toBeNull();
+    // A saved activity's steps 1–2 open again (feedback 21e8c594).
+    expect(previousSetupStep("scenario")).toBe("goal");
+    expect(previousSetupStep("goal")).toBe("materials");
+    expect(previousSetupStep("materials")).toBeNull();
+    expect(nextSetupStep("materials")).toBe("goal");
+    expect(nextSetupStep("goal")).toBe("scenario");
     expect(setupPath("c1", "a1", "grading")).toBe("/courses/c1/activities/a1/setup/grading");
   });
 
@@ -46,6 +51,8 @@ describe("setup steps", () => {
     expect(savedStepTarget("options", "goto:review")).toBe("review");
     expect(savedStepTarget("options", "save")).toBeNull();
     expect(savedStepTarget("options", null)).toBeNull();
+    expect(savedStepTarget("scenario", "goto:materials")).toBe("materials");
+    expect(savedStepTarget("goal", "next")).toBe("scenario");
   });
 
   it("\"Save and finish later\" is not a step: it goes to the course's drafts (feedback deea6853)", () => {
