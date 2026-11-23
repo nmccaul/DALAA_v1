@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "Results now has one Gradebook, like Canvas's: students down, assignments across. Under each grade it says whether it's in Canvas (✓ In Canvas, Not sent, or Changed, not sent) and if it's disputed. Each column has Send to Canvas. Click a grade to read the chat, change the score or answer a dispute right beside the grid. Disputes no longer have their own view.",
       "When you change a student's score, you can say why: the student sees it with their grade. \"Polish with AI\" tidies your wording, and Undo puts your words back. A student's chat page now has Previous and Next, and on a wide screen the grade stays beside the conversation.",
       "Results → Grades lists your assignments, the latest submissions first, each with how many are graded, being graded and disputed. Open one to see just its students, with Send grades to Canvas there. The Results link on an activity goes straight to its grades.",
       "Search for an assignment on Grades and Insights. Score boxes move by half a point. The Insights score chart now splits low scores into Under 40%, 40s and 50s.",
