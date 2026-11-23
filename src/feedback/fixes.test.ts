@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
-import { claimReport, findReport, getFix, listLine, openReports, readOnly, recordFix, resolveFixed } from "./fixes";
+import { claimReport, findReport, getFix, listLine, openReports, readOnly, recordFix, resolveFixed, setPriority } from "./fixes";
 import { getReport } from "./store";
 
 let db: Db;
@@ -62,6 +62,19 @@ describe("openReports", () => {
     expect([priority, kind, age, path]).toEqual(["-", "bug", "2h", "/courses/abc/students"]);
     expect(note).toHaveLength(80);
     expect(note.startsWith("Line one line two")).toBe(true);
+  });
+});
+
+describe("setPriority", () => {
+  it("sets a priority, clears it with none, and refuses anything else", async () => {
+    const id = await report();
+    const priority = async () => (await db.query<{ priority: string | null }>("select priority from feedback_reports where id = $1", [id]))[0].priority;
+    expect(await setPriority(db, id, "p0")).toBe(true);
+    expect(await priority()).toBe("p0");
+    expect(await setPriority(db, id, "urgent")).toBe(false);
+    expect(await priority()).toBe("p0");
+    expect(await setPriority(db, id, "none")).toBe(true);
+    expect(await priority()).toBeNull();
   });
 });
 

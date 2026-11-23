@@ -7,7 +7,7 @@
  */
 
 import type { Db } from "@/db/types";
-import type { Kind, Priority } from "./report";
+import { isPriority, type Kind, type Priority } from "./report";
 
 export const FIX_STATUSES = ["in_progress", "fixed", "wont_fix", "cant_reproduce", "needs_nathan"] as const;
 export type FixStatus = (typeof FIX_STATUSES)[number];
@@ -152,4 +152,11 @@ export async function resolveFixed(db: Db, reportId: string, sha: string): Promi
     await recordFix(tx, reportId, { status: "fixed", commit });
     return { ok: true };
   });
+}
+
+/** Triage from the command line (D-042): sets a report's priority, or clears it with "none". False for anything else. */
+export async function setPriority(db: Db, reportId: string, priority: string): Promise<boolean> {
+  if (priority !== "none" && !isPriority(priority)) return false;
+  const rows = await db.query("update feedback_reports set priority = $2 where id = $1 returning id", [reportId, priority === "none" ? null : priority]);
+  return rows.length === 1;
 }

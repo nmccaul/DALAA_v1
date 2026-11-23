@@ -5,7 +5,8 @@ import { requireActor } from "@/auth/current";
 import { LocalTime } from "@/components/local-time";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { db } from "@/db/client";
-import { kindLabel } from "@/feedback/report";
+import { PRIORITY_TONE } from "@/components/priority-tone";
+import { kindLabel, priorityLabel } from "@/feedback/report";
 import { listReports } from "@/feedback/store";
 
 export const metadata: Metadata = { title: "Feedback reports" };
@@ -33,6 +34,7 @@ export default async function FeedbackReportsPage() {
             <li key={r.id}>
               <Link href={`/settings/feedback/${r.id}`} className="flex flex-col gap-1 px-5 py-4 hover:bg-accent-soft">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+                  <span className={`rounded-full border px-2 py-0.5 text-[13px] font-bold ${PRIORITY_TONE[r.priority ?? "none"]}`}>{priorityLabel(r.priority)}</span>
                   <span className="font-medium text-text">{kindLabel(r.kind)}</span>
                   <span>{r.reporter}</span>
                   <span><LocalTime value={r.createdAt} /></span>
