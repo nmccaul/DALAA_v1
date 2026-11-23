@@ -1,3 +1,4 @@
+import { ReadingText } from "@/components/reading-text";
 import type { ReactNode } from "react";
 import { after } from "next/server";
 import { graderModel } from "@/ai/models";
@@ -55,7 +56,7 @@ export async function StudyChatTake({ actor, activity }: TakeScreenProps) {
   const reading = (
     <div className="flex flex-col gap-6">
       {activity.readings.map((r) => {
-        const text = <div className="max-w-[70ch] text-[1.0625rem] leading-relaxed whitespace-pre-wrap break-words">{r.body}</div>;
+        const text = <ReadingText text={r.body} />;
         return (
           <article key={r.id} className="flex flex-col gap-3 rounded-panel border border-border bg-surface px-5 py-5 sm:px-8">
             <h2 className="font-display text-xl font-semibold break-words">{r.name}</h2>

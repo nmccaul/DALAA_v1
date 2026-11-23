@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import { ReadingText } from "@/components/reading-text";
 import { Button, buttonStyles, inputStyles } from "@/components/ui";
 import { editMaterialAction, type EditMaterialState } from "../actions";
 
@@ -19,6 +20,7 @@ export function MaterialEditor({
   notes,
   nameMax,
   previewLabel,
+  added,
 }: {
   courseId: string;
   id: string;
@@ -28,6 +30,8 @@ export function MaterialEditor({
   notes: string[];
   nameMax: number;
   previewLabel: string;
+  /** Checking it right after adding it: Save comes back to that, with `next` kept. */
+  added?: { next: string | null };
 }) {
   const [name, setName] = useState(initialName);
   const [body, setBody] = useState(initialBody);
@@ -38,6 +42,8 @@ export function MaterialEditor({
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="id" value={id} />
+      {added && <input type="hidden" name="added" value="1" />}
+      {added?.next && <input type="hidden" name="next" value={added.next} />}
       {notes.map((n) => (
         <p key={n} className="rounded-control border border-border bg-subtle px-3 py-2 text-sm">
           {n}
@@ -63,7 +69,7 @@ export function MaterialEditor({
           <span className="text-sm font-medium">{previewLabel}</span>
           <div className="max-h-[38rem] min-h-80 overflow-y-auto rounded-panel border border-border bg-surface px-5 py-4">
             <h3 className="mb-3 font-display text-lg font-semibold break-words">{name || "Untitled"}</h3>
-            <div className="text-[1.0625rem] leading-relaxed break-words whitespace-pre-wrap">{body}</div>
+            <ReadingText text={body} />
           </div>
         </div>
       </div>

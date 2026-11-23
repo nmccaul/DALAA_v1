@@ -8,7 +8,7 @@ import { updateMaterial } from "@/content/material";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
 import { readContent } from "@/content/read";
-import { afterAddPath } from "@/content/return-path";
+import { reviewPath } from "@/content/return-path";
 import { fetchWebPage } from "@/content/web";
 import { db } from "@/db/client";
 
@@ -18,7 +18,8 @@ export type AddMaterialState = { error?: string };
  * Adds an uploaded or pasted material from the Materials tab. "ai" saves it
  * as an AI-only note (course_guides), which never reaches students.
  * `creationKey` is client-generated, so a double submit saves one copy.
- * A `next` inside the course (step 1 of a new activity) is where it returns.
+ * It opens on its own page to check (reviewPath); a `next` inside the
+ * course (step 1 of a new activity) is where "Looks good" returns.
  */
 export async function addMaterialAction(_prev: AddMaterialState, form: FormData): Promise<AddMaterialState> {
   const actor = await requireActor();
@@ -33,7 +34,7 @@ export async function addMaterialAction(_prev: AddMaterialState, form: FormData)
   const aiOnly = form.get("seenBy") === "ai";
   const saved = await (aiOnly ? saveGuide : saveContent)(db(), actor, courseId, creationKey, input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(afterAddPath(form.get("next"), courseId, { id: saved.content.id, aiOnly }));
+  redirect(reviewPath(courseId, saved.content.id, form.get("next")));
 }
 
 export type WebPageState = { error?: string; preview?: { url: string; title: string; excerpt: string } };
@@ -57,7 +58,7 @@ export async function addWebPageAction(_prev: WebPageState, form: FormData): Pro
   const aiOnly = form.get("seenBy") === "ai";
   const saved = await (aiOnly ? saveGuide : saveContent)(db(), actor, courseId, String(form.get("creationKey") ?? ""), fetched.input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(afterAddPath(form.get("next"), courseId, { id: saved.content.id, aiOnly }));
+  redirect(reviewPath(courseId, saved.content.id, form.get("next")));
 }
 
 /** The trash button on a Materials row, after the teacher confirms (D-041). */
@@ -72,7 +73,7 @@ export async function deleteMaterialAction(_prev: DeleteState, form: FormData): 
 
 export type EditMaterialState = { error?: string };
 
-/** Save on a material's page (feedback 8697eb90): its new name and text, then back to reading it. */
+/** Save on a material's page (feedback 8697eb90): its new name and text, then back to reading it (still checking it, when just added). */
 export async function editMaterialAction(_prev: EditMaterialState, form: FormData): Promise<EditMaterialState> {
   const courseId = String(form.get("courseId") ?? "");
   const id = String(form.get("id") ?? "");
@@ -81,5 +82,6 @@ export async function editMaterialAction(_prev: EditMaterialState, form: FormDat
     body: String(form.get("body") ?? ""),
   });
   if (!saved.ok) return { error: saved.reason };
+  if (form.get("added") === "1") redirect(reviewPath(courseId, id, form.get("next"), true));
   redirect(`/courses/${courseId}/materials/${id}?saved=1`);
 }

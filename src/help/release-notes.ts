@@ -11,6 +11,8 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "After you upload a file, paste text or add a web page, it opens so you can check it: the whole text, or a PDF's pages, as students will see it. Edit it side by side with a preview, then \"Looks good\" takes you back where you were.",
+      "Readings now show their Markdown as formatting: \"# Title\" is a heading, \"- item\" a list, **bold** is bold, for students and in the preview.",
       "On step 2 of a new Study Chat, the learning goal box starts empty: write your own, press Draft for DALAA's, or press Tweak and say what to change.",
       "A new Study Chat now starts with \"Show students their progress\" on and students answering by typing or speaking, their choice. Change either on Chat options.",
       "The \"You're still setting up …\" reminder on Activities has a ✕ to dismiss it and \"Remind me tomorrow\".",

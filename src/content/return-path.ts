@@ -26,3 +26,17 @@ export function afterAddPath(next: unknown, courseId: string, saved: { id: strin
   url.searchParams.set("added", `${saved.aiOnly ? "guide" : "content"}:${saved.id}`);
   return `${url.pathname}${url.search}`;
 }
+
+/**
+ * Right after adding a material: its own page, to check it reads right and
+ * edit it before going on (Lucy, feedback 6c0bf4e4, 2e01b6f9, c4e4aef5). It
+ * carries `next` (kept only inside the course), so "Looks good" goes on to
+ * where the teacher was. `saved` after an edit there.
+ */
+export function reviewPath(courseId: string, id: string, next: unknown, saved = false): string {
+  const back = materialReturnPath(next, courseId);
+  const query = new URLSearchParams({ added: "1" });
+  if (saved) query.set("saved", "1");
+  if (back) query.set("next", back);
+  return `/courses/${courseId}/materials/${id}?${query}`;
+}
