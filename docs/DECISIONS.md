@@ -643,3 +643,14 @@ per-assignment grades page and the separate Disputes view.*
   dispute to answer, the grader's breakdown, the conversation, and Previous
   and Next student down the column. Saving keeps it open. Old links (a
   student's chat page, Grades, Disputes, an assignment's grades) land here.
+- **The counts sit in the toolbar, not above it** (Nathan, same day: the
+  two notices "take up too much room and are the first thing that is
+  seen"): "N not in Canvas" (amber) and "N disputed" (red) are buttons beside
+  the searches. Each shows only those students and turns off with a second
+  click, replacing the Show menu. "All in Canvas" (green) shows when nothing
+  is waiting. The legend is a "What the marks mean" popover. The grid starts
+  right under the searches.
+- **Canvas Student View stays marked:** a roster sync only ever sets
+  `student_view`, never clears it, so a class list that leaves out the
+  TestUser role can't turn a test user back into a student. Two students
+  with the same name show their login IDs.
