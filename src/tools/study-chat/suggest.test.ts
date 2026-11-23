@@ -80,6 +80,19 @@ describe("step 2 suggestions", () => {
     expect(await suggestGoalFor(db, answering({ goal: "x".repeat(601) }), {}, harbor, "debate")).toBeNull();
     expect((await ledger()).map((r) => r.purpose)).toEqual(Array(3).fill("suggest.goal"));
   });
+
+  it("rewrites the teacher's goal as they ask (Tweak, feedback 78c8594e)", async () => {
+    const model = answering({ goal: "Defend opening the store now." });
+    const tweak = { current: "Argue about the store.", instruction: "make it about opening now" };
+    expect(await suggestGoalFor(db, model, {}, harbor, "debate", tweak)).toBe("Defend opening the store now.");
+    expect(sent(model)).toContain("<teacher-goal>Argue about the store.</teacher-goal>");
+    expect(sent(model)).toContain("What the teacher wants changed: make it about opening now");
+    // The screen already says the opening; a goal that repeats it loses it.
+    const repeats = answering({ goal: "When students finish, they should be able to defend opening now." });
+    expect(await suggestGoalFor(db, repeats, {}, harbor, "debate", tweak)).toBe("Defend opening now.");
+    // An empty direction still asks for something.
+    expect(goalPrompt(harbor, "debate", { current: "x", instruction: " " }).prompt).toContain("make it clearer and easier to assess");
+  });
 });
 
 describe("prompts", () => {

@@ -11,6 +11,9 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "On step 2 of a new Study Chat, the learning goal box starts empty: write your own, press Draft for DALAA's, or press Tweak and say what to change.",
+      "A new Study Chat now starts with \"Show students their progress\" on and students answering by typing or speaking, their choice. Change either on Chat options.",
+      "The \"You're still setting up …\" reminder on Activities has a ✕ to dismiss it and \"Remind me tomorrow\".",
       "Results now has one Gradebook, like Canvas's: students down, assignments across. Under each grade it says whether it's in Canvas (✓ In Canvas, Not sent, or Changed, not sent) and if it's disputed. Each column has Send to Canvas. Click a grade to read the chat, change the score or answer a dispute right beside the grid. Disputes no longer have their own view.",
       "When you change a student's score, you can say why: the student sees it with their grade. \"Polish with AI\" tidies your wording, and Undo puts your words back. A student's chat page now has Previous and Next, and on a wide screen the grade stays beside the conversation.",
       "Results → Grades lists your assignments, the latest submissions first, each with how many are graded, being graded and disputed. Open one to see just its students, with Send grades to Canvas there. The Results link on an activity goes straight to its grades.",

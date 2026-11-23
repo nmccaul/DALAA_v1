@@ -11,9 +11,10 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { Button, inputStyles } from "@/components/ui";
 import { goalForTypeAction, wizardTypeAction, type TypeState } from "../actions";
+import { AssistButton } from "../assist-button";
 import { PickerField } from "../forms";
 import type { ModeSlug } from "../modes";
 import type { TypeSuggestion } from "../suggest";
@@ -36,9 +37,9 @@ const ICONS: Record<string, Icon> = {
  * able to do by the end, which follows the kind (Nathan, feedback 084938dc:
  * interaction, then outcome and evaluation). Every kind is on screen, each
  * saying what students do and who the AI is; the suggested one leads. The
- * goal is written for the chosen kind: switching kinds brings that kind's
- * goal (asking the AI when the first suggestion had none), unless the teacher
- * has written their own, which is never replaced. Next saves the chat and
+ * goal box starts empty (Lucy, feedback 78c8594e): the teacher writes it, or
+ * presses Draft for one written for the chosen kind, or Tweak to have DALAA
+ * rewrite theirs; it never changes on its own. Next saves the chat and
  * opens step 3, where the teacher writes the rest or asks DALAA to.
  */
 export function GoalTypeForm({
@@ -56,7 +57,7 @@ export function GoalTypeForm({
   addToCanvas: string | null;
   contentIds: string[];
   guideIds: string[];
-  /** The teacher's own goal, coming back to this step; NULL to use the suggestions. */
+  /** The teacher's own goal, coming back to this step; NULL to start empty. */
   kept: string | null;
   /** The AI's kinds, best first, each with why it fits and its goal (never empty). */
   suggested: TypeSuggestion[];
@@ -77,35 +78,29 @@ export function GoalTypeForm({
   );
   const mode = styles[group];
 
-  // Goals written for each kind so far; the teacher's own goal wins once they type.
-  const [goals, setGoals] = useState<ReadonlyMap<ModeSlug, string>>(
-    () => new Map(suggested.flatMap((s) => (s.goal ? [[s.mode, s.goal] as const] : []))),
-  );
-  // The teacher's own goal once they type (or coming back); until then the goal written for the chosen kind.
-  const [own, setOwn] = useState<string | null>(kept);
-  const edited = own !== null;
-  const goal = own ?? goals.get(mode) ?? "";
-  // Kinds whose goal couldn't be written: the teacher writes one instead.
-  const [failed, setFailed] = useState<ReadonlySet<ModeSlug>>(() => new Set());
-  // Kinds already asked for, so switching back and forth asks once each.
-  const asked = useRef(new Set<ModeSlug>());
-  // Only the chosen kind matters: a slower answer for another kind never holds this one up (feedback a1fc461e).
-  const waiting = !edited && !goals.has(mode) && !failed.has(mode);
+  // Goals the first suggestion wrote for each kind: Draft uses one at once, without asking again.
+  const drafted = new Map(suggested.flatMap((s) => (s.goal ? [[s.mode, s.goal] as const] : [])));
+  // The box starts empty (feedback 78c8594e): the teacher writes the goal, or asks DALAA to draft or tweak it.
+  const [goal, setGoal] = useState(kept ?? "");
+  const [writing, setWriting] = useState(false);
+  const [assistError, setAssistError] = useState<string | null>(null);
 
-  const contentKey = contentIds.join(",");
-  const guideKey = guideIds.join(",");
-  // A kind with no goal yet gets one written for it, unless the teacher has written their own.
-  // Its answer is kept for that kind whenever it comes, even if the teacher has moved on.
-  useEffect(() => {
-    if (edited || goals.has(mode) || asked.current.has(mode)) return;
-    asked.current.add(mode);
-    goalForTypeAction(courseId, contentKey.split(","), guideKey ? guideKey.split(",") : [], mode)
+  const assist = (instruction: string) => {
+    setAssistError(null);
+    const current = goal.trim();
+    if (current === "" && drafted.has(mode)) {
+      setGoal(drafted.get(mode)!);
+      return;
+    }
+    setWriting(true);
+    goalForTypeAction(courseId, contentIds, guideIds, mode, current === "" ? undefined : { current, instruction })
       .catch(() => null)
       .then((written) => {
-        if (written) setGoals((g) => new Map(g).set(mode, written));
-        else setFailed((f) => new Set(f).add(mode));
-      });
-  }, [mode, edited, goals, courseId, contentKey, guideKey]);
+        if (written) setGoal(written);
+        else setAssistError("That didn't work this time. Try again, or write it yourself.");
+      })
+      .finally(() => setWriting(false));
+  };
 
   if (pending) {
     return (
@@ -119,7 +114,6 @@ export function GoalTypeForm({
   const lead = groupOf(first);
   const others = TYPE_GROUPS.filter((g) => g.key !== lead.key);
   const chosen = TYPE_GROUPS.find((g) => g.key === group)!;
-  const showing = !edited && goals.has(mode);
 
   const card = (g: TypeGroup, leading: boolean) => {
     const checked = g.key === group;
@@ -194,7 +188,10 @@ export function GoalTypeForm({
           <span className="text-lg font-bold">2. What will they be able to do by the end?</span>
           <span className="text-sm text-muted">The learning goal. DALAA builds the grading on step 4 from it.</span>
         </label>
-        <div className="flex items-baseline gap-2 text-sm font-medium">When students finish, they should be able to…</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium">
+          When students finish, they should be able to…
+          <AssistButton name="Learning goal" empty={goal.trim() === ""} busy={writing} disabled={false} error={assistError} onRun={assist} />
+        </div>
         <textarea
           id="goal"
           name="goal"
@@ -202,17 +199,16 @@ export function GoalTypeForm({
           required
           maxLength={1000}
           value={goal}
-          onChange={(e) => setOwn(e.target.value)}
+          readOnly={writing}
+          onChange={(e) => setGoal(e.target.value)}
           className={`${inputStyles} field-sizing-content min-h-24`}
         />
         <p role="status" className="text-sm text-muted">
-          {edited
-            ? "Your goal. It stays as you wrote it if you change the kind above."
-            : showing
-              ? `Written for ${chosen.label}, based on your reading. Edit it until it says what you want.`
-              : waiting
-                ? `Writing a goal for ${chosen.label}…`
-                : `I couldn't write a goal for ${chosen.label} this time. Write it in a sentence or two.`}
+          {writing
+            ? `Writing a goal for ${chosen.label}…`
+            : goal.trim() === ""
+              ? `Write it in a sentence or two, or press Draft and I'll write one for ${chosen.label} from your reading.`
+              : "Edit it until it says what you want, or press Tweak and tell me what to change."}
         </p>
       </div>
 
@@ -227,7 +223,7 @@ export function GoalTypeForm({
           ← Back
         </Link>
         <span className="flex-1" />
-        <Button type="submit" disabled={waiting}>
+        <Button type="submit" disabled={writing}>
           Next
         </Button>
       </div>
