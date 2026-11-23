@@ -62,7 +62,8 @@ export function planFromMembers(members: NrpsMember[]): ImportPlan & { subs: Map
       name: m.name?.trim() || netId,
       canvasSectionId: null,
       email,
-      studentView: isStudentView(m.roles ?? []),
+      // Only ever marks: a roster that leaves out the TestUser role must not clear what a Student View launch set.
+      studentView: isStudentView(m.roles ?? []) || undefined,
     });
     if (m.user_id) subs.set(netId, m.user_id);
   }

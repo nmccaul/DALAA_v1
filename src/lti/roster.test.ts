@@ -38,8 +38,8 @@ describe("planFromMembers", () => {
     ]);
     expect(plan.sections).toEqual([]);
     expect(plan.students).toEqual([
-      { netId: "amy@school.edu", name: "AMY", canvasSectionId: null, email: "amy@school.edu", studentView: false },
-      { netId: "bonetid", name: "BO", canvasSectionId: null, email: "bo@school.edu", studentView: false },
+      { netId: "amy@school.edu", name: "AMY", canvasSectionId: null, email: "amy@school.edu", studentView: undefined },
+      { netId: "bonetid", name: "BO", canvasSectionId: null, email: "bo@school.edu", studentView: undefined },
     ]);
     expect(plan.skipped).toEqual({ notEnrolled: 2, noNetId: 2, inTwoSections: 0 });
     expect([...plan.subs]).toEqual([
@@ -63,7 +63,7 @@ describe("planFromMembers and Canvas Student View", () => {
     const plan = planFromMembers([studentView("a1b2c3"), learner("test@school.edu", { name: "Test Student" })]);
     expect(plan.students.map((s) => [s.netId, s.studentView])).toEqual([
       ["a1b2c3", true],
-      ["test@school.edu", false],
+      ["test@school.edu", undefined],
     ]);
   });
 });
@@ -161,6 +161,10 @@ describe("syncLtiRoster", () => {
       ["a1b2c3", true],
     ]);
     expect(await getTaughtCourse(db, prof, id)).toMatchObject({ students: 1 });
+    // A roster that lists it without the TestUser role keeps the mark (it's only ever set, never cleared).
+    pages[MEMBERS] = { members: [learner("amy@school.edu"), { ...studentView("a1b2c3"), roles: [`${ROLE}Learner`] }] };
+    expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true });
+    expect((await listRoster(db, prof, id)).find((r) => r.netId === "a1b2c3")?.studentView).toBe(true);
     // A sync that no longer lists it flags it like anyone else; nothing is deleted.
     pages[MEMBERS] = { members: [learner("amy@school.edu")] };
     expect(await syncLtiRoster(db, prof, id, { fetch, key })).toMatchObject({ ok: true, flagged: 1 });

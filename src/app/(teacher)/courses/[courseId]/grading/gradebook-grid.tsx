@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
+import { CheckCircle, Info, MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { CanvasState } from "@/results/gradebook";
@@ -103,6 +103,15 @@ export function GradebookGrid({
     });
   }, [rows, student, show, shownCols]);
 
+  // What the toolbar counts, over the assignments shown (all of them, or the one searched for).
+  const unsent = rows.reduce((n, r) => n + shownCols.filter((c) => r.cells[c.id] && ["not_sent", "changed"].includes(r.cells[c.id].canvas)).length, 0);
+  const disputed = rows.reduce((n, r) => n + shownCols.filter((c) => r.cells[c.id]?.disputed).length, 0);
+  const graded = rows.reduce((n, r) => n + shownCols.filter((c) => r.cells[c.id]?.canvas !== undefined && r.cells[c.id].canvas !== "none").length, 0);
+  // Two students with the same name (two Student View users, say) are told apart by login ID.
+  const named = new Map<string, number>();
+  for (const r of rows) named.set(r.name, (named.get(r.name) ?? 0) + 1);
+  const toggle = (to: Show) => setShow((s) => (s === to ? "all" : to));
+
   const href = (attemptId: string) => {
     const q = new URLSearchParams({ open: attemptId });
     if (initialAssignment) q.set("assignment", initialAssignment);
@@ -111,8 +120,8 @@ export function GradebookGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-        <label className="flex flex-col gap-1 text-sm font-bold">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex min-w-48 flex-[1_1_14rem] flex-col gap-1 text-sm font-bold">
           Student names
           <span className="relative">
             <MagnifyingGlass size={16} aria-hidden className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
@@ -125,7 +134,7 @@ export function GradebookGrid({
             />
           </span>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-bold">
+        <label className="flex min-w-48 flex-[1_1_14rem] flex-col gap-1 text-sm font-bold">
           Assignment names
           <span className="relative">
             <MagnifyingGlass size={16} aria-hidden className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
@@ -138,23 +147,79 @@ export function GradebookGrid({
             />
           </span>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-bold">
-          Show
-          <select
-            value={show}
-            onChange={(e) => setShow(e.target.value as Show)}
-            className="rounded-control border border-border-strong bg-surface px-3 py-2 font-normal"
-          >
-            <option value="all">Every student</option>
-            {linked && <option value="unsent">Grades not in Canvas</option>}
-            <option value="disputed">Disputed grades</option>
-          </select>
-        </label>
+        {/* What needs attention, as filters: click to show only those, click again for everyone (Nathan, 2026-11-22). */}
+        <div role="group" aria-label="Show only" className="flex flex-wrap items-center gap-2 pb-0.5">
+          {linked &&
+            (unsent > 0 ? (
+              <button
+                type="button"
+                aria-pressed={show === "unsent"}
+                onClick={() => toggle("unsent")}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold ${
+                  show === "unsent" ? "border-warn-text bg-warn-text text-white" : "border-warn-text/40 bg-warn-soft text-warn-text hover:border-warn-text"
+                }`}
+              >
+                <WarningCircle size={15} weight="fill" aria-hidden />
+                {unsent} not in Canvas
+              </button>
+            ) : graded > 0 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-3 py-1.5 text-sm font-bold text-success">
+                <CheckCircle size={15} weight="fill" aria-hidden />
+                All in Canvas
+              </span>
+            ) : null)}
+          {disputed > 0 && (
+            <button
+              type="button"
+              aria-pressed={show === "disputed"}
+              onClick={() => toggle("disputed")}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold ${
+                show === "disputed" ? "border-danger bg-danger text-white" : "border-danger/40 bg-danger-soft text-danger hover:border-danger"
+              }`}
+            >
+              <span className={`size-2 rounded-full ${show === "disputed" ? "bg-white" : "bg-danger"}`} aria-hidden />
+              {disputed} disputed
+            </button>
+          )}
+          <details className="relative text-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-accent-text hover:underline [&::-webkit-details-marker]:hidden">
+              <Info size={15} aria-hidden />
+              What the marks mean
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 flex w-72 flex-col gap-1.5 rounded-panel border border-border bg-surface p-3 shadow-lg">
+              {linked ? (
+                <>
+                  <p>
+                    <span className="font-bold text-success">✓ In Canvas</span>: Canvas has this score.
+                  </p>
+                  <p>
+                    <span className="font-bold text-warn-text">Not sent</span>: only in DALAA so far.
+                  </p>
+                  <p>
+                    <span className="font-bold text-warn-text">Changed, not sent</span>: you changed it after sending; Canvas has the old score.
+                  </p>
+                </>
+              ) : (
+                <p>This course isn&apos;t connected to Canvas, so grades stay in DALAA.</p>
+              )}
+              <p>
+                <span className="font-bold text-danger">Disputed</span>: the student asked you to look again.
+              </p>
+              {linked && <p className="text-muted">Canvas changes only when you press Send to Canvas at the top of a column.</p>}
+            </div>
+          </details>
+        </div>
       </div>
 
       {shownCols.length === 0 || shownRows.length === 0 ? (
         <p className="border border-dashed border-border-strong px-6 py-8 text-muted">
-          {shownCols.length === 0 ? "No assignment matches that search." : show === "all" ? "No student matches that search." : "Nothing here: no student matches."}
+          {shownCols.length === 0
+            ? "No assignment matches that search."
+            : show === "all"
+              ? "No student matches that search."
+              : show === "unsent"
+                ? "Every grade here is in Canvas."
+                : "No disputed grades here."}
         </p>
       ) : (
         <div className="max-w-full overflow-x-auto rounded-panel border border-border bg-surface">
@@ -200,6 +265,11 @@ export function GradebookGrid({
                 <tr key={r.userId} className="border-b border-border last:border-b-0 even:bg-subtle/40">
                   <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2 text-left align-top font-normal">
                     <span className="block font-medium break-words">{r.name}</span>
+                    {(named.get(r.name) ?? 0) > 1 && (
+                      <span className="block text-[12px] break-all text-muted" translate="no">
+                        {r.loginId}
+                      </span>
+                    )}
                     {r.note && <span className="block text-[12px] text-muted">{r.note}</span>}
                   </th>
                   {shownCols.map((c) => {

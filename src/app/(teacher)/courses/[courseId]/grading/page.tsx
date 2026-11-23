@@ -65,7 +65,7 @@ export default async function ResultsPage({ params, searchParams }: PageProps<"/
       {view === "insights" ? (
         <InsightsView actor={actor} assignments={await listCourseGrades(db(), actor, course.id)} courseId={course.id} />
       ) : (
-        <GradebookView book={book} linked={linked} courseId={course.id} base={base} q={q} disputed={disputed} actor={actor} />
+        <GradebookView book={book} linked={linked} courseId={course.id} base={base} q={q} actor={actor} />
       )}
     </div>
   );
@@ -77,7 +77,6 @@ async function GradebookView({
   courseId,
   base,
   q,
-  disputed,
   actor,
 }: {
   book: Gradebook;
@@ -85,12 +84,9 @@ async function GradebookView({
   courseId: string;
   base: string;
   q: Query;
-  disputed: number;
   actor: Parameters<typeof GradePanel>[0]["actor"];
 }) {
   const columns = byRecentSubmission(book.columns);
-  const unsent = columns.reduce((n, c) => n + c.unsent, 0);
-  const graded = columns.reduce((n, c) => n + c.graded, 0);
   const assignment = typeof q.assignment === "string" && columns.some((c) => c.activityId === q.assignment) ? q.assignment : null;
   const open = typeof q.open === "string" ? q.open : null;
   const pushed = typeof q.pushed === "string" ? columns.find((c) => c.activityId === q.pushed) : undefined;
@@ -158,48 +154,6 @@ async function GradebookView({
           <p className="font-bold">{pushed.title}</p>
           {pushError ? <p>{pushError}</p> : summaryLines(readSummary(q)).map((line) => <p key={line}>{line}</p>)}
         </div>
-      )}
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        {!linked ? (
-          <p className="rounded-panel border border-border bg-subtle px-4 py-3 text-sm">
-            This course isn&apos;t connected to Canvas, so grades stay in DALAA. Students see their grade on the assignment.
-          </p>
-        ) : unsent > 0 ? (
-          <p role="status" className="rounded-panel border border-warn-text/30 bg-warn-soft px-4 py-3 text-warn-text">
-            <span className="font-bold">
-              {unsent} {unsent === 1 ? "grade isn't" : "grades aren't"} in Canvas yet.
-            </span>{" "}
-            They&apos;re marked &ldquo;Not sent&rdquo;. Send each assignment&apos;s from the top of its column when you&apos;re ready; Canvas changes
-            only when you send.
-          </p>
-        ) : graded > 0 ? (
-          <p role="status" className="rounded-panel border border-success/40 bg-success/10 px-4 py-3 font-bold text-success">
-            Every graded score is in Canvas.
-          </p>
-        ) : null}
-        {disputed > 0 && (
-          <p role="status" className="rounded-panel border border-danger/40 bg-danger-soft px-4 py-3 text-danger">
-            <span className="font-bold">
-              {disputed} {disputed === 1 ? "student disputed a grade" : "students disputed a grade"}.
-            </span>{" "}
-            Click a red &ldquo;Disputed&rdquo; grade to answer, or show only disputed grades.
-          </p>
-        )}
-      </div>
-      {linked && (
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
-          <span>Under each grade:</span>
-          <span className="font-bold text-success">✓ In Canvas</span>
-          <span>
-            <span className="font-bold text-warn-text">Not sent</span>: only in DALAA
-          </span>
-          <span>
-            <span className="font-bold text-warn-text">Changed, not sent</span>: Canvas has the old score
-          </span>
-          <span>
-            <span className="font-bold text-danger">Disputed</span>: waiting for your answer
-          </span>
-        </p>
       )}
       <GradebookGrid courseId={courseId} columns={gridColumns} rows={gridRows} linked={linked} base={base} open={open} initialAssignment={assignment} />
       {panel}
