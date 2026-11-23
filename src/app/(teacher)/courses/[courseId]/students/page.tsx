@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loginIdLabel } from "@/auth/login-id";
+import { readableLoginId } from "@/auth/readable-id";
 import { db } from "@/db/client";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
@@ -137,7 +138,7 @@ export default async function CourseStudentsPage({
               {roster.map((s) => (
                 <tr key={s.netId}>
                   <td className="px-4 py-3 font-medium">{s.name}</td>
-                  <td className="px-4 py-3 text-muted" translate="no">{s.netId}</td>
+                  <td className="px-4 py-3 text-muted" translate="no">{readableLoginId(s.netId) ?? "–"}</td>
                   {hasSections && <td className="px-4 py-3 tabular-nums text-muted">{s.section ?? "None"}</td>}
                   <td className="px-4 py-3 text-muted">
                     {[s.studentView && "Canvas Student View", s.status === "flagged" && "Not on the latest class list"]

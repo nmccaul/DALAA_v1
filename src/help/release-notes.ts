@@ -9,6 +9,12 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-23",
+    changes: [
+      "The Gradebook and Students tab no longer show the long code Canvas gives its test students in place of a login ID.",
+    ],
+  },
+  {
     date: "2026-11-22",
     changes: [
       "After you upload a file, paste text or add a web page, it opens so you can check it: the whole text, or a PDF's pages, as students will see it. Edit it side by side with a preview, then \"Looks good\" takes you back where you were.",

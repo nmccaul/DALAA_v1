@@ -1,5 +1,6 @@
 "use client";
 
+import { readableLoginId } from "@/auth/readable-id";
 import { CheckCircle, Info, MagnifyingGlass, WarningCircle } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -265,9 +266,9 @@ export function GradebookGrid({
                 <tr key={r.userId} className="border-b border-border last:border-b-0 even:bg-subtle/40">
                   <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2 text-left align-top font-normal">
                     <span className="block font-medium break-words">{r.name}</span>
-                    {(named.get(r.name) ?? 0) > 1 && (
+                    {(named.get(r.name) ?? 0) > 1 && readableLoginId(r.loginId) && (
                       <span className="block text-[12px] break-all text-muted" translate="no">
-                        {r.loginId}
+                        {readableLoginId(r.loginId)}
                       </span>
                     )}
                     {r.note && <span className="block text-[12px] text-muted">{r.note}</span>}
