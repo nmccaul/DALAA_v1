@@ -7,6 +7,7 @@ import { previewGrades } from "@/lti/grades";
 import type { PushLine } from "@/results/push-plan";
 import { sendGradesAction } from "../../actions";
 import { CATEGORY, PREVIEW_ORDER, REFUSAL } from "../../push-text";
+import { gradesPath } from "../../view";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,7 +23,7 @@ export default async function SendGradesPage({ params, searchParams }: PageProps
   // The key from the Grading tab's click, so a confirm after a retry still sends once.
   const clientKey = typeof key === "string" && UUID.test(key) ? key : randomUUID();
   const preview = await previewGrades(db(), actor, activityId);
-  const back = `/courses/${course.id}/grading`;
+  const back = gradesPath(course.id, activityId);
 
   if (!preview.ok || !preview.plan.ok) {
     const plan = preview.ok ? preview.plan : null;

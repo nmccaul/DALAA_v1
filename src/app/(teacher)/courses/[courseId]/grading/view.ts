@@ -9,3 +9,6 @@ export function resultsView(view: string | string[] | undefined): ResultsView {
 
 /** One assignment's Insights page. */
 export const insightsPath = (courseId: string, activityId: string) => `/courses/${courseId}/grading/insights/${activityId}`;
+
+/** One assignment's grades: its students, scores and Send to Canvas (feedback 12f80baa). */
+export const gradesPath = (courseId: string, activityId: string) => `/courses/${courseId}/grading/grades/${activityId}`;

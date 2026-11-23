@@ -10,7 +10,7 @@ import { latestDispute } from "@/results/disputes";
 import { getResult } from "@/results/store";
 import { screensFor } from "@/tools/screens";
 import { DisputeForm, ScoreForm } from "../../score-forms";
-import { insightsPath } from "../../view";
+import { gradesPath, insightsPath } from "../../view";
 
 export const metadata: Metadata = { title: "Student's conversation" };
 
@@ -55,7 +55,7 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
             ← Insights
           </Link>
         ) : (
-          <Link href={`${base}?view=grades#${attempt.id}`} className="text-sm text-accent-text hover:underline">
+          <Link href={`${gradesPath(course.id, attempt.activityId)}#${attempt.id}`} className="text-sm text-accent-text hover:underline">
             ← Grades
           </Link>
         )}

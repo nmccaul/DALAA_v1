@@ -10,7 +10,7 @@ import { resolveDispute } from "@/results/disputes";
 import { setTeacherScore } from "@/results/grading";
 import { summaryQuery } from "./push-text";
 import { backTo } from "./back";
-import { insightsPath } from "./view";
+import { gradesPath, insightsPath } from "./view";
 
 /** Saves the teacher's score, or with "reset" puts the AI's score back. */
 export async function setScoreAction(form: FormData): Promise<void> {
@@ -53,8 +53,7 @@ export async function sendGradesAction(form: FormData): Promise<void> {
     redirect(`${grading}/send/${activityId}?${new URLSearchParams({ key: clientKey })}`);
   }
   const q = result.ok ? summaryQuery(activityId, result.summary) : new URLSearchParams({ pushed: activityId, pusherror: result.reason });
-  q.set("view", "grades");
-  redirect(`${grading}?${q}#grades-${activityId}`);
+  redirect(`${gradesPath(courseId, activityId)}?${q}#send`);
 }
 
 /**

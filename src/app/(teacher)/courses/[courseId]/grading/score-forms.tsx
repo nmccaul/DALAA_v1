@@ -50,7 +50,7 @@ export function ScoreForm({
           inputMode="decimal"
           min={0}
           max={max}
-          step={0.01}
+          step={0.5}
           required
           defaultValue={counted}
           aria-describedby={error ? `${inputId}-error` : undefined}
@@ -116,7 +116,7 @@ export function DisputeForm({
           inputMode="decimal"
           min={0}
           max={max}
-          step={0.01}
+          step={0.5}
           required
           defaultValue={student.teacherScore ?? student.aiScore!}
           aria-describedby={error ? `${id}-error` : undefined}

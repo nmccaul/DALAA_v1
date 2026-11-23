@@ -5,7 +5,7 @@ import { listStudentAssignments } from "@/activities/queries";
 import { getResult } from "./store";
 import { getTaughtAttempt } from "./attempt";
 import { latestDispute, listCourseDisputes, openDispute, resolveDispute } from "./disputes";
-import { listCourseGrades, setTeacherScore, testChats, testChatsNote } from "./grading";
+import { byRecentSubmission, gradeCounts, listCourseGrades, setTeacherScore, testChats, testChatsNote } from "./grading";
 
 async function setup() {
   const db = await testDb();
@@ -110,6 +110,24 @@ describe("listCourseGrades and Canvas Student View", () => {
       ["Zed", false],
       ["Test Student", true],
     ]);
+  });
+});
+
+describe("byRecentSubmission", () => {
+  it("puts the latest finished chat first, then ones no one finished by due date", () => {
+    const at = (iso: string | null) => (iso ? new Date(iso) : null);
+    const a = (id: string, last: string | null, due: string | null) => ({ id, lastSubmittedAt: at(last), dueAt: at(due) });
+    const list = [a("none-late", null, "2027-03-01"), a("old", "2027-01-02", null), a("none-undated", null, null), a("new", "2027-01-09", null), a("none-soon", null, "2027-02-01")];
+    expect(byRecentSubmission(list).map((x) => x.id)).toEqual(["new", "old", "none-soon", "none-late", "none-undated"]);
+    expect(list[0].id).toBe("none-late");
+  });
+});
+
+describe("gradeCounts", () => {
+  it("counts the class by where each student stands, leaving Student View out but not its dispute", () => {
+    const s = (status: string, studentView = false, disputeId: string | null = null) => ({ status, studentView, disputeId });
+    const students = [s("graded"), s("graded", false, "d1"), s("submitted"), s("in_progress"), s("not_started"), s("graded", true)];
+    expect(gradeCounts({ students: students as never })).toEqual({ students: 5, graded: 2, beingGraded: 1, inProgress: 1, notStarted: 1, disputed: 1 });
   });
 });
 
