@@ -1,34 +1,20 @@
-import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
-import { Button, EmptyState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
-import { isLtiCourse } from "@/lti/roster";
 import { listCourseDisputes, type CourseDispute } from "@/results/disputes";
-import { listCourseGrades, type AssignmentGrades, type StudentGrade } from "@/results/grading";
-import { sendGradesAction } from "./actions";
+import { byRecentSubmission, gradeCounts, listCourseGrades, type AssignmentGrades } from "@/results/grading";
+import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { InsightsView } from "./insights-view";
-import { REFUSAL, readSummary, summaryLines } from "./push-text";
-import { DisputeForm, ScoreForm } from "./score-forms";
-import { resultsView, type ResultsView } from "./view";
+import { DisputeForm } from "./score-forms";
+import { SCORE_ERRORS } from "./student-rows";
+import { gradesPath, resultsView, type ResultsView } from "./view";
 
 export const metadata: Metadata = { title: "Results" };
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
-
-const STATUS: Record<StudentGrade["status"], string> = {
-  not_started: "Not started",
-  in_progress: "In progress",
-  submitted: "Being graded",
-  graded: "Graded",
-};
-
-const ERRORS: Record<string, string> = {
-  out_of_range: "Enter a score from 0 up to the assignment's points.",
-  not_found: "That attempt isn't graded yet, so its score can't be changed.",
-};
 
 type Query = Record<string, string | string[] | undefined>;
 
@@ -84,7 +70,7 @@ export default async function ResultsPage({ params, searchParams }: PageProps<"/
       {view === "insights" ? (
         <InsightsView actor={actor} assignments={assignments} courseId={course.id} />
       ) : view === "grades" ? (
-        <Grades assignments={assignments} courseId={course.id} base={base} q={q} openDisputes={open} />
+        <Grades assignments={assignments} courseId={course.id} base={base} openDisputes={open} />
       ) : (
         <Disputes disputes={disputes} courseId={course.id} base={base} q={q} />
       )}
@@ -92,110 +78,77 @@ export default async function ResultsPage({ params, searchParams }: PageProps<"/
   );
 }
 
-/** Each student's score on each activity, changeable, and sending grades to Canvas. */
-async function Grades({
-  assignments,
-  courseId,
-  base,
-  q,
-  openDisputes,
-}: {
-  assignments: AssignmentGrades[];
-  courseId: string;
-  base: string;
-  q: Query;
-  openDisputes: number;
-}) {
-  const error = typeof q.error === "string" ? ERRORS[q.error] : undefined;
-  const fromCanvas = await isLtiCourse(db(), courseId);
-  const pushError = typeof q.pusherror === "string" ? (REFUSAL[q.pusherror as keyof typeof REFUSAL] ?? REFUSAL.unavailable) : null;
-  const from = `${base}?view=grades`;
-
+/**
+ * Grades (feedback 12f80baa, 2154c3d7, c7ef8807): one row per assignment,
+ * the latest submissions first, with where the class stands. Each opens its
+ * own page of students, scores and Send to Canvas.
+ */
+function Grades({ assignments, courseId, base, openDisputes }: { assignments: AssignmentGrades[]; courseId: string; base: string; openDisputes: number }) {
+  const ordered = byRecentSubmission(assignments);
   return (
-    <div className="flex flex-col gap-8">
+    <ListSearch className="flex flex-col gap-4">
       {openDisputes > 0 && (
-        <p role="status" className="rounded-panel border border-border-strong bg-accent-soft px-4 py-3">
+        <p role="status" className="rounded-panel border border-danger/40 bg-danger-soft px-4 py-3">
           {openDisputes === 1 ? "A student disputed a grade." : `${openDisputes} students disputed a grade.`}{" "}
           <Link href={`${base}?view=disputes`} className="font-medium text-accent-text hover:underline">
             Answer {openDisputes === 1 ? "it" : "them"} in Disputes
           </Link>
         </p>
       )}
-      {assignments.map((a) => (
-        <section key={a.activityId} className="flex flex-col gap-3" aria-labelledby={`grades-${a.activityId}`}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 id={`grades-${a.activityId}`} className="scroll-mt-4 font-display text-xl font-semibold break-words">
-              {a.title} <span className="text-base font-normal text-muted">· {pointsFormat.format(a.points)} points</span>
-            </h2>
-            {fromCanvas && a.students.some((s) => s.status === "graded") && (
-              <form action={sendGradesAction}>
-                <input type="hidden" name="courseId" value={courseId} />
-                <input type="hidden" name="activityId" value={a.activityId} />
-                <input type="hidden" name="clientKey" value={randomUUID()} />
-                <Button>Send grades to Canvas</Button>
-              </form>
-            )}
-          </div>
-          {q.pushed === a.activityId && (
-            <div
-              role={pushError ? "alert" : "status"}
-              className={`rounded-panel border px-4 py-3 text-sm ${pushError ? "border-danger text-danger" : "border-border-strong bg-accent-soft"}`}
-            >
-              {pushError ? <p>{pushError}</p> : summaryLines(readSummary(q)).map((line) => <p key={line}>{line}</p>)}
-            </div>
-          )}
-          {a.students.length === 0 ? (
-            <p className="text-muted">No students on the class list yet.</p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-border rounded-panel border border-border bg-surface">
-              {a.students.map((s) => (
-                <li
-                  key={s.userId}
-                  id={s.attemptId ?? undefined}
-                  className="flex scroll-mt-4 flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-6"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    {s.attemptId ? (
-                      <Link href={`${base}/attempts/${s.attemptId}`} className="font-medium break-words text-accent-text hover:underline">
-                        {s.name}
-                      </Link>
-                    ) : (
-                      <span className="font-medium break-words">{s.name}</span>
-                    )}
-                    <span className="text-sm text-muted break-all" translate="no">
-                      {s.loginId}
-                      {s.studentView && <span translate="yes"> · Student View</span>}
-                      {s.flagged && <span translate="yes"> · Not on the latest class list</span>}
-                    </span>
-                  </div>
-                  {s.disputeId && s.attemptId ? (
-                    <Link href={`${base}?view=disputes#${s.attemptId}`} className="text-sm font-medium text-danger hover:underline">
-                      Disputed: answer it
-                    </Link>
-                  ) : s.status === "graded" && s.attemptId ? (
-                    <ScoreForm
-                      courseId={courseId}
-                      from={from}
-                      student={s}
-                      saved={q.saved === s.attemptId ? "Saved." : q.resolved === s.attemptId ? "Dispute resolved." : null}
-                      error={q.attempt === s.attemptId ? error : undefined}
-                    />
-                  ) : (
-                    <span className="text-sm text-muted">{STATUS[s.status]}</span>
-                  )}
+      <SearchBox placeholder="Search for an assignment" />
+      <SearchGroup texts={ordered.map((a) => a.title)}>
+        <ul className="flex flex-col divide-y divide-border rounded-panel border border-border bg-surface">
+          {ordered.map((a) => {
+            const c = gradeCounts(a);
+            const finished = c.graded + c.beingGraded;
+            return (
+              <SearchItem key={a.activityId} text={a.title}>
+                <li>
+                  <Link
+                    href={gradesPath(courseId, a.activityId)}
+                    className={`group flex flex-col gap-2 px-4 py-4 hover:bg-subtle sm:flex-row sm:items-center sm:gap-6 ${finished === 0 ? "opacity-75" : ""}`}
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="font-bold break-words group-hover:text-accent-text group-hover:underline">{a.title}</span>
+                      <span className="text-[13px] text-muted">
+                        {pointsFormat.format(a.points)} points ·{" "}
+                        {a.lastSubmittedAt ? (
+                          <>
+                            Last finished <LocalTime value={a.lastSubmittedAt} style="day" />
+                          </>
+                        ) : (
+                          "No one has finished"
+                        )}
+                        {a.lastSentAt && (
+                          <>
+                            {" · "}Sent to Canvas <LocalTime value={a.lastSentAt} style="day" />
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                      {c.disputed > 0 && <span className="rounded-full bg-danger-soft px-2.5 py-0.5 font-bold text-danger">{c.disputed} disputed</span>}
+                      {c.beingGraded > 0 && <span className="rounded-full bg-warn-soft px-2.5 py-0.5 font-bold text-warn-text">{c.beingGraded} being graded</span>}
+                      <span className="rounded-full bg-accent-soft px-2.5 py-0.5 font-bold text-accent-text tabular-nums">
+                        {c.graded} of {c.students} graded
+                      </span>
+                      <span className="font-medium whitespace-nowrap text-accent-text">Open →</span>
+                    </div>
+                  </Link>
                 </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
-    </div>
+              </SearchItem>
+            );
+          })}
+        </ul>
+      </SearchGroup>
+      <NoMatches texts={ordered.map((a) => a.title)} noun="assignments" />
+    </ListSearch>
   );
 }
 
 /** Students asking for another look: open ones to answer, then the ones already answered. */
 function Disputes({ disputes, courseId, base, q }: { disputes: CourseDispute[]; courseId: string; base: string; q: Query }) {
-  const error = typeof q.error === "string" ? ERRORS[q.error] : undefined;
+  const error = typeof q.error === "string" ? SCORE_ERRORS[q.error] : undefined;
   const open = disputes.filter((d) => d.status === "open");
   const resolved = disputes.filter((d) => d.status === "resolved");
   const from = `${base}?view=disputes`;

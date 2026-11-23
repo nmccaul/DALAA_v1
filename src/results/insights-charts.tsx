@@ -48,7 +48,10 @@ export function Bar({ percent, tone = "accent" }: { percent: number; tone?: "acc
 }
 
 const BANDS = [
-  { label: "Under 60%", min: 0 },
+  // Low scores split into 10-point bands too, so a 20% isn't lumped with a 55% (feedback 8502b57c).
+  { label: "Under 40%", min: 0 },
+  { label: "40s", min: 0.4 },
+  { label: "50s", min: 0.5 },
   { label: "60s", min: 0.6 },
   { label: "70s", min: 0.7 },
   { label: "80s", min: 0.8 },

@@ -24,6 +24,7 @@ import { runBriefAction } from "../../actions";
 import { BriefButton } from "../../brief-button";
 import { AskPanel } from "./ask-panel";
 import { CopyList } from "./copy-list";
+import { gradesPath } from "../../view";
 
 export const metadata: Metadata = { title: "Insights" };
 
@@ -77,7 +78,7 @@ export default async function AssignmentInsightsPage({ params, searchParams }: P
           <span>
             {finished} of {studentsLabel(students.length)} finished · {view.graded} graded
           </span>
-          <Link href={`${base}?view=grades#grades-${activityId}`} className="text-accent-text hover:underline">
+          <Link href={gradesPath(course.id, activityId)} className="text-accent-text hover:underline">
             Grades
           </Link>
           <Link href={`${here}${names ? "" : "?names=1"}`} className="text-accent-text hover:underline">
@@ -87,7 +88,7 @@ export default async function AssignmentInsightsPage({ params, searchParams }: P
         {testChats(assignment) > 0 && (
           <p role="note" className="mt-1 max-w-prose rounded-control border border-border bg-subtle px-3 py-2 text-sm">
             {testChatsNote(testChats(assignment))}{" "}
-            <Link href={`${base}?view=grades#grades-${activityId}`} className="font-medium text-accent-text underline">
+            <Link href={gradesPath(course.id, activityId)} className="font-medium text-accent-text underline">
               Open Grades
             </Link>
           </p>

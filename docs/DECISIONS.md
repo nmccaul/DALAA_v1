@@ -571,3 +571,25 @@ has always left them out of the class. It did that silently, so Lucy's
 graded test looked lost. The Insights card and the assignment page now say
 "1 test chat from Canvas Student View isn't counted here … See it under
 Grades".
+
+### D-044 · Results: one assignment at a time, the latest submissions first
+
+*2026-11-22, Nathan ("lets fix the results tab … prioritize ease of use,
+clear and understandable user experience"), from Lucy's feedback 12f80baa,
+2154c3d7, c7ef8807 and 8502b57c*
+- **Grades lists assignments, not every student under every assignment.**
+  Each row shows when someone last finished it, how many are graded, being
+  graded and disputed, and when grades last went to Canvas. A click opens that
+  assignment's own page (`/grading/grades/:activityId`): counts for graded,
+  being graded, in progress and not started; the students who finished
+  (disputed first), with In progress, Not started and Everyone a click away;
+  and Send grades to Canvas with when it was last sent. Before, it was one
+  page of about 75 rows, and the assignment needing attention could be
+  anywhere.
+- **The latest submissions first**, on Grades and on the Insights cards.
+  Assignments no one has finished come last, soonest due first.
+- **Results links go to the assignment**: the Activities tab's Results, the
+  student's chat page's "← Grades", Insights' "Grades", and Send to Canvas all
+  land on that assignment's grades page.
+- **Search** on Grades and Insights. Scores move by half a point. The
+  Insights score chart splits the low end into Under 40%, 40s and 50s.

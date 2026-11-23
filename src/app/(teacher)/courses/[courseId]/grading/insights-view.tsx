@@ -2,7 +2,8 @@ import Link from "next/link";
 import { db } from "@/db/client";
 import type { Actor } from "@/db/scope";
 import { finishedCount, getBrief } from "@/results/brief";
-import { testChats, type AssignmentGrades } from "@/results/grading";
+import { byRecentSubmission, testChats, type AssignmentGrades } from "@/results/grading";
+import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { classInsights } from "@/results/insights";
 import { Bar, pointsFormat, share } from "@/results/insights-charts";
 import { insightsPath } from "./view";
@@ -26,14 +27,17 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
       return { a, view, brief, finished, students: students.length, newer, tests: testChats(a) };
     }),
   );
-  // Assignments someone has finished first; the rest wait, muted, below.
-  const ordered = [...cards.filter((c) => c.finished > 0), ...cards.filter((c) => c.finished === 0)];
+  // The latest finished chats first (feedback 2154c3d7); assignments no one has finished wait, muted, below.
+  const order = byRecentSubmission(assignments).map((a) => a.activityId);
+  const ordered = [...cards].sort((x, y) => order.indexOf(x.a.activityId) - order.indexOf(y.a.activityId));
   return (
-    <div className="flex flex-col gap-4">
+    <ListSearch className="flex flex-col gap-4">
+      <SearchBox placeholder="Search for an assignment" />
       <p className="max-w-[65ch] text-muted">
         Pick an assignment to see how the class did. The numbers are ready as soon as chats are graded; the AI&apos;s
         takeaways run when you ask.
       </p>
+      <SearchGroup texts={ordered.map((c) => c.a.title)}>
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ordered.map(({ a, view, brief, finished, students, newer, tests }) => {
           const waiting = finished === 0;
@@ -47,7 +51,8 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
                 ? { text: "No one has finished", style: "bg-subtle text-muted" }
                 : { text: "Not analyzed yet", style: "bg-subtle text-text" };
           return (
-            <li key={a.activityId}>
+            <SearchItem key={a.activityId} text={a.title}>
+            <li>
               <Link
                 href={insightsPath(courseId, a.activityId)}
                 className={`group flex h-full flex-col gap-4 rounded-panel border bg-surface px-5 py-4 transition-colors hover:border-accent ${
@@ -88,9 +93,12 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
                 </div>
               </Link>
             </li>
+            </SearchItem>
           );
         })}
       </ul>
-    </div>
+      </SearchGroup>
+      <NoMatches texts={ordered.map((c) => c.a.title)} noun="assignments" />
+    </ListSearch>
   );
 }

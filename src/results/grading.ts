@@ -35,8 +35,41 @@ export type AssignmentGrades = {
   tool: string;
   title: string;
   points: number;
+  /** NULL: no due date. */
+  dueAt: Date | null;
+  /** When a student last finished it; NULL when no one has. */
+  lastSubmittedAt: Date | null;
+  /** When grades were last sent to Canvas; NULL when they never were. */
+  lastSentAt: Date | null;
   students: StudentGrade[];
 };
+
+/**
+ * Assignments with the latest finished chat first, so what needs attention
+ * is on top (feedback 2154c3d7); ones no one has finished come last, soonest
+ * due first. The list it's given is left alone.
+ */
+export function byRecentSubmission<T extends Pick<AssignmentGrades, "lastSubmittedAt" | "dueAt">>(assignments: readonly T[]): T[] {
+  const time = (d: Date | null, none: number) => (d ? d.getTime() : none);
+  return [...assignments].sort(
+    (a, b) =>
+      time(b.lastSubmittedAt, -Infinity) - time(a.lastSubmittedAt, -Infinity) || time(a.dueAt, Infinity) - time(b.dueAt, Infinity),
+  );
+}
+
+/** Where an assignment's class stands, for its row on Grades. Student View tests aren't counted. */
+export function gradeCounts(a: Pick<AssignmentGrades, "students">) {
+  const real = a.students.filter((s) => !s.studentView);
+  const n = (status: StudentGrade["status"]) => real.filter((s) => s.status === status).length;
+  return {
+    students: real.length,
+    graded: n("graded"),
+    beingGraded: n("submitted"),
+    inProgress: n("in_progress"),
+    notStarted: n("not_started"),
+    disputed: a.students.filter((s) => s.disputeId !== null).length,
+  };
+}
 
 /**
  * Finished chats from Canvas's Student View on an assignment: a teacher's own
@@ -61,7 +94,9 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
   if (!UUID.test(courseId)) return [];
   const where = and({ text: "a.course_id = $1 and a.status = 'published'", values: [courseId] }, coursesTaughtBy(actor, "c"));
   const rows = await db.query<Omit<AssignmentGrades, "students"> & StudentGrade>(
-    `select a.id as "activityId", a.tool, a.title, a.points::float8 as points,
+    `select a.id as "activityId", a.tool, a.title, a.points::float8 as points, a.due_at as "dueAt",
+            (select max(t2.completed_at) from attempts t2 where t2.activity_id = a.id) as "lastSubmittedAt",
+            (select max(p.finished_at) from grade_pushes p where p.activity_id = a.id) as "lastSentAt",
             u.id as "userId", u.display_name as name, u.external_id as "loginId", m.status = 'flagged' as flagged,
             m.student_view is true as "studentView",
             case when r.status = 'graded' then 'graded'
@@ -85,9 +120,9 @@ export async function listCourseGrades(db: Db, actor: Actor, courseId: string): 
     where.values,
   );
   const byActivity = new Map<string, AssignmentGrades>();
-  for (const { activityId, tool, title, points, ...student } of rows) {
+  for (const { activityId, tool, title, points, dueAt, lastSubmittedAt, lastSentAt, ...student } of rows) {
     let assignment = byActivity.get(activityId);
-    if (!assignment) byActivity.set(activityId, (assignment = { activityId, tool, title, points, students: [] }));
+    if (!assignment) byActivity.set(activityId, (assignment = { activityId, tool, title, points, dueAt, lastSubmittedAt, lastSentAt, students: [] }));
     assignment.students.push(student);
   }
   return [...byActivity.values()];
