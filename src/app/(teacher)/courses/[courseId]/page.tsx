@@ -240,7 +240,7 @@ function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; 
           {a.status === "published" ? `${a.submitted} submitted · ${a.graded} graded` : "Students can’t see it"}
         </span>
         {a.status === "published" && (
-          <Link href={`/courses/${courseId}/grading/grades/${a.id}`} className="text-sm text-accent-text hover:underline">
+          <Link href={`/courses/${courseId}/grading?assignment=${a.id}`} className="text-sm text-accent-text hover:underline">
             Results
           </Link>
         )}

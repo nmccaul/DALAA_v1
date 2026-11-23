@@ -612,3 +612,34 @@ clear and understandable user experience"), from Lucy's feedback 12f80baa,
   the students who finished ("3 of 10 finished", disputed first, as on the
   grades page), and on a wide screen the grade sits beside the conversation
   and stays in view while reading.
+
+### D-046 · One Gradebook: every grade, its Canvas state, and disputes, on one page
+
+*2026-11-22, Nathan ("grades and disputes should all be one tab … there
+should be no clicking into another window … extremely clear what is pushed to
+Canvas and what is not"), after Canvas's own Gradebook. Replaces D-044's
+per-assignment grades page and the separate Disputes view.*
+- **Results is Gradebook · Insights.** The Gradebook is a grid: students down,
+  published assignments across (latest submissions first), "Out of N" under
+  each title, with student and assignment search and a Show filter (every
+  student, grades not in Canvas, disputed grades).
+- **Every grade says where it stands with Canvas**, worked out from the last
+  score Canvas confirmed (`grade_push_lines`, status `sent`) and the score
+  that counts now:
+  - ✓ In Canvas: Canvas has this score.
+  - Not sent: graded, never sent.
+  - Changed, not sent: sent, then changed in DALAA, so Canvas has the old
+    score.
+  - Disputed (red) shows as well as the Canvas state.
+
+  A legend sits above the grid. The top of the page says how many grades
+  aren't in Canvas, or that every graded score is. Each column has "N not in
+  Canvas" and Send to Canvas (or "All in Canvas"). The button doesn't promise
+  a count, since Canvas may refuse some (CLAUDE.md's push rules are
+  unchanged). A course not connected to Canvas says grades stay in DALAA and
+  shows no Canvas marks.
+- **Clicking a grade opens it beside the grid** (`?open=`), on the same page:
+  its Canvas state in a sentence, the score with "Why you changed it" or the
+  dispute to answer, the grader's breakdown, the conversation, and Previous
+  and Next student down the column. Saving keeps it open. Old links (a
+  student's chat page, Grades, Disputes, an assignment's grades) land here.
