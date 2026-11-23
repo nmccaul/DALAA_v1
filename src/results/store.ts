@@ -48,6 +48,8 @@ export type Result =
       maxScore: number;
       /** The teacher's own score, which counts instead; NULL when they haven't changed it. */
       teacherScore: number | null;
+      /** Why the teacher changed it, for the student; NULL when they gave no reason or didn't change it. */
+      teacherNote: string | null;
       gradedAt: Date;
     } & GradedResult);
 
@@ -112,6 +114,7 @@ export async function getResult(db: Db, attemptId: string): Promise<Result | nul
     score: number | null;
     maxScore: number | null;
     teacherScore: number | null;
+    teacherNote: string | null;
     criteria: GradedResult["criteria"] | null;
     touchpoints: GradedResult["touchpoints"] | null;
     position: string | null;
@@ -119,7 +122,7 @@ export async function getResult(db: Db, attemptId: string): Promise<Result | nul
     gradedAt: Date | null;
   }>(
     `select status, score::float8 as score, max_score::float8 as "maxScore",
-            teacher_score::float8 as "teacherScore", criteria, touchpoints, position, feedback,
+            teacher_score::float8 as "teacherScore", teacher_note as "teacherNote", criteria, touchpoints, position, feedback,
             graded_at as "gradedAt"
        from results where attempt_id = $1`,
     [attemptId],
@@ -131,6 +134,7 @@ export async function getResult(db: Db, attemptId: string): Promise<Result | nul
     score: row.score!,
     maxScore: row.maxScore!,
     teacherScore: row.teacherScore,
+    teacherNote: row.teacherNote,
     gradedAt: row.gradedAt!,
     criteria: row.criteria!,
     touchpoints: row.touchpoints!,

@@ -593,3 +593,22 @@ clear and understandable user experience"), from Lucy's feedback 12f80baa,
   land on that assignment's grades page.
 - **Search** on Grades and Insights. Scores move by half a point. The
   Insights score chart splits the low end into Under 40%, 40s and 50s.
+
+### D-045 · Changing a grade: a reason the student sees, and grading straight through
+
+*2026-11-22, Nathan, from Lucy's feedback ae234e89*
+- **Scores move by half a point** (they moved by 0.01).
+- **"Why you changed it"** on the student's chat page: optional, up to
+  2,000 characters, saved with the teacher's score (`results.teacher_note`)
+  and shown to the student under "Your teacher set this grade". Putting the
+  AI's score back clears it.
+- **"Polish with AI"** rewrites the teacher's words more clearly and kindly
+  (the chat model, purpose `grade.note`; nothing is saved until Save). The
+  first try reversed a note's meaning: it read "ai missed u said the stars r
+  states" as the student not saying it. So the AI now gets the scores before
+  and after, the instructions say "the AI" means the first grading, it gets a
+  worked example, and an **Undo** puts the teacher's own words back.
+- **The chat page grades a class straight through:** Previous and Next across
+  the students who finished ("3 of 10 finished", disputed first, as on the
+  grades page), and on a wide screen the grade sits beside the conversation
+  and stays in view while reading.

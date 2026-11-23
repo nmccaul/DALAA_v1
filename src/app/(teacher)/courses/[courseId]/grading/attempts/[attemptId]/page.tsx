@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { getTaughtAttempt } from "@/results/attempt";
 import { ResultBreakdown } from "@/results/breakdown";
 import { latestDispute } from "@/results/disputes";
+import { listCourseGrades } from "@/results/grading";
 import { getResult } from "@/results/store";
 import { screensFor } from "@/tools/screens";
 import { DisputeForm, ScoreForm } from "../../score-forms";
@@ -33,10 +34,22 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   const attempt = await getTaughtAttempt(db(), actor, attemptId);
   if (!attempt || attempt.courseId !== course.id) notFound();
   const q = await searchParams;
-  const [result, dispute] = await Promise.all([getResult(db(), attempt.id), latestDispute(db(), attempt.id)]);
+  const [result, dispute, grades] = await Promise.all([
+    getResult(db(), attempt.id),
+    latestDispute(db(), attempt.id),
+    listCourseGrades(db(), actor, course.id),
+  ]);
+  // Previous and next among the students who finished, in the grades page's order, so a class can be graded straight through.
+  const finished = (grades.find((a) => a.activityId === attempt.activityId)?.students ?? [])
+    .filter((s) => s.attemptId && (s.status === "graded" || s.status === "submitted"))
+    .sort((a, b) => Number(b.disputeId !== null) - Number(a.disputeId !== null));
+  const at = finished.findIndex((s) => s.attemptId === attempt.id);
+  const step = (i: number) => (at >= 0 && finished[i] ? `${base}/attempts/${finished[i].attemptId}${q.from === "insights" ? "?from=insights" : ""}` : null);
   const Transcript = screensFor(attempt.tool)?.transcript;
   const base = `/courses/${course.id}/grading`;
   const from = `${base}/attempts/${attempt.id}`;
+  const prev = step(at - 1);
+  const next = step(at + 1);
   const error = q.attempt === attempt.id && typeof q.error === "string" ? ERRORS[q.error] : undefined;
   const graded = result?.status === "graded" ? result : null;
   const scored = graded && {
@@ -48,7 +61,7 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   };
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         {q.from === "insights" ? (
           <Link href={insightsPath(course.id, attempt.activityId)} className="text-sm text-accent-text hover:underline">
@@ -59,7 +72,30 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
             ← Grades
           </Link>
         )}
-        <h2 className="text-2xl font-normal break-words">{attempt.studentName}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-normal break-words">{attempt.studentName}</h2>
+          {at >= 0 && finished.length > 1 && (
+            <nav aria-label="Other students" className="flex items-center gap-3 text-sm">
+              {prev ? (
+                <Link href={prev} className="font-medium text-accent-text hover:underline">
+                  ← Previous
+                </Link>
+              ) : (
+                <span className="text-muted">← Previous</span>
+              )}
+              <span className="text-muted tabular-nums">
+                {at + 1} of {finished.length} finished
+              </span>
+              {next ? (
+                <Link href={next} className="font-medium text-accent-text hover:underline">
+                  Next →
+                </Link>
+              ) : (
+                <span className="text-muted">Next →</span>
+              )}
+            </nav>
+          )}
+        </div>
         <p className="text-sm text-muted">
           {attempt.activityTitle} · Started <LocalTime value={attempt.startedAt} />
           {attempt.completedAt ? (
@@ -74,7 +110,13 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
         </p>
       </div>
 
-      <section id={attempt.id} className="flex scroll-mt-4 flex-col gap-3 rounded-panel border border-border bg-surface px-5 py-4" aria-labelledby="grade">
+      {/* On a wide screen the grade stays beside the conversation, so the teacher reads and scores in one view. */}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:items-start lg:gap-8">
+      <section
+        id={attempt.id}
+        className="flex scroll-mt-4 flex-col gap-3 rounded-panel border border-border bg-surface px-5 py-4 lg:sticky lg:top-4 lg:order-2 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto"
+        aria-labelledby="grade"
+      >
         <h3 id="grade" className="text-lg font-bold">
           Grade
         </h3>
@@ -102,6 +144,7 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
                 student={scored}
                 saved={q.saved === attempt.id ? "Saved." : q.resolved === attempt.id ? "Dispute resolved." : null}
                 error={error}
+                note={{ value: graded.teacherNote }}
               />
             )}
             {dispute?.status === "resolved" && (
@@ -116,12 +159,13 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
         )}
       </section>
 
-      <section className="flex flex-col gap-3" aria-labelledby="conversation">
+      <section className="flex min-w-0 flex-col gap-3" aria-labelledby="conversation">
         <h3 id="conversation" className="text-lg font-bold">
           Conversation
         </h3>
         {Transcript ? <Transcript attempt={attempt} /> : <p className="text-muted">This activity has no conversation to show.</p>}
       </section>
+      </div>
     </div>
   );
 }

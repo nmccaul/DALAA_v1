@@ -59,7 +59,11 @@ export function StudentResult({
           Your grade: {countedScore(result).toLocaleString("en-US", { maximumFractionDigits: 2 })} of {points(result.maxScore)}
         </h2>
         {result.teacherScore !== null && (
-          <p className="text-sm text-muted">Your teacher set this grade. The scores below are from the first grading.</p>
+          <div className="flex flex-col gap-1 rounded-control border border-accent-text/20 bg-accent-soft px-3 py-2">
+            <p className="text-sm font-medium text-accent-text">Your teacher set this grade.</p>
+            {result.teacherNote && <p className="max-w-[65ch] break-words whitespace-pre-wrap">{result.teacherNote}</p>}
+            <p className="text-sm text-muted">The scores below are from the first grading.</p>
+          </div>
         )}
         <p className="max-w-[65ch]">{result.feedback}</p>
       </div>

@@ -136,7 +136,16 @@ export type SetScoreResult = "saved" | "not_found" | "out_of_range";
  * score is never changed. "not_found" covers anyone else's course, an attempt
  * not graded yet, and a made-up id.
  */
-export async function setTeacherScore(db: Db, actor: Actor, attemptId: string, score: number | null): Promise<SetScoreResult> {
+export const NOTE_MAX = 2000;
+
+export async function setTeacherScore(
+  db: Db,
+  actor: Actor,
+  attemptId: string,
+  score: number | null,
+  /** Why it changed, for the student (feedback ae234e89); blank or missing for none. Cleared with the score. */
+  note: string | null = null,
+): Promise<SetScoreResult> {
   if (!UUID.test(attemptId)) return "not_found";
   const where = and({ text: "t.id = $1 and r.status = 'graded'", values: [attemptId] }, coursesTaughtBy(actor, "c"));
   const [graded] = await db.query<{ maxScore: number }>(
@@ -150,12 +159,14 @@ export async function setTeacherScore(db: Db, actor: Actor, attemptId: string, s
   );
   if (!graded) return "not_found";
   if (score !== null && !(Number.isFinite(score) && score >= 0 && score <= graded.maxScore)) return "out_of_range";
+  const kept = score === null ? null : note?.trim().slice(0, NOTE_MAX) || null;
   await db.query(
     `update results
         set teacher_score = $2, teacher_scored_by = case when $2::numeric is null then null else $3::uuid end,
-            teacher_scored_at = case when $2::numeric is null then null else now() end
+            teacher_scored_at = case when $2::numeric is null then null else now() end,
+            teacher_note = $4
       where attempt_id = $1 and status = 'graded'`,
-    [attemptId, score === null ? null : Math.round(score * 100) / 100, actor.userId],
+    [attemptId, score === null ? null : Math.round(score * 100) / 100, actor.userId, kept],
   );
   return "saved";
 }

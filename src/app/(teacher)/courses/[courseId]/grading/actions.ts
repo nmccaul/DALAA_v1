@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { sendGrades } from "@/lti/grades";
 import { runBrief } from "@/results/brief";
 import { resolveDispute } from "@/results/disputes";
+import { polishNote } from "@/results/note";
 import { setTeacherScore } from "@/results/grading";
 import { summaryQuery } from "./push-text";
 import { backTo } from "./back";
@@ -18,7 +19,8 @@ export async function setScoreAction(form: FormData): Promise<void> {
   const attemptId = String(form.get("attemptId"));
   const raw = String(form.get("score") ?? "").trim();
   const score = form.get("reset") ? null : raw === "" ? Number.NaN : Number(raw);
-  const result = await setTeacherScore(db(), await requireActor(), attemptId, score);
+  const note = form.get("note");
+  const result = await setTeacherScore(db(), await requireActor(), attemptId, score, typeof note === "string" ? note : null);
   const q: Record<string, string> = result === "saved" ? { saved: attemptId } : { error: result, attempt: attemptId };
   redirect(backTo(courseId, form.get("from"), q, attemptId));
 }
@@ -67,4 +69,13 @@ export async function runBriefAction(form: FormData): Promise<void> {
   const q = new URLSearchParams({ brief: result });
   if (form.get("names") === "1") q.set("names", "1");
   redirect(`${insightsPath(courseId, activityId)}?${q}#takeaways`);
+}
+
+/** "Polish with AI" on the reason for a changed grade: a clearer, kinder wording of what the teacher wrote, to keep or edit. */
+export async function polishNoteAction(
+  attemptId: string,
+  text: string,
+  scores: { ai: number | null; teacher: number | null; max: number | null },
+): Promise<{ text?: string; error?: string }> {
+  return polishNote(db(), chatModel(), await requireActor(), attemptId, text, scores);
 }

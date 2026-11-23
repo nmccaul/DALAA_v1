@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "When you change a student's score, you can say why: the student sees it with their grade. \"Polish with AI\" tidies your wording, and Undo puts your words back. A student's chat page now has Previous and Next, and on a wide screen the grade stays beside the conversation.",
       "Results → Grades lists your assignments, the latest submissions first, each with how many are graded, being graded and disputed. Open one to see just its students, with Send grades to Canvas there. The Results link on an activity goes straight to its grades.",
       "Search for an assignment on Grades and Insights. Score boxes move by half a point. The Insights score chart now splits low scores into Under 40%, 40s and 50s.",
       "Open any material from Materials to read it the way students do (a PDF as its pages) and to edit its name and text, with a preview beside it. The list shows when each was last edited.",

@@ -162,6 +162,21 @@ describe("setTeacherScore", () => {
     expect((await listStudentAssignments(db, ana))[0]).toMatchObject({ score: 7 });
   });
 
+  it("keeps why the teacher changed it for the student, and clears it with the AI's score", async () => {
+    const { db, prof, activity, student, attempt, grade } = await setup();
+    const a = await activity("Case 1", "published", null);
+    const graded = await attempt(a, await student("ana", "Ana"), true);
+    await grade(graded, 7);
+
+    expect(await setTeacherScore(db, prof, graded, 8.5, "  You covered the colors; the AI missed it. ")).toBe("saved");
+    expect(await getResult(db, graded)).toMatchObject({ teacherScore: 8.5, teacherNote: "You covered the colors; the AI missed it." });
+    expect(await setTeacherScore(db, prof, graded, 9, "   ")).toBe("saved");
+    expect(await getResult(db, graded)).toMatchObject({ teacherScore: 9, teacherNote: null });
+    expect(await setTeacherScore(db, prof, graded, 9, "Kept.")).toBe("saved");
+    expect(await setTeacherScore(db, prof, graded, null, "ignored")).toBe("saved");
+    expect(await getResult(db, graded)).toMatchObject({ teacherScore: null, teacherNote: null });
+  });
+
   it("refuses scores out of range, attempts not graded yet, and other teachers", async () => {
     const { db, prof, other, activity, student, attempt, grade } = await setup();
     const a = await activity("Case 1", "published", null);

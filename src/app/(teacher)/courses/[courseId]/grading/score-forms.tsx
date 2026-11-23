@@ -1,5 +1,7 @@
 import { Button, inputStyles } from "@/components/ui";
+import { NOTE_MAX } from "@/results/grading";
 import { resolveDisputeAction, setScoreAction } from "./actions";
+import { NoteField } from "./note-field";
 
 /**
  * The teacher's score and dispute forms, on the Results tab and a student's
@@ -24,18 +26,21 @@ export function ScoreForm({
   student,
   saved,
   error,
+  note,
 }: {
   courseId: string;
   from: string;
   student: Scored;
   saved: string | null;
   error?: string;
+  /** On a student's chat page: the box for why the score changed, with its saved text. */
+  note?: { value: string | null };
 }) {
   const max = student.maxScore!;
   const counted = student.teacherScore ?? student.aiScore!;
   const inputId = `score-${student.attemptId}`;
   return (
-    <form action={setScoreAction} className="flex flex-col gap-1 sm:items-end">
+    <form action={setScoreAction} className={`flex flex-col gap-1 ${note ? "gap-3" : "sm:items-end"}`}>
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="from" value={from} />
       <input type="hidden" name="attemptId" value={student.attemptId!} />
@@ -57,8 +62,14 @@ export function ScoreForm({
           className={`${inputStyles} max-w-24 tabular-nums`}
         />
         <span className="text-sm whitespace-nowrap text-muted">of {pointsFormat.format(max)}</span>
-        <Button variant="secondary">Save</Button>
+        {!note && <Button variant="secondary">Save</Button>}
       </div>
+      {note && (
+        <>
+          <NoteField attemptId={student.attemptId!} initial={note.value} max={NOTE_MAX} aiScore={student.aiScore} maxScore={student.maxScore} />
+          <Button className="self-start">Save grade</Button>
+        </>
+      )}
       {student.teacherScore !== null && (
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
           You changed this from the AI&apos;s {pointsFormat.format(student.aiScore!)}.
