@@ -87,7 +87,13 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
                     <SearchItem key={r.key} text={r.name}>
                       <tr className="border-b border-border align-top">
                         <td className="px-3 py-3">
-                          <span className="font-bold break-words">{r.name}</span>
+                          {r.savedId ? (
+                            <Link href={`${base}/${r.savedId}`} className="font-bold break-words text-text hover:text-accent hover:underline">
+                              {r.name}
+                            </Link>
+                          ) : (
+                            <span className="font-bold break-words">{r.name}</span>
+                          )}
                           <span className="block text-[13px] text-muted">
                             {SOURCE_LABEL[r.source]}
                             {r.url && (
@@ -135,7 +141,8 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
         </>
       )}
       <p className="text-sm text-muted">
-        This course&apos;s Canvas Pages and Files are listed automatically; edit them in Canvas. Students see a material
+        Open a material to read it the way students do, or to edit it. This course&apos;s Canvas Pages and Files are
+        listed automatically; one an activity uses can be opened and edited here too. Students see a material
         only inside an activity that uses it, and AI-only materials never reach students. Canvas Files are listed when
         DALAA can read them: PDF, Word, PowerPoint, .txt and .md.
       </p>

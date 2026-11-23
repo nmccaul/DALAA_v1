@@ -547,3 +547,27 @@ release notes"), from Lucy's feedback 3df5d2ca, 107d2eb9 and deead2c3*
   list every change, whether or not someone asked for it.
 - **Screenshot markup has three named colors**, red, blue and green, so a
   note can say "the blue box". Red is the default.
+
+### D-043 · Teachers open, read and edit their materials
+
+*2026-11-22, Nathan ("lets fix 2 urgent reports"), from Lucy's feedback
+8697eb90 (urgent) and 04454477*
+- **Every saved material has its own page** (the title in Materials links
+  to it). It shows the material the way students read it: a PDF as its
+  pages, anything else as its text. It also shows where the material is used
+  and when it was added and last edited.
+- **Edit changes the name and the text**, with a live preview beside the
+  text on a wide screen (the side-by-side Lucy asked for, after MakeTheCase
+  and Quizzer). A PDF's pages stay as uploaded; editing changes its text,
+  which the AI reads and "Show as text" shows. The page says so, and says
+  when students can already open an activity that uses it, since they'll see
+  the change right away. Same 100,000-character limit as uploads.
+- `course_content` and `course_guides` gain a nullable `updated_at`; the
+  Materials list's Updated column shows it, or when the material was added.
+
+**Insights says when it leaves test chats out** (feedback 309e6e3a, same
+day). Chats from Canvas Student View are a teacher's own tests, and Insights
+has always left them out of the class. It did that silently, so Lucy's
+graded test looked lost. The Insights card and the assignment page now say
+"1 test chat from Canvas Student View isn't counted here … See it under
+Grades".

@@ -21,6 +21,7 @@ export type Material = {
   url: string | null;
   /** "students": students and the AI read it; "ai": only the AI does. */
   seenBy: "students" | "ai";
+  /** When it was last edited on its page, or added. */
   createdAt: Date;
   /** The activities that use it; `published` ones students can already open. */
   usedIn: { id: string; title: string; published: boolean }[];
@@ -30,16 +31,16 @@ export type Material = {
 export async function listCourseMaterials(db: Db, actor: Actor, courseId: string): Promise<Material[]> {
   if (!(await getTaughtCourse(db, actor, courseId))) return [];
   return db.query<Material>(
-    `select m.id, m.name, m.source, m.source_url as url, m.seen_by as "seenBy", m.created_at as "createdAt",
+    `select m.id, m.name, m.source, m.source_url as url, m.seen_by as "seenBy", coalesce(m.updated_at, m.created_at) as "createdAt",
             coalesce((select json_agg(json_build_object('id', a.id, 'title', a.title, 'published', a.status = 'published') order by a.title)
                         from activities a
                        where a.course_id = m.course_id
                          and exists (select 1 from activity_materials am
                                       where am.activity_id = a.id
                                         and (case m.seen_by when 'students' then am.content_id else am.guide_id end) = m.id)), '[]') as "usedIn"
-       from (select id, course_id, name, source, source_url, created_at, 'students' as seen_by from course_content
+       from (select id, course_id, name, source, source_url, created_at, updated_at, 'students' as seen_by from course_content
              union all
-             select id, course_id, name, source, source_url, created_at, 'ai' from course_guides) m
+             select id, course_id, name, source, source_url, created_at, updated_at, 'ai' from course_guides) m
       where m.course_id = $1
       order by m.created_at desc, m.name`,
     [courseId],

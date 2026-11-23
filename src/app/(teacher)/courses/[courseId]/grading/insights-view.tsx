@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/db/client";
 import type { Actor } from "@/db/scope";
 import { finishedCount, getBrief } from "@/results/brief";
-import type { AssignmentGrades } from "@/results/grading";
+import { testChats, type AssignmentGrades } from "@/results/grading";
 import { classInsights } from "@/results/insights";
 import { Bar, pointsFormat, share } from "@/results/insights-charts";
 import { insightsPath } from "./view";
@@ -23,7 +23,7 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
       ]);
       const students = a.students.filter((s) => !s.studentView);
       const newer = brief?.brief && brief.conversations !== null ? finished - brief.conversations : 0;
-      return { a, view, brief, finished, students: students.length, newer };
+      return { a, view, brief, finished, students: students.length, newer, tests: testChats(a) };
     }),
   );
   // Assignments someone has finished first; the rest wait, muted, below.
@@ -35,7 +35,7 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
         takeaways run when you ask.
       </p>
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {ordered.map(({ a, view, brief, finished, students, newer }) => {
+        {ordered.map(({ a, view, brief, finished, students, newer, tests }) => {
           const waiting = finished === 0;
           const status = brief?.running
             ? { text: "Analyzing now…", style: "bg-accent-soft text-accent-text" }
@@ -64,6 +64,12 @@ export async function InsightsView({ actor, assignments, courseId }: { actor: Ac
                       {finished} of {students} finished
                     </span>
                     <Bar percent={share(finished, students)} />
+                    {/* Canvas Student View chats are the teacher's own tests: not counted, but never silently (feedback 309e6e3a). */}
+                    {tests > 0 && (
+                      <span className="text-[13px] text-muted">
+                        + {tests} test {tests === 1 ? "chat" : "chats"} from Student View, not counted
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-end justify-between gap-3">
                     {view?.average !== null && view?.average !== undefined ? (

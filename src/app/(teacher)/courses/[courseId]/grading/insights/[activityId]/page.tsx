@@ -5,7 +5,7 @@ import { LocalTime } from "@/components/local-time";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { finishedCount, getBrief, type ClassBrief, type SavedBrief } from "@/results/brief";
-import { listCourseGrades } from "@/results/grading";
+import { listCourseGrades, testChats, testChatsNote } from "@/results/grading";
 import { classInsights, weakestCriteria, type ClassInsights } from "@/results/insights";
 import {
   BarRow,
@@ -84,6 +84,14 @@ export default async function AssignmentInsightsPage({ params, searchParams }: P
             {names ? "Hide names" : "Show names"}
           </Link>
         </p>
+        {testChats(assignment) > 0 && (
+          <p role="note" className="mt-1 max-w-prose rounded-control border border-border bg-subtle px-3 py-2 text-sm">
+            {testChatsNote(testChats(assignment))}{" "}
+            <Link href={`${base}?view=grades#grades-${activityId}`} className="font-medium text-accent-text underline">
+              Open Grades
+            </Link>
+          </p>
+        )}
       </header>
 
       <Stats view={view} points={assignment.points} finished={finished} students={students.length} />
