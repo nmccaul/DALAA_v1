@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { dataUrlBytes } from "@/feedback/annotate";
-import { KINDS, NOTE_MAX, SCREENSHOT_MAX_BYTES, type Kind, type ReportInput } from "@/feedback/report";
+import { KINDS, NOTE_MAX, PRIORITIES, SCREENSHOT_MAX_BYTES, type Kind, type Priority, type ReportInput } from "@/feedback/report";
 import { installRing } from "@/feedback/ring";
 import { ScreenshotEditor } from "./annotate";
 import { Button, inputStyles } from "./ui";
@@ -59,6 +59,7 @@ export function FeedbackButton() {
   const capture = useRef<Promise<string | null> | null>(null);
   const [clientKey, setClientKey] = useState<string | null>(null);
   const [kind, setKind] = useState<Kind>("bug");
+  const [priority, setPriority] = useState<Priority>("p1");
   const [note, setNote] = useState("");
   const [shot, setShot] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
@@ -127,6 +128,7 @@ export function FeedbackButton() {
     if (status !== "sent") return;
     setClientKey(null);
     setKind("bug");
+    setPriority("p1");
     setNote("");
     setIncludeShot(true);
   }
@@ -140,6 +142,7 @@ export function FeedbackButton() {
     const report: ReportInput = {
       clientKey,
       kind,
+      priority,
       note,
       url: location.href,
       screenshot: screenshot ?? null,
@@ -217,6 +220,25 @@ export function FeedbackButton() {
                   {k.label}
                 </label>
               ))}
+            </fieldset>
+            {/* How soon it needs fixing (D-042); an admin can change it later. */}
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1.5 text-sm font-medium">How soon does it need fixing?</legend>
+              <div className="flex flex-wrap gap-2">
+                {PRIORITIES.map((p) => (
+                  <label
+                    key={p.value}
+                    title={p.hint}
+                    className={`cursor-pointer rounded-control border px-3 py-1.5 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                      priority === p.value ? "border-accent bg-accent-soft text-accent-text" : "border-border-strong text-muted hover:text-text"
+                    }`}
+                  >
+                    <input type="radio" name="priority" value={p.value} checked={priority === p.value} onChange={() => setPriority(p.value)} className="sr-only" />
+                    {p.label}
+                  </label>
+                ))}
+              </div>
+              <span className="text-[13px] text-muted">{PRIORITIES.find((p) => p.value === priority)?.hint}</span>
             </fieldset>
             <label className="flex flex-col gap-1 text-sm font-medium">
               What were you doing, and what went wrong?

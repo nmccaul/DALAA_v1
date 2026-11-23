@@ -526,11 +526,18 @@ release notes"), from Lucy's feedback 3df5d2ca, 107d2eb9 and deead2c3*
   the team. **An admin sees everyone's by default** (Nathan, same day: "i
   want to see everyones"), with who sent each and a link to it in the
   Settings inbox, and can switch to just their own.
-- **Filters by tab or feature** (Nathan, same day: "filter the feedback by
-  section/feature/tab"): Activities, Creating an activity, Materials,
-  Results, Insights, Setup, Help, Student view, Courses, Settings, Other,
-  worked out from the page each report was sent on (`src/feedback/area.ts`).
-  Only areas with reports show, each with how many are still open.
+- **Filters follow the course tabs** (Nathan, same day: "the filters should
+  be the tabs … then dropdown categories"): pills for All, Activities,
+  Materials, Results, Setup, Help and Other, each with how many are still
+  open, worked out from the page each report was sent on
+  (`src/feedback/area.ts`). Under them, dropdowns: the tab's sections (e.g.
+  Results: Grades, A student's chat, Insights), type, and priority.
+- **Every report has a priority:** Urgent (p0, blocks teaching or students
+  now), Soon (p1, fix this week) or Can wait (p2). The reporter picks it when
+  sending, Soon preselected; an admin can change it from the list or the
+  inbox. Reports sent before it existed show "Not set" until triaged. Open
+  reports sort Urgent first, and `npm run feedback -- list` puts them first
+  too, so the bug loop takes urgent ones first.
 - **It's not the release notes.** A report is crossed off when it's resolved
   (`npm run feedback -- resolve` or the admin inbox). The release notes still
   list every change, whether or not someone asked for it.

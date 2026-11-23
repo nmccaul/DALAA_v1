@@ -11,11 +11,13 @@
 import { feedbackReadableBy, feedbackSentBy, type Actor, type Scope } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { FixStatus } from "./fixes";
-import type { Kind } from "./report";
+import type { Kind, Priority } from "./report";
 
 export type MyReport = {
   id: string;
   kind: Kind;
+  /** NULL: sent before priorities existed, and not triaged yet. */
+  priority: Priority | null;
   note: string;
   /** Who sent it, as their account names them. */
   reporter: string;
@@ -69,7 +71,7 @@ export function listEveryonesReports(db: Db, actor: Actor): Promise<MyReport[]> 
 
 function listReportsIn(db: Db, scope: Scope): Promise<MyReport[]> {
   return db.query<MyReport>(
-    `select f.id, f.kind, f.note, u.display_name as reporter, f.url, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
+    `select f.id, f.kind, f.priority, f.note, u.display_name as reporter, f.url, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
             x.status as "fixStatus", x.updated_at as "fixAt"
        from feedback_reports f
        join users u on u.id = f.user_id

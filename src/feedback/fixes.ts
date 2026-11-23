@@ -7,7 +7,7 @@
  */
 
 import type { Db } from "@/db/types";
-import type { Kind } from "./report";
+import type { Kind, Priority } from "./report";
 
 export const FIX_STATUSES = ["in_progress", "fixed", "wont_fix", "cant_reproduce", "needs_nathan"] as const;
 export type FixStatus = (typeof FIX_STATUSES)[number];
@@ -44,19 +44,19 @@ export async function findReport(db: Db, idOrPrefix: string): Promise<{ id: stri
   return { problem: rows.length ? `More than one report starts with ${prefix}; give more of the id.` : `No report starts with ${prefix}.` };
 }
 
-export type OpenReport = { id: string; kind: Kind; note: string; url: string; createdAt: Date; fixStatus: FixStatus | null };
+export type OpenReport = { id: string; kind: Kind; priority: Priority | null; note: string; url: string; createdAt: Date; fixStatus: FixStatus | null };
 
 /**
  * Reports still waiting on the loop: open, and either untouched or only
- * claimed (`in_progress`). Bugs and confusing pages come before ideas, oldest first.
+ * claimed (`in_progress`). Urgent first, then Soon, Can wait and unset (D-042); within each, bugs and confusing pages before ideas, oldest first.
  */
 export async function openReports(db: Db): Promise<OpenReport[]> {
   return db.query<OpenReport>(
-    `select f.id, f.kind, f.note, f.url, f.created_at as "createdAt", x.status as "fixStatus"
+    `select f.id, f.kind, f.priority, f.note, f.url, f.created_at as "createdAt", x.status as "fixStatus"
        from feedback_reports f
        left join feedback_fixes x on x.report_id = f.id
       where f.status = 'open' and (x.status is null or x.status = 'in_progress')
-      order by f.kind = 'idea', f.created_at, f.id`,
+      order by coalesce(f.priority, 'p3'), f.kind = 'idea', f.created_at, f.id`,
   );
 }
 
@@ -75,11 +75,11 @@ function path(url: string): string {
   }
 }
 
-/** One line per report: short id, kind, age, page path, the start of the note, and a claim if there is one. */
+/** One line per report: short id, priority, kind, age, page path, the start of the note, and a claim if there is one. */
 export function listLine(r: OpenReport, now = new Date()): string {
   const note = r.note.replace(/\s+/g, " ").trim();
   const start = note.length > 80 ? `${note.slice(0, 79)}…` : note;
-  return [r.id.slice(0, 8), r.kind, age(r.createdAt, now), path(r.url), start, r.fixStatus ?? ""].join("\t").trimEnd();
+  return [r.id.slice(0, 8), r.priority ?? "-", r.kind, age(r.createdAt, now), path(r.url), start, r.fixStatus ?? ""].join("\t").trimEnd();
 }
 
 export async function getFix(db: Db, reportId: string): Promise<Fix | null> {

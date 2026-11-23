@@ -1,47 +1,58 @@
 import { describe, expect, it } from "vitest";
-import { feedbackArea, isArea } from "./area";
+import { feedbackArea, isTab, sectionsOf, TABS } from "./area";
 
 const site = "https://dalaa-v1.vercel.app";
 const course = `${site}/courses/0e0735e5-ad33-470d-8713-bb0464c9ed00`;
 const activity = "dfd635b1-fa80-4cd3-bf3d-d29a6ffd0c75";
+const at = (url: string) => {
+  const p = feedbackArea(url);
+  return `${p.tab}/${p.section}`;
+};
 
 describe("feedbackArea", () => {
-  it("files course pages under their tab", () => {
-    expect(feedbackArea(course)).toBe("activities");
-    expect(feedbackArea(`${course}/`)).toBe("activities");
-    expect(feedbackArea(`${course}/activities/${activity}`)).toBe("activities");
-    expect(feedbackArea(`${course}/activities/${activity}/assign`)).toBe("activities");
-    expect(feedbackArea(`${course}/materials?source=paste`)).toBe("materials");
-    expect(feedbackArea(`${course}/materials/new?kind=web`)).toBe("materials");
-    expect(feedbackArea(`${course}/grading?view=grades`)).toBe("results");
-    expect(feedbackArea(`${course}/grading/attempts/250f3a2e-2a5a-4015-aa81-86658b5c70d3`)).toBe("results");
-    expect(feedbackArea(`${course}/dalaa`)).toBe("setup");
-    expect(feedbackArea(`${course}/students`)).toBe("setup");
-    expect(feedbackArea(`${course}/help`)).toBe("help");
+  it("files Activities pages, the new-activity steps and the student page under Activities", () => {
+    expect(at(course)).toBe("activities/list");
+    expect(at(`${course}/`)).toBe("activities/list");
+    expect(at(`${course}/activities/${activity}`)).toBe("activities/list");
+    expect(at(`${course}/activities/${activity}/assign`)).toBe("activities/list");
+    expect(at(`${course}/activities/new/study-chat?step=goal`)).toBe("activities/create");
+    expect(at(`${course}/activities/${activity}/setup/grading`)).toBe("activities/create");
+    expect(at(`${site}/activities/${activity}`)).toBe("activities/student");
+    expect(at(`${site}/`)).toBe("activities/student");
   });
 
-  it("puts the new-activity steps and editing an activity's setup together", () => {
-    expect(feedbackArea(`${course}/activities/new/study-chat?step=goal`)).toBe("create");
-    expect(feedbackArea(`${course}/activities/${activity}/setup/grading`)).toBe("create");
+  it("files Materials, Results, Setup and Help pages under their tab", () => {
+    expect(at(`${course}/materials?source=paste`)).toBe("materials/list");
+    expect(at(`${course}/materials/new?kind=web`)).toBe("materials/add");
+    expect(at(`${course}/materials/case-writer`)).toBe("materials/add");
+    expect(at(`${course}/grading?view=grades`)).toBe("results/grades");
+    expect(at(`${course}/grading/attempts/250f3a2e-2a5a-4015-aa81-86658b5c70d3`)).toBe("results/chat");
+    expect(at(`${course}/grading?view=insights`)).toBe("results/insights");
+    expect(at(`${course}/grading/insights/928ed615-4e6a-48a0-99dd-913076e0789b`)).toBe("results/insights");
+    expect(at(`${course}/dalaa`)).toBe("setup/setup");
+    expect(at(`${course}/students`)).toBe("setup/students");
+    expect(at(`${course}/add-to-canvas`)).toBe("setup/canvas");
+    expect(at(`${course}/help`)).toBe("help/help");
   });
 
-  it("splits Insights from the rest of Results", () => {
-    expect(feedbackArea(`${course}/grading?view=insights`)).toBe("insights");
-    expect(feedbackArea(`${course}/grading/insights/928ed615-4e6a-48a0-99dd-913076e0789b`)).toBe("insights");
+  it("puts everything else under Other", () => {
+    expect(at(`${site}/courses`)).toBe("other/courses");
+    expect(at(`${site}/settings/feedback`)).toBe("other/settings");
+    expect(at(`${site}/sign-in`)).toBe("other/other");
+    expect(at("not a url")).toBe("other/other");
   });
 
-  it("knows the pages outside a course", () => {
-    expect(feedbackArea(`${site}/courses`)).toBe("courses");
-    expect(feedbackArea(`${site}/settings/feedback`)).toBe("settings");
-    expect(feedbackArea(`${site}/activities/${activity}`)).toBe("student");
-    expect(feedbackArea(`${site}/`)).toBe("student");
-    expect(feedbackArea(`${site}/sign-in`)).toBe("other");
-    expect(feedbackArea("not a url")).toBe("other");
+  it("only ever names a section its tab lists", () => {
+    const urls = [course, `${course}/materials/new`, `${course}/grading/attempts/x`, `${course}/students`, `${site}/settings`, `${site}/x`];
+    for (const url of urls) {
+      const p = feedbackArea(url);
+      expect(sectionsOf(p.tab).map((s) => s.key)).toContain(p.section);
+    }
   });
 
-  it("checks a filter value from the address bar", () => {
-    expect(isArea("materials")).toBe(true);
-    expect(isArea("nope")).toBe(false);
-    expect(isArea(undefined)).toBe(false);
+  it("checks a tab from the address bar", () => {
+    expect(TABS.map((t) => t.label)).toEqual(["Activities", "Materials", "Results", "Setup", "Help", "Other"]);
+    expect(isTab("results")).toBe(true);
+    expect(isTab("insights")).toBe(false);
   });
 });

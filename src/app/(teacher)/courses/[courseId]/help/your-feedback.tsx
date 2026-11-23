@@ -1,10 +1,21 @@
 import { CaretRight, Check } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
+import { PrioritySelect } from "@/components/priority-select";
 import { standing, type MyReport, type Standing } from "@/feedback/mine";
-import type { Kind } from "@/feedback/report";
+import { priorityLabel, type Kind, type Priority } from "@/feedback/report";
+import { setPriorityAction } from "@/feedback/actions";
 
 const KIND: Record<Kind, string> = { bug: "Bug", confusing: "Confusing", idea: "Idea" };
+
+const PRIORITY_PILL: Record<Priority, string> = {
+  p0: "bg-danger-soft text-danger",
+  p1: "bg-warn-soft text-warn-text",
+  p2: "bg-subtle text-muted",
+};
+
+/** Urgent first, unset last; newest first within each. */
+const RANK = (p: Priority | null) => (p === null ? 3 : Number(p.slice(1)));
 
 const PILL: Record<string, string> = {
   fixed: "bg-success/10 text-success",
@@ -27,16 +38,20 @@ function pill(s: Standing): string {
  * off under Done, which folds away. `everyone` is an admin's view of all
  * reports: it names who sent each, and each opens in the Settings inbox.
  */
-export function YourFeedback({ reports, everyone = false }: { reports: MyReport[]; everyone?: boolean }) {
+export function YourFeedback({ reports, everyone = false, filtered = false }: { reports: MyReport[]; everyone?: boolean; filtered?: boolean }) {
   if (reports.length === 0) {
     return (
       <p className="text-muted">
-        {everyone ? "No one has sent feedback yet." : "Nothing yet. What you send shows up here, and is crossed off when it's fixed."}
+        {filtered
+          ? "Nothing matches these filters."
+          : everyone
+            ? "No one has sent feedback yet."
+            : "Nothing yet. What you send shows up here, and is crossed off when it's fixed."}
       </p>
     );
   }
   const rows = reports.map((r) => ({ r, s: standing(r) }));
-  const open = rows.filter((x) => !x.s.done);
+  const open = rows.filter((x) => !x.s.done).sort((a, b) => RANK(a.r.priority) - RANK(b.r.priority));
   const done = rows.filter((x) => x.s.done).sort((a, b) => (b.s.at?.getTime() ?? 0) - (a.s.at?.getTime() ?? 0));
   return (
     <div className="flex flex-col divide-y divide-border rounded-panel border border-border">
@@ -87,16 +102,25 @@ function Group({
                   {everyone && <> · {r.reporter}</>} · Sent <LocalTime value={r.createdAt} style="day" />
                 </p>
               </div>
-              <span className={`inline-flex shrink-0 items-center gap-1 self-start rounded-full px-2.5 py-0.5 text-[13px] font-bold ${pill(s)}`}>
-                {s.done === "fixed" && <Check size={13} weight="bold" aria-hidden />}
-                {s.label}
-                {s.at && (
-                  <span className="font-normal">
-                    {" · "}
-                    <LocalTime value={s.at} style="day" />
-                  </span>
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5 self-start">
+                {everyone ? (
+                  <PrioritySelect id={r.id} priority={r.priority} action={setPriorityAction} />
+                ) : (
+                  r.priority && (
+                    <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-bold ${PRIORITY_PILL[r.priority]}`}>{priorityLabel(r.priority)}</span>
+                  )
                 )}
-              </span>
+                <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[13px] font-bold ${pill(s)}`}>
+                  {s.done === "fixed" && <Check size={13} weight="bold" aria-hidden />}
+                  {s.label}
+                  {s.at && (
+                    <span className="font-normal">
+                      {" · "}
+                      <LocalTime value={s.at} style="day" />
+                    </span>
+                  )}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

@@ -6,7 +6,7 @@
 import { feedbackReadableBy, type Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { Fix } from "./fixes";
-import { ReportInput, SCREENSHOT_MAX_BYTES, type Kind, type ReportContext } from "./report";
+import { isPriority, ReportInput, SCREENSHOT_MAX_BYTES, type Kind, type Priority, type ReportContext } from "./report";
 
 /** More reports than this from one person in the window are dropped quietly. */
 const RATE_LIMIT = 6;
@@ -52,8 +52,8 @@ export async function saveReport(db: Db, actor: Actor, input: unknown, appCommit
   const shot = decodeScreenshot(report.screenshot);
   const [row] = await db.query<{ id: string }>(
     `insert into feedback_reports
-       (user_id, client_key, kind, note, url, context, screenshot, screenshot_type, app_commit)
-     values ($1, $2, $3, $4, $5, $6::text::jsonb, $7, $8, $9)
+       (user_id, client_key, kind, note, url, context, screenshot, screenshot_type, app_commit, priority)
+     values ($1, $2, $3, $4, $5, $6::text::jsonb, $7, $8, $9, $10)
      on conflict (user_id, client_key) do nothing
      returning id`,
     [
@@ -66,6 +66,7 @@ export async function saveReport(db: Db, actor: Actor, input: unknown, appCommit
       shot?.bytes ?? null,
       shot?.type ?? null,
       appCommit,
+      report.priority ?? null,
     ],
   );
   if (row) return { ok: true, id: row.id };
@@ -83,6 +84,7 @@ export type ReportSummary = {
   note: string;
   url: string;
   status: "open" | "resolved";
+  priority: Priority | null;
   reporter: string;
   fixedCommit: string | null;
   hasScreenshot: boolean;
@@ -93,7 +95,7 @@ export type ReportSummary = {
 export async function listReports(db: Db, actor: Actor): Promise<ReportSummary[]> {
   const scope = feedbackReadableBy(actor);
   return db.query<ReportSummary>(
-    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter, f.fixed_commit as "fixedCommit",
+    `select f.id, f.kind, f.note, f.url, f.status, f.priority, u.display_name as reporter, f.fixed_commit as "fixedCommit",
             f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt"
        from feedback_reports f
        join users u on u.id = f.user_id
@@ -109,7 +111,7 @@ export type ReportDetail = ReportSummary & { context: ReportContext; appCommit: 
 export async function getReport(db: Db, actor: Actor, id: string): Promise<ReportDetail | null> {
   const scope = feedbackReadableBy(actor);
   const [row] = await db.query<ReportDetail>(
-    `select f.id, f.kind, f.note, f.url, f.status, u.display_name as reporter, f.fixed_commit as "fixedCommit",
+    `select f.id, f.kind, f.note, f.url, f.status, f.priority, u.display_name as reporter, f.fixed_commit as "fixedCommit",
             f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt",
             f.context, f.app_commit as "appCommit",
             case when x.report_id is null then null else json_build_object(
@@ -151,6 +153,20 @@ export async function resolveReport(db: Db, actor: Actor, id: string, fixedCommi
       where f.id::text = $${n + 1} and f.status = 'open' and (${scope.text})
       returning f.id`,
     [...scope.values, id, commit],
+  );
+  return rows.length === 1;
+}
+
+/** Changes a report's priority (D-042). Admin only; NULL clears it. */
+export async function setReportPriority(db: Db, actor: Actor, id: string, priority: Priority | null): Promise<boolean> {
+  if (priority !== null && !isPriority(priority)) return false;
+  const scope = feedbackReadableBy(actor);
+  const n = scope.values.length;
+  const rows = await db.query<{ id: string }>(
+    `update feedback_reports f set priority = $${n + 2}
+      where f.id::text = $${n + 1} and (${scope.text})
+      returning f.id`,
+    [...scope.values, id, priority],
   );
   return rows.length === 1;
 }

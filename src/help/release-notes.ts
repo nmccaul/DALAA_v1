@@ -13,6 +13,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     changes: [
       "Help now lists the feedback you've sent, under Open and Done, with where each one stands. When one is fixed, it's crossed off.",
       "When you mark up the picture in Feedback, you can draw in red, blue or green, so your note can point at \"the blue box\".",
+      "Feedback asks how soon it needs fixing: Urgent, Soon or Can wait. Your feedback in Help shows it, and filters by tab (Activities, Materials, Results, Setup, Help, Other), then by section, type and priority.",
     ],
   },
   {
