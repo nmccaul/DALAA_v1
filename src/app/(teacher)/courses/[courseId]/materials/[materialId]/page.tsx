@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
+import { ReadingText } from "@/components/reading-text";
 import { SeenByPill } from "@/components/seen-by-pill";
 import { ButtonLink } from "@/components/ui";
 import { getMaterial, NAME_MAX } from "@/content/material";
+import { afterAddPath, materialReturnPath, reviewPath } from "@/content/return-path";
 import { SOURCE_LABEL } from "@/content/material-sources";
 import { PdfPages } from "@/content/pdf-pages";
 import { loadTaughtCourse } from "@/courses/load";
@@ -26,9 +28,14 @@ export default async function MaterialPage({ params, searchParams }: PageProps<"
   const q = await searchParams;
   const editing = q.edit === "1";
   const base = `/courses/${course.id}/materials`;
-  const here = `${base}/${material.id}`;
+  // Just added (feedback 6c0bf4e4, 2e01b6f9, c4e4aef5): check it, edit it, then "Looks good" goes on.
+  const added = q.added === "1";
+  const next = added ? materialReturnPath(q.next, course.id) : null;
+  const here = added ? reviewPath(course.id, material.id, next) : `${base}/${material.id}`;
+  const editHref = `${here}${added ? "&" : "?"}edit=1`;
+  const done = afterAddPath(next, course.id, { id: material.id, aiOnly: material.seenBy === "ai" });
   const live = material.usedIn.filter((a) => a.published);
-  const text = <div className="max-w-[70ch] text-[1.0625rem] leading-relaxed break-words whitespace-pre-wrap">{material.body}</div>;
+  const text = <ReadingText text={material.body} />;
 
   return (
     <div className="flex flex-col gap-5">
@@ -39,7 +46,7 @@ export default async function MaterialPage({ params, searchParams }: PageProps<"
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h2 className="min-w-0 text-2xl font-normal text-balance break-words">{material.name}</h2>
           {!editing && (
-            <ButtonLink href={`${here}?edit=1`} variant="secondary">
+            <ButtonLink href={editHref} variant="secondary">
               Edit
             </ButtonLink>
           )}
@@ -81,7 +88,18 @@ export default async function MaterialPage({ params, searchParams }: PageProps<"
         </p>
       </div>
 
-      {q.saved && !editing && (
+      {added && !editing && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-border bg-accent-soft px-4 py-3">
+          <p className="min-w-0 max-w-prose">
+            {q.saved ? "Saved. " : "Added. "}
+            {material.seenBy === "ai" ? "This is what the AI reads." : material.hasFile ? "This is how students see it." : "This is how students read it."} Check
+            it came through right; Edit to fix anything{material.hasFile ? " in its text" : ""}.
+          </p>
+          <ButtonLink href={done}>{next ? "Looks good, back to the activity" : "Looks good"}</ButtonLink>
+        </div>
+      )}
+
+      {q.saved && !added && !editing && (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
           Saved.
           {live.length > 0 &&
@@ -98,6 +116,7 @@ export default async function MaterialPage({ params, searchParams }: PageProps<"
           name={material.name}
           body={material.body}
           cancel={here}
+          added={added ? { next } : undefined}
           nameMax={NAME_MAX}
           previewLabel={material.seenBy === "ai" ? "What the AI reads" : "How students read it"}
           notes={[

@@ -34,7 +34,7 @@ export function AddMaterialForm({ courseId, creationKey, kind, next }: { courseI
             <label htmlFor="text" className="font-bold">
               Text
             </label>
-            <p className="-mt-1 text-sm text-muted">Notes, a transcript, an excerpt. Markdown formatting is kept.</p>
+            <p className="-mt-1 text-sm text-muted">Notes, a transcript, an excerpt. Use Markdown for a title (# Title), **bold** or lists; you&apos;ll see how it reads next.</p>
             <textarea id="text" name="text" rows={12} required className={inputStyles} />
           </div>
         </>
@@ -46,7 +46,7 @@ export function AddMaterialForm({ courseId, creationKey, kind, next }: { courseI
         </p>
       )}
       <div>
-        <Button disabled={pending}>{pending ? "Reading…" : "Add material"}</Button>
+        <Button disabled={pending}>{pending ? "Reading…" : "Add and preview"}</Button>
       </div>
     </form>
   );

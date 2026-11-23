@@ -581,6 +581,16 @@ has always left them out of the class. It did that silently, so Lucy's
 graded test looked lost. The Insights card and the assignment page now say
 "1 test chat from Canvas Student View isn't counted here … See it under
 Grades".
+- **Adding a material opens it to check** (*2026-11-22*, Lucy's 6c0bf4e4,
+  2e01b6f9, c4e4aef5): upload, paste or web page lands on its page as
+  students see it (a PDF as its pages), with Edit (the side-by-side editor)
+  and "Looks good", which goes on to where the teacher came from (step 1 of
+  a new activity, with it ticked; else Materials). It is saved first, not
+  held unsaved: the page and editor already exist, and Delete undoes it.
+- **Readings render their Markdown** (Lucy's ffcdcaf9): headings, lists,
+  quotes, rules and emphasis show as formatting for students, on the
+  material's page and in the editor's preview, built as elements, never
+  HTML (`reading-blocks.ts`).
 
 ### D-044 · Results: one assignment at a time, the latest submissions first
 

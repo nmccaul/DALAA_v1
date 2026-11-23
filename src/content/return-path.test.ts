@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { afterAddPath, materialReturnPath } from "./return-path";
+import { afterAddPath, materialReturnPath, reviewPath } from "./return-path";
 
 const C = "11111111-1111-4111-8111-111111111111";
 const ID = "22222222-2222-4222-8222-222222222222";
@@ -40,5 +40,15 @@ describe("afterAddPath", () => {
   it("goes to the Materials tab without a usable next", () => {
     expect(afterAddPath(null, C, { id: ID, aiOnly: false })).toBe(`/courses/${C}/materials?added=${ID}`);
     expect(afterAddPath("/settings", C, { id: ID, aiOnly: true })).toBe(`/courses/${C}/materials?added=${ID}`);
+  });
+});
+
+describe("reviewPath", () => {
+  it("opens the new material to check, carrying only a next inside the course (feedback 6c0bf4e4)", () => {
+    expect(reviewPath(C, ID, null)).toBe(`/courses/${C}/materials/${ID}?added=1`);
+    expect(reviewPath(C, ID, "https://evil.example/")).toBe(`/courses/${C}/materials/${ID}?added=1`);
+    const url = new URL(reviewPath(C, ID, step, true), "http://x");
+    expect(url.searchParams.get("next")).toBe(step);
+    expect(url.searchParams.get("saved")).toBe("1");
   });
 });
