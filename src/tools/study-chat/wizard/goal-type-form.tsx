@@ -13,11 +13,12 @@ import {
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button, inputStyles } from "@/components/ui";
-import { goalForTypeAction, wizardTypeAction, type TypeState } from "../actions";
+import { editTypeAction, goalForTypeAction, wizardTypeAction, type TypeState } from "../actions";
 import { AssistButton } from "../assist-button";
 import { PickerField } from "../forms";
 import type { ModeSlug } from "../modes";
 import type { TypeSuggestion } from "../suggest";
+import { WIZARD_FORM_ID } from "./steps";
 import { reasonField } from "./type-request";
 import { groupOf, styleLabel, TYPE_GROUPS, type TypeGroup } from "./types";
 
@@ -51,6 +52,7 @@ export function GoalTypeForm({
   kept,
   suggested,
   back,
+  activityId,
 }: {
   courseId: string;
   creationKey: string;
@@ -62,8 +64,10 @@ export function GoalTypeForm({
   /** The AI's kinds, best first, each with why it fits and its goal (never empty). */
   suggested: TypeSuggestion[];
   back: string;
+  /** On a saved activity (feedback 21e8c594): its current kind leads, and Next saves it in place. */
+  activityId?: string;
 }) {
-  const [state, action, pending] = useActionState<TypeState, FormData>(wizardTypeAction, {});
+  const [state, action, pending] = useActionState<TypeState, FormData>(activityId ? editTypeAction : wizardTypeAction, {});
   const first = suggested[0].mode;
   const keptMode = TYPE_GROUPS.flatMap((g) => g.modes).find((m) => m === state.mode);
   const [group, setGroup] = useState(groupOf(keptMode ?? first).key);
@@ -129,7 +133,11 @@ export function GoalTypeForm({
           <span className="flex min-w-0 flex-col gap-1">
             <span className="flex flex-wrap items-center gap-2 font-bold">
               {g.label}
-              {leading && <span className="rounded-control bg-accent px-2 py-0.5 text-xs font-bold text-white">Suggested based on your reading</span>}
+              {leading && (
+                <span className="rounded-control bg-accent px-2 py-0.5 text-xs font-bold text-white">
+                  {activityId ? "Current kind" : "Suggested based on your reading"}
+                </span>
+              )}
               {checked && <span className="text-xs font-bold text-accent-text">✓ Chosen</span>}
             </span>
             <span className="text-sm">{g.does}</span>
@@ -163,8 +171,9 @@ export function GoalTypeForm({
   };
 
   return (
-    <form action={action} className="flex flex-col gap-8">
+    <form id={activityId ? WIZARD_FORM_ID : undefined} action={action} className="flex flex-col gap-8">
       <input type="hidden" name="courseId" value={courseId} />
+      {activityId && <input type="hidden" name="activityId" value={activityId} />}
       <input type="hidden" name="creationKey" value={creationKey} />
       <PickerField addToCanvas={addToCanvas} />
       <input type="hidden" name="content" value={contentIds.join(",")} />
@@ -223,7 +232,7 @@ export function GoalTypeForm({
           ← Back
         </Link>
         <span className="flex-1" />
-        <Button type="submit" disabled={writing}>
+        <Button type="submit" name="intent" value="next" disabled={writing}>
           Next
         </Button>
       </div>

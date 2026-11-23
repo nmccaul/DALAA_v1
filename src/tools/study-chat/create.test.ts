@@ -8,7 +8,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { findTool, isLive } from "@/tools/catalog";
-import { blankSettings, createStudyChat, publishStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT, unfinished } from "./create";
+import { blankSettings, createStudyChat, publishStudyChat, retype, retypeStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT, unfinished } from "./create";
 import { studentView } from "./student-view";
 import { answering, draft, drafted } from "./test-fixtures";
 
@@ -326,5 +326,25 @@ describe("creating a Study Chat", () => {
     expect(unfinished(partly)).toContain("“How it's scored › Criteria” needs at least one.");
     expect(await publishStudyChat(db, prof, started.activityId)).toEqual({ ok: false, reason: expect.stringMatching(/^Finish setting it up before you publish: /) });
     expect(unfinished(draft())).toEqual([]);
+  });
+
+  it("changes a saved chat's kind and goal and keeps everything written (feedback 21e8c594)", async () => {
+    const request = { contentIds: [content], guideIds: [], mode: "debate" as const, goal: "Defend a side.", studentWork: false, typeReason: "Two sides.", creationKey: randomUUID() };
+    const started = await startStudyChat(db, prof, course, request);
+    if (!started.ok) throw new Error(started.reason);
+    const written = { ...blankSettings(request), scenarios: [{ title: "Bike debate", situation: "Open or wait.", opening: "Hi." }] };
+    expect(await saveStudyChat(db, prof, started.activityId, written)).toEqual({ ok: true });
+
+    // Same kind: the reason stays. Another kind: it goes, unless that kind came with one.
+    expect(retype(written, { mode: "debate", goal: " New goal. ", typeReason: "Two sides." })).toMatchObject({ goal: "New goal.", typeReason: "Two sides." });
+    expect(retype(written, { mode: "socratic", goal: "Reason it out.", typeReason: null })).not.toHaveProperty("typeReason");
+    // A kind about the student's own work turns that on.
+    expect(retype(written, { mode: "defend", goal: "Defend your plan.", typeReason: null }).studentWork).toBe(true);
+
+    expect(await retypeStudyChat(db, prof, started.activityId, { mode: "socratic", goal: "Reason it out.", typeReason: null })).toEqual({ ok: true });
+    const saved = (await getTaughtActivity(db, prof, started.activityId))?.settings;
+    expect(saved).toMatchObject({ mode: "socratic", goal: "Reason it out.", scenarios: written.scenarios });
+    expect(await retypeStudyChat(db, prof, started.activityId, { mode: "socratic", goal: "x".repeat(1001), typeReason: null })).toMatchObject({ ok: false });
+    expect(await retypeStudyChat(db, prof, randomUUID(), { mode: "socratic", goal: "Reason.", typeReason: null })).toMatchObject({ ok: false });
   });
 });

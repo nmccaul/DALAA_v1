@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { addActivityGuide, removeActivityGuide } from "@/activities/materials";
+import { addActivityGuide, removeActivityGuide, setActivityMaterials } from "@/activities/materials";
 import { chatModel, graderModel } from "@/ai/models";
 import { requireActor } from "@/auth/current";
 import { clientFor } from "@/canvas/connection";
@@ -13,7 +13,7 @@ import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti
 import { getTaughtActivity } from "@/activities/store";
 import { activityMaterials } from "@/activities/materials";
 import { assistParts, MAX_INSTRUCTION_CHARS, type AssistResult } from "./assist";
-import { createStudyChat, publishStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT } from "./create";
+import { createStudyChat, publishStudyChat, retypeStudyChat, saveStudyChat, startStudyChat, STUDY_CHAT } from "./create";
 import { isListPart, isPartKey } from "./parts";
 import { StudyChatSetupSettings } from "./schema";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
@@ -21,7 +21,7 @@ import { MAX_GOAL_CHARS, suggestGoalFor } from "./suggest";
 import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
 import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
-import { typeRequestFrom } from "./wizard/type-request";
+import { reasonField, typeRequestFrom } from "./wizard/type-request";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
 
@@ -73,6 +73,8 @@ export type MaterialsPickState = FormState & { reconnect?: string; ticked?: stri
 export async function wizardMaterialsAction(_prev: MaterialsPickState, form: FormData): Promise<MaterialsPickState> {
   const actor = await requireActor();
   const courseId = String(form.get("courseId") ?? "");
+  // Step 1 on a saved activity (feedback 21e8c594): its materials change in place.
+  const activityId = String(form.get("activityId") ?? "") || null;
   const picker = pickerRequest(form.get(PICKER_PARAM));
   const ticked = form.getAll("pick").map(String);
   const picks = parsePicks(ticked);
@@ -85,11 +87,42 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
       : null;
   const saved = await savePicks(db(), actor, canvas, courseId, String(form.get("formKey") ?? ""), picks);
   if (!saved.ok) {
-    const back = keepPicker(`${newPath(courseId)}?step=materials`, picker);
+    const back = keepPicker(activityId ? setupPath(courseId, activityId, "materials") : `${newPath(courseId)}?step=materials`, picker);
     // The form resets after the action; `ticked` keeps the teacher's ticks.
     return { error: saved.reason, reconnect: saved.reconnect ? `/canvas/connect?next=${encodeURIComponent(back)}` : undefined, ticked };
   }
-  redirect(keepPicker(`${newPath(courseId)}?step=goal&${materialsQuery(saved)}`, picker));
+  if (!activityId) redirect(keepPicker(`${newPath(courseId)}?step=goal&${materialsQuery(saved)}`, picker));
+
+  const attached = await setActivityMaterials(db(), actor, activityId, saved);
+  if (!attached.ok) return { error: attached.reason, ticked };
+  afterSavedStep(courseId, activityId, "materials", form.get("intent"), picker);
+  return { savedAt: Date.now(), ticked };
+}
+
+/** After a saved activity's step 1 or 2 saves: "Save and finish later", Next, or a step in the list. */
+function afterSavedStep(courseId: string, activityId: string, step: "materials" | "goal", intent: unknown, picker: string | null) {
+  if (intent === "later") redirect(keepPicker(finishLaterPath(courseId), picker));
+  const target = savedStepTarget(step, intent);
+  if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
+}
+
+/**
+ * Step 2 on a saved activity (feedback 21e8c594): the kind and goal change,
+ * and what's written on the later steps stays.
+ */
+export async function editTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
+  const actor = await requireActor();
+  const courseId = String(form.get("courseId") ?? "");
+  const activityId = String(form.get("activityId") ?? "");
+  const mode = MODE_SLUGS.find((m) => m === form.get("mode"));
+  if (!mode) return { error: "Pick a type of activity." };
+  const goal = String(form.get("goal") ?? "").trim();
+  if (!goal) return { error: "Write the learning goal first.", mode };
+  const reason = form.get(reasonField(mode));
+  const saved = await retypeStudyChat(db(), actor, activityId, { mode, goal, typeReason: typeof reason === "string" ? reason : null });
+  if (!saved.ok) return { error: saved.reason, mode };
+  afterSavedStep(courseId, activityId, "goal", form.get("intent"), pickerRequest(form.get(PICKER_PARAM)));
+  return { savedAt: Date.now(), mode };
 }
 
 /**

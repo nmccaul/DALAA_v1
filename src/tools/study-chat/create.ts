@@ -10,7 +10,7 @@ import { activityForKey, createActivity, getTaughtActivity, publishActivity, upd
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { draftSettings } from "./draft";
-import type { ModeSlug } from "./modes";
+import { MODES, type ModeSlug } from "./modes";
 import { rubricPoints, settingProblems, StudyChatSettings, StudyChatSetupSettings } from "./schema";
 import { MAX_REASON_CHARS } from "./suggest";
 import { pickedMaterials } from "./wizard/picks";
@@ -205,4 +205,43 @@ export async function saveStudyChat(db: Db, actor: Actor, activityId: string, se
     settings: parsed.data,
     points: parsed.data.rubric.criteria.length > 0 ? rubricPoints(parsed.data) : null,
   });
+}
+
+/**
+ * Step 2 again on a saved chat (Lucy, feedback 21e8c594): its kind and goal
+ * change, and everything already written stays for the teacher to redo or
+ * keep. The reason is kept only for the kind it was given for. A kind about
+ * the student's own work turns that on, as on a new chat. Exported for tests.
+ */
+export function retype<T extends { mode: ModeSlug; goal: string; studentWork: boolean; typeReason?: string }>(
+  settings: T,
+  change: { mode: ModeSlug; goal: string; typeReason: string | null },
+): T {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { typeReason: _old, ...rest } = settings;
+  const typeReason = change.typeReason?.trim().replace(/\s+/g, " ").slice(0, MAX_REASON_CHARS) || undefined;
+  return {
+    ...rest,
+    mode: change.mode,
+    goal: change.goal.trim(),
+    studentWork: settings.studentWork || MODES[change.mode].needsStudentWork,
+    ...(typeReason ? { typeReason } : {}),
+  } as T;
+}
+
+/** Saves step 2 on a saved chat: `retype`, then the usual save, which checks it. */
+export async function retypeStudyChat(
+  db: Db,
+  actor: Actor,
+  activityId: string,
+  change: { mode: ModeSlug; goal: string; typeReason: string | null },
+): Promise<SaveResult> {
+  const activity = await getTaughtActivity(db, actor, activityId);
+  if (!activity || activity.tool !== STUDY_CHAT) return { ok: false, reason: "That assignment isn't one of yours." };
+  if (change.goal.trim().length > MAX_GOAL_CHARS) {
+    return { ok: false, reason: `Keep the learning goal under ${MAX_GOAL_CHARS.toLocaleString("en-US")} characters.` };
+  }
+  const current = StudyChatSetupSettings.safeParse(activity.settings);
+  if (!current.success) return { ok: false, reason: "Some of this chat's settings don't fit any more. Create it again." };
+  return saveStudyChat(db, actor, activityId, retype(current.data, change));
 }

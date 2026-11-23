@@ -1,12 +1,26 @@
 import { Check } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { TaughtActivity } from "@/activities/store";
+import type { Actor } from "@/db/scope";
 import { stepIndex, WIZARD_FORM_ID, WIZARD_STEPS, type WizardStep } from "./steps";
 
 const LATER_STYLE = "shrink-0 text-sm whitespace-nowrap text-accent-text underline hover:text-text";
 
 /** A step the list can take the teacher to: a plain link, or (`save`) a button that saves this step's form first. */
 export type StepLink = { href: string; save?: boolean };
+
+/** What steps 1–2 on a saved activity get from the setup page (feedback 21e8c594). */
+export type SavedStepProps = {
+  actor: Actor;
+  activity: TaughtActivity;
+  addToCanvas: string | null;
+  searchParams: Record<string, string | string[] | undefined>;
+  go: Partial<Record<WizardStep, StepLink>>;
+  later: StepLink;
+  /** "Students have started it" note, when they have. */
+  started: ReactNode;
+};
 
 /**
  * The frame every wizard step sits in: the step list on the left (done steps
