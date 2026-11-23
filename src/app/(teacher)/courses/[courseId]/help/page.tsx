@@ -4,9 +4,11 @@ import Link from "next/link";
 import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
-import { AREAS, feedbackArea, isArea } from "@/feedback/area";
+import { feedbackArea, isTab, sectionsOf, TABS, type Place, type Tab } from "@/feedback/area";
+import { isPriority, KINDS, type Kind, type Priority } from "@/feedback/report";
 import { listEveryonesReports, listMyReports, standing } from "@/feedback/mine";
 import { noteDate, RELEASE_NOTES } from "@/help/release-notes";
+import { FeedbackFilters } from "./feedback-filters";
 import { GiveFeedback } from "./give-feedback";
 import { YourFeedback } from "./your-feedback";
 
@@ -19,20 +21,14 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
   const q = await searchParams;
   // An admin sees everyone's reports here by default (Nathan, 2026-11-22); everyone else, only their own.
   const everyone = actor.isAdmin && q.feedback !== "mine";
-  const all = (await (everyone ? listEveryonesReports : listMyReports)(db(), actor)).map((r) => ({ ...r, area: feedbackArea(r.url) }));
-  // Filtered by tab or feature (Nathan, 2026-11-22); each filter counts what's still open there.
-  const area = isArea(q.area) ? q.area : null;
-  const reports = area ? all.filter((r) => r.area === area) : all;
-  const openIn = (key: string | null) => all.filter((r) => (key === null || r.area === key) && !standing(r).done).length;
+  const all = (await (everyone ? listEveryonesReports : listMyReports)(db(), actor)).map((r) => ({ ...r, place: feedbackArea(r.url) }));
+  // Filtered by course tab, then by section, type and priority (D-042).
+  const filter = readFilter(q);
+  const reports = all.filter((r) => matches(r, filter));
+  const openIn = (tab: Tab | null) => all.filter((r) => (tab === null || r.place.tab === tab) && !standing(r).done).length;
   const base = `/courses/${course.id}/help`;
-  const href = (opts: { mine: boolean; area: string | null }) => {
-    const p = new URLSearchParams();
-    if (opts.mine) p.set("feedback", "mine");
-    if (opts.area) p.set("area", opts.area);
-    const query = p.toString();
-    return `${base}${query ? `?${query}` : ""}#feedback`;
-  };
-  const filters = [{ key: null, label: "All" }, ...AREAS.filter((a) => all.some((r) => r.area === a.key))];
+  const href = (f: Partial<Filter>, mine = !everyone) => filterHref(base, { ...filter, ...f }, mine);
+  const pills: { key: Tab | null; label: string }[] = [{ key: null, label: "All" }, ...TABS];
 
   const section = "flex flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0";
   return (
@@ -60,8 +56,8 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
           {actor.isAdmin && (
             <nav aria-label="Whose feedback" className="inline-flex rounded-control border border-border-strong text-sm">
               {[
-                { key: "everyone", label: "Everyone", on: everyone, href: href({ mine: false, area }) },
-                { key: "mine", label: "Yours", on: !everyone, href: href({ mine: true, area }) },
+                { key: "everyone", label: "Everyone", on: everyone, href: href({}, false) },
+                { key: "mine", label: "Yours", on: !everyone, href: href({}, true) },
               ].map((v, i) => (
                 <Link
                   key={v.key}
@@ -81,26 +77,41 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
           {everyone
             ? "Every report anyone has sent, and where it stands. Only admins see this; teachers see just their own. Open one for its picture and details."
             : "Everything you've sent, and where it stands."}{" "}
-          When one is fixed, it&apos;s crossed off and moves to Done. Filter by tab or feature; each number is how many
-          are still open there. Release notes below list every change, whether or not someone asked for it.
+          When one is fixed, it&apos;s crossed off and moves to Done. Pick a tab to see its feedback; each number is
+          how many are still open there. Release notes below list every change, whether or not someone asked for it.
         </p>
         {all.length > 0 && (
-          <nav aria-label="Filter feedback by area" className="flex flex-wrap gap-1.5 text-sm">
-            {filters.map((f) => (
-              <Link
-                key={f.label}
-                href={href({ mine: !everyone, area: f.key })}
-                aria-current={f.key === area ? "page" : undefined}
-                className={`rounded-full border px-3 py-1 ${
-                  f.key === area ? "border-accent bg-accent text-white" : "border-border-strong text-accent-text hover:bg-subtle"
-                }`}
-              >
-                {f.label} <span className={f.key === area ? "" : "text-muted"}>{openIn(f.key)}</span>
-              </Link>
-            ))}
-          </nav>
+          <>
+            <nav aria-label="Feedback by tab" className="flex flex-wrap gap-1.5 text-sm">
+              {pills.map((t) => {
+                const on = t.key === filter.tab;
+                const open = openIn(t.key);
+                return (
+                  <Link
+                    key={t.label}
+                    href={href({ tab: t.key, section: null })}
+                    aria-current={on ? "page" : undefined}
+                    className={`rounded-full border px-3 py-1 ${
+                      on
+                        ? "border-accent bg-accent text-white"
+                        : `border-border-strong hover:bg-subtle ${open === 0 ? "text-muted" : "text-accent-text"}`
+                    }`}
+                  >
+                    {t.label} <span className={on ? "" : "text-muted"}>{open}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            <FeedbackFilters
+              action={`${base}#feedback`}
+              mine={!everyone}
+              tab={filter.tab}
+              sections={filter.tab ? sectionsOf(filter.tab).map((x) => ({ value: x.key, label: x.label })) : []}
+              values={{ section: filter.section ?? "", type: filter.type ?? "", priority: filter.priority ?? "" }}
+            />
+          </>
         )}
-        <YourFeedback reports={reports} everyone={everyone} />
+        <YourFeedback reports={reports} everyone={everyone} filtered={reports.length < all.length} />
       </section>
 
       <section className={section}>
@@ -129,4 +140,41 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
       </section>
     </div>
   );
+}
+
+type Filter = { tab: Tab | null; section: string | null; type: Kind | null; priority: Priority | "none" | null };
+
+const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+
+/** The feedback filters from the address; anything unknown is ignored. */
+function readFilter(q: Record<string, string | string[] | undefined>): Filter {
+  const tab = isTab(q.tab) ? q.tab : null;
+  const section = one(q.section);
+  const type = one(q.type);
+  const priority = one(q.priority);
+  return {
+    tab,
+    section: tab && section && sectionsOf(tab).some((x) => x.key === section) ? section : null,
+    type: KINDS.some((k) => k.value === type) ? (type as Kind) : null,
+    priority: priority === "none" || isPriority(priority) ? priority : null,
+  };
+}
+
+function matches(r: { place: Place; kind: Kind; priority: Priority | null }, f: Filter): boolean {
+  if (f.tab && r.place.tab !== f.tab) return false;
+  if (f.section && r.place.section !== f.section) return false;
+  if (f.type && r.kind !== f.type) return false;
+  if (f.priority && (r.priority ?? "none") !== f.priority) return false;
+  return true;
+}
+
+function filterHref(base: string, f: Filter, mine: boolean): string {
+  const p = new URLSearchParams();
+  if (mine) p.set("feedback", "mine");
+  if (f.tab) p.set("tab", f.tab);
+  if (f.section) p.set("section", f.section);
+  if (f.type) p.set("type", f.type);
+  if (f.priority) p.set("priority", f.priority);
+  const query = p.toString();
+  return `${base}${query ? `?${query}` : ""}#feedback`;
 }

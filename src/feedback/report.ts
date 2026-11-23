@@ -24,6 +24,19 @@ export type Kind = (typeof KINDS)[number]["value"];
 
 export const kindLabel = (kind: Kind) => KINDS.find((k) => k.value === kind)!.label;
 
+/** How soon a report needs fixing (D-042), most urgent first, with what the button calls each. */
+export const PRIORITIES = [
+  { value: "p0", label: "Urgent", hint: "Blocks teaching or students now" },
+  { value: "p1", label: "Soon", hint: "Gets in the way; fix this week" },
+  { value: "p2", label: "Can wait", hint: "Nice to have" },
+] as const;
+
+export type Priority = (typeof PRIORITIES)[number]["value"];
+
+export const isPriority = (value: unknown): value is Priority => PRIORITIES.some((p) => p.value === value);
+
+export const priorityLabel = (priority: Priority | null) => PRIORITIES.find((p) => p.value === priority)?.label ?? "Not set";
+
 const scrubbed = (max: number) => z.string().transform((s) => scrub(s, max));
 const ring = <T extends z.ZodType>(entry: T) => z.array(entry).transform((list) => list.slice(-RING_SIZE));
 
@@ -43,6 +56,8 @@ export type ReportContext = z.infer<typeof ReportContext>;
 export const ReportInput = z.object({
   clientKey: z.uuid(),
   kind: z.enum(KINDS.map((k) => k.value) as [Kind, ...Kind[]]),
+  /** Missing from a button loaded before priorities existed. */
+  priority: z.enum(PRIORITIES.map((p) => p.value) as [Priority, ...Priority[]]).optional(),
   note: z.string().trim().min(1).max(NOTE_MAX),
   url: scrubbed(2000),
   context: ReportContext,

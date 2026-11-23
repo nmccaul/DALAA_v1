@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { requireActor } from "@/auth/current";
 import { LocalTime } from "@/components/local-time";
+import { PrioritySelect } from "@/components/priority-select";
 import { Button, PageHeader, inputStyles } from "@/components/ui";
 import { db } from "@/db/client";
+import { setPriorityAction } from "@/feedback/actions";
 import type { FixStatus } from "@/feedback/fixes";
 import { kindLabel } from "@/feedback/report";
 import { getReport } from "@/feedback/store";
@@ -61,6 +63,9 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
         {report.hasScreenshot && context.annotated && <p className="-mt-4 text-sm text-muted">The reporter marked up this picture.</p>}
 
         <dl className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-5">
+          <Row label="Priority">
+            <PrioritySelect id={report.id} priority={report.priority} action={setPriorityAction} />
+          </Row>
           <Row label="Page"><span className="font-mono text-sm" translate="no">{report.url}</span></Row>
           <Row label="Title">{context.title || "None"}</Row>
           <Row label="Screen">

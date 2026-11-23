@@ -46,15 +46,20 @@ describe("openReports", () => {
     const rows = await openReports(db);
     expect(rows.map((r) => r.id)).toEqual([oldConfusing, claimed, newBug, idea]);
     expect(rows.find((r) => r.id === claimed)?.fixStatus).toBe("in_progress");
+
+    // Priority goes first: an urgent idea beats every unset bug, and Can wait beats unset.
+    await db.query("update feedback_reports set priority = 'p0' where id = $1", [idea]);
+    await db.query("update feedback_reports set priority = 'p2' where id = $1", [newBug]);
+    expect((await openReports(db)).map((r) => r.id)).toEqual([idea, newBug, oldConfusing, claimed]);
   });
 
-  it("prints short id, kind, age, path and the start of the note on one line", async () => {
+  it("prints short id, priority, kind, age, path and the start of the note on one line", async () => {
     await report("bug", 150, `Line one\nline two ${"x".repeat(100)}`);
     const [row] = await openReports(db);
     const line = listLine(row);
-    const [shortId, kind, age, path, note] = line.split("\t");
+    const [shortId, priority, kind, age, path, note] = line.split("\t");
     expect(shortId).toBe(row.id.slice(0, 8));
-    expect([kind, age, path]).toEqual(["bug", "2h", "/courses/abc/students"]);
+    expect([priority, kind, age, path]).toEqual(["-", "bug", "2h", "/courses/abc/students"]);
     expect(note).toHaveLength(80);
     expect(note.startsWith("Line one line two")).toBe(true);
   });

@@ -3,7 +3,7 @@ import { testDb } from "@/test/db";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { ReportInput } from "./report";
-import { decodeScreenshot, getReport, getScreenshot, listReports, resolveReport, saveReport } from "./store";
+import { decodeScreenshot, getReport, getScreenshot, listReports, resolveReport, saveReport, setReportPriority } from "./store";
 
 // A 1×1 PNG.
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -158,6 +158,29 @@ describe("resolveReport", () => {
     const { id } = (await saveReport(db, student, input(), null)) as { id: string };
     expect(await resolveReport(db, student, id, null)).toBe(false);
     expect(await getReport(db, admin, id)).toMatchObject({ status: "open" });
+  });
+});
+
+describe("priority", () => {
+  it("keeps the priority the reporter picked, and none from an older button", async () => {
+    const picked = await saveReport(db, student, input({ priority: "p0" }), null);
+    const older = await saveReport(db, student, input(), null);
+    if (!("id" in picked) || !("id" in older)) throw new Error("setup");
+    expect((await getReport(db, admin, picked.id))?.priority).toBe("p0");
+    expect((await getReport(db, admin, older.id))?.priority).toBeNull();
+    expect(await saveReport(db, student, { ...input(), priority: "p9" }, null)).toMatchObject({ ok: false });
+  });
+
+  it("lets only an admin change it, to a real priority or none", async () => {
+    const saved = await saveReport(db, student, input({ priority: "p2" }), null);
+    if (!("id" in saved)) throw new Error("setup");
+    expect(await setReportPriority(db, student, saved.id, "p0")).toBe(false);
+    expect(await setReportPriority(db, admin, saved.id, "p9" as never)).toBe(false);
+    expect((await getReport(db, admin, saved.id))?.priority).toBe("p2");
+    expect(await setReportPriority(db, admin, saved.id, "p0")).toBe(true);
+    expect((await getReport(db, admin, saved.id))?.priority).toBe("p0");
+    expect(await setReportPriority(db, admin, saved.id, null)).toBe(true);
+    expect((await getReport(db, admin, saved.id))?.priority).toBeNull();
   });
 });
 
