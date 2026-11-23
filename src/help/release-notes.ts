@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-22",
     changes: [
+      "Editing a Study Chat now opens steps 1 and 2 too: change its materials, or its kind and learning goal, from the step list or with Back. What you wrote on the later steps stays.",
       "On step 2 of a new Study Chat, the learning goal box starts empty: write your own, press Draft for DALAA's, or press Tweak and say what to change.",
       "A new Study Chat now starts with \"Show students their progress\" on and students answering by typing or speaking, their choice. Change either on Chat options.",
       "The \"You're still setting up …\" reminder on Activities has a ✕ to dismiss it and \"Remind me tomorrow\".",

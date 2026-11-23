@@ -10,7 +10,9 @@ import { SOURCE_FILTERS, SOURCE_LABEL, type MaterialSource } from "@/content/mat
 import { Button } from "@/components/ui";
 import { wizardMaterialsAction, type MaterialsPickState } from "../actions";
 import { PickerField } from "../forms";
-import { addMaterialPath, savedIds, type AddKind } from "./query";
+import { keepPicker } from "@/lti/picker";
+import { addMaterialPath, materialsQuery, savedIds, type AddKind, type MaterialIds } from "./query";
+import { WIZARD_FORM_ID } from "./steps";
 
 export type PickRow = { value: string; name: string; source: MaterialSource; seenBy: SeenBy; checked: boolean };
 
@@ -35,19 +37,26 @@ export function MaterialsPickForm({
   addToCanvas,
   rows,
   back,
+  activityId,
+  savedStep,
 }: {
   courseId: string;
   formKey: string;
   addToCanvas: string | null;
   rows: PickRow[];
-  back: string;
+  back: string | null;
+  /** On a saved activity (feedback 21e8c594): Next saves its materials in place, and the step list saves first. */
+  activityId?: string;
+  /** Step 1 of the saved activity, for "+ Materials" to come back to; step 1 of a new chat without it. */
+  savedStep?: string;
 }) {
   const [state, action, pending] = useActionState<MaterialsPickState, FormData>(wizardMaterialsAction, {});
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const drawn = rows.filter((r) => (state.ticked ? state.ticked.includes(r.value) : r.checked)).map((r) => r.value);
   // The href fits the boxes as drawn; a plain click reads the boxes as they are now.
-  const addPath = (kind: AddKind, ticked: string[]) => addMaterialPath(courseId, kind, savedIds(ticked), addToCanvas);
+  const stepPath = savedStep ? (ids: MaterialIds) => keepPicker(`${savedStep}?${materialsQuery(ids)}`, addToCanvas) : undefined;
+  const addPath = (kind: AddKind, ticked: string[]) => addMaterialPath(courseId, kind, savedIds(ticked), addToCanvas, stepPath);
   const [query, setQuery] = useState("");
   const [show, setShow] = useState<MaterialSource | null>(null);
   const [count, setCount] = useState(drawn.length);
@@ -64,8 +73,9 @@ export function MaterialsPickForm({
   };
 
   return (
-    <form ref={form} action={action} className="flex flex-col gap-4">
+    <form ref={form} id={activityId ? WIZARD_FORM_ID : undefined} action={action} className="flex flex-col gap-4">
       <input type="hidden" name="courseId" value={courseId} />
+      {activityId && <input type="hidden" name="activityId" value={activityId} />}
       <input type="hidden" name="formKey" value={formKey} />
       <PickerField addToCanvas={addToCanvas} />
       {rows.length === 0 ? (
@@ -145,14 +155,16 @@ export function MaterialsPickForm({
         </p>
       )}
       <div className="sticky bottom-0 z-10 flex items-center gap-3 border-t border-border bg-bg pt-3 pb-16 lg:pb-3">
-        <Link href={back} className="text-sm whitespace-nowrap text-muted hover:text-text">
-          ← Back
-        </Link>
+        {back && (
+          <Link href={back} className="text-sm whitespace-nowrap text-muted hover:text-text">
+            ← Back
+          </Link>
+        )}
         <span className="flex-1" />
         <span role="status" className="text-sm text-muted">
           {count === 0 ? "None ticked yet" : `${count} ticked`}
         </span>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" name="intent" value="next" disabled={pending}>
           {pending ? "Saving…" : "Next"}
         </Button>
       </div>

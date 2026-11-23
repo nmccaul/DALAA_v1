@@ -26,8 +26,10 @@ import {
   SETUP_STEPS,
   setupPath,
   WIZARD_STEPS,
-  type SetupStep,
+  type WizardStep,
 } from "./steps";
+import { SavedGoalStep } from "./goal-step";
+import { SavedMaterialsStep } from "./materials-step";
 
 /**
  * Wizard steps 4–7 on the drafted activity: each editing step shows its own
@@ -36,8 +38,19 @@ import {
  * Step 7 sums it up, lets the teacher try it as a student, then assigns it
  * (ASSIGN_TO_CANVAS) or publishes it. The panel's note comes from the stored settings.
  */
-export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScreenProps) {
+export async function StudyChatSetup({ actor, activity, step, addToCanvas, searchParams }: SetupScreenProps) {
   if (step === RESUME_STEP) redirect(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas));
+  const path = (s: WizardStep) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
+  const later = keepPicker(finishLaterPath(activity.courseId), addToCanvas);
+  // Every step works on the saved draft, so any can be opened from the list; from a step with a form, saving first.
+  const go = (save: boolean) =>
+    Object.fromEntries(WIZARD_STEPS.map((s) => [s.slug, { href: path(s.slug), save }])) as Record<WizardStep, { href: string; save: boolean }>;
+  // Steps 1–2 open again on a saved activity, to change its materials or kind (feedback 21e8c594).
+  if (step === "materials" || step === "goal") {
+    const started = startedBanner(startedNote(await countStartedAttempts(db(), activity.id)));
+    const props = { actor, activity, addToCanvas, searchParams, go: go(true), later: { href: later, save: true }, started };
+    return step === "materials" ? SavedMaterialsStep(props) : SavedGoalStep(props);
+  }
   if (!isSetupStep(step)) notFound();
   if (activity.status === "draft") await rememberSetupStep(db(), activity, step);
   const title = WIZARD_STEPS.find((s) => s.slug === step)!.question;
@@ -50,11 +63,7 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
       </WizardShell>
     );
   }
-  const path = (s: Parameters<typeof setupPath>[2]) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
   const previous = previousSetupStep(step);
-  const later = keepPicker(finishLaterPath(activity.courseId), addToCanvas);
-  // Every setup step works on the saved draft, so any can be opened from the list; from an editing step, saving first.
-  const go = (save: boolean) => Object.fromEntries(SETUP_STEPS.map((s) => [s, { href: path(s), save }])) as Record<SetupStep, { href: string; save: boolean }>;
 
   if (step === "review") {
     const { readings, guides } = await activityMaterials(db(), activity.id);
@@ -133,14 +142,10 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
   }
 
   // Edit can open an activity students have started: say changes reach new attempts only (D-031).
-  const started = startedNote(await countStartedAttempts(db(), activity.id));
+  const started = startedBanner(startedNote(await countStartedAttempts(db(), activity.id)));
   return (
     <WizardShell step={step} title={title} note={<p>{setupNote(step, parsed.data)}</p>} go={go(true)} later={{ href: later, save: true }}>
-      {started && (
-        <p role="status" className="mb-4 rounded-control border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
-          {started}
-        </p>
-      )}
+      {started}
       <StudyChatEditor
         // A new step is a new form: its cards open and its unsaved state starts fresh.
         key={step}
@@ -153,5 +158,16 @@ export async function StudyChatSetup({ activity, step, addToCanvas }: SetupScree
         wizard={{ step, previous }}
       />
     </WizardShell>
+  );
+}
+
+/** "Students have started it: changes reach new attempts only" (D-031), when they have. */
+function startedBanner(started: string | null) {
+  return (
+    started && (
+      <p role="status" className="mb-4 rounded-control border border-border-strong bg-warn-soft px-4 py-3 text-warn-text">
+        {started}
+      </p>
+    )
   );
 }

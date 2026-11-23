@@ -20,13 +20,14 @@ export default async function SetupStepPage({ params, searchParams }: PageProps<
   if (!activity || activity.courseId !== course.id) notFound();
   const Setup = screensFor(activity.tool)?.setup;
   if (!Setup) notFound();
+  const query = await searchParams;
 
   return (
     <div className="flex flex-col gap-6">
       <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
         ‹ Activities
       </Link>
-      <Setup actor={actor} activity={activity} step={step} addToCanvas={pickerRequest((await searchParams)[PICKER_PARAM])} />
+      <Setup actor={actor} activity={activity} step={step} addToCanvas={pickerRequest(query[PICKER_PARAM])} searchParams={query} />
     </div>
   );
 }

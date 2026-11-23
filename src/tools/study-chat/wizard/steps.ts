@@ -29,7 +29,11 @@ export function stepIndex(step: WizardStep): number {
  */
 export const WIZARD_FORM_ID = "wizard-step-form";
 
-/** Steps 3–6 work on the drafted activity; 1–2 come before it exists. */
+/**
+ * Steps 3–6: the editor's steps on the drafted activity. Steps 1–2 come
+ * before it exists, and open on it again too, to change its materials or
+ * kind (Lucy, feedback 21e8c594), but with their own forms.
+ */
 export const SETUP_STEPS = ["scenario", "grading", "options", "review"] as const satisfies readonly WizardStep[];
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
@@ -46,7 +50,7 @@ export const RESUME_STEP = "resume";
 /** Where `resume` goes: the step last stored, when it's still a setup step. */
 export const resumeStep = (stored: string | null): SetupStep => (isSetupStep(stored) ? stored : SETUP_STEPS[0]);
 
-export const setupPath = (courseId: string, activityId: string, step: SetupStep) =>
+export const setupPath = (courseId: string, activityId: string, step: WizardStep) =>
   `/courses/${courseId}/activities/${activityId}/setup/${step}`;
 
 /**
@@ -55,20 +59,20 @@ export const setupPath = (courseId: string, activityId: string, step: SetupStep)
  */
 export const finishLaterPath = (courseId: string) => `/courses/${courseId}?show=unassigned`;
 
-/** Where a setup step's form goes after saving: Next's step, a `goto:<step>` step, or null to stay. */
-export function savedStepTarget(step: unknown, intent: unknown): SetupStep | null {
-  if (!isSetupStep(step)) return null;
+/** Where a saved activity's step goes after saving: Next's step, a `goto:<step>` step, or null to stay. */
+export function savedStepTarget(step: unknown, intent: unknown): WizardStep | null {
+  if (!isWizardStep(step)) return null;
   if (intent === "next") return nextSetupStep(step) ?? step;
   const target = typeof intent === "string" && intent.startsWith("goto:") ? intent.slice("goto:".length) : null;
-  return isSetupStep(target) ? target : null;
+  return isWizardStep(target) ? target : null;
 }
 
 /** The step after `step`, or null after the last. */
-export function nextSetupStep(step: SetupStep): SetupStep | null {
-  return SETUP_STEPS[SETUP_STEPS.indexOf(step) + 1] ?? null;
+export function nextSetupStep(step: WizardStep): WizardStep | null {
+  return WIZARD_STEPS[stepIndex(step) + 1]?.slug ?? null;
 }
 
-/** The step before `step`, or null on the first (step 2 came before the activity existed; there's no going back to it). */
-export function previousSetupStep(step: SetupStep): SetupStep | null {
-  return SETUP_STEPS[SETUP_STEPS.indexOf(step) - 1] ?? null;
+/** The step before `step`, or null on the first. On a saved activity, step 3 goes back to step 2 (feedback 21e8c594). */
+export function previousSetupStep(step: WizardStep): WizardStep | null {
+  return WIZARD_STEPS[stepIndex(step) - 1]?.slug ?? null;
 }

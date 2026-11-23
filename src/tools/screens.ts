@@ -31,8 +31,8 @@ export type CreateScreenProps = {
 /** `addToCanvas`: the open "Add to Canvas" picker's request, so Publish returns to it (src/lti/picker.ts). */
 export type ReviewScreenProps = { actor: Actor; activity: TaughtActivity; addToCanvas: string | null };
 
-/** A step of the tool's setup wizard on a drafted activity; `step` is the URL's, unchecked. */
-export type SetupScreenProps = ReviewScreenProps & { step: string };
+/** A step of the tool's setup wizard on a drafted activity; `step` and `searchParams` are the URL's, unchecked. */
+export type SetupScreenProps = ReviewScreenProps & { step: string; searchParams: Record<string, string | string[] | undefined> };
 
 /** A student doing the activity. The screen passes the browser only what the tool's student view allows. */
 export type TakeScreenProps = { actor: Actor; activity: TakenActivity };
