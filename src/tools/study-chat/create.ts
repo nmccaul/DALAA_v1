@@ -115,7 +115,9 @@ export function blankSettings(request: Pick<StartRequest, "mode" | "goal" | "stu
   return StudyChatSetupSettings.parse({
     mode: request.mode,
     studentWork: request.studentWork,
-    showProgress: false,
+    // What teachers pick for nearly every chat (Lucy, feedback 9abab88c): progress shown, typing or speaking.
+    showProgress: true,
+    answerWith: "either",
     goal: request.goal,
     ...(typeReason ? { typeReason } : {}),
     scenarios: [{ title: "", situation: "", opening: "" }],

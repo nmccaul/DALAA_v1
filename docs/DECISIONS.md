@@ -424,6 +424,12 @@ and bc22f7df asked for the same).
 - **"About how long?" moved to Chat options**, as buttons that set "Most
   student messages" (the choice itself isn't stored). New chats start at 12
   messages, no time limit, students can finish.
+- **Step 2's goal follows the same rule** (*2026-11-22*, Lucy's feedback
+  78c8594e): the box starts empty, with Draft (the goal the suggestion wrote
+  for the chosen kind, else one written now) and Tweak (rewrite the
+  teacher's goal as asked). Picking another kind never changes the goal.
+- **New chats start with progress shown and students choosing typing or
+  speaking** (*2026-11-22*, Lucy's 9abab88c: what she picks every time).
 
 ### D-038 · Students can speak their messages (dictation)
 *2026-11-17, Nathan*

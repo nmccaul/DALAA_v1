@@ -85,6 +85,15 @@ const tidy = (text: string, max: number) => {
   return line === "" || line.length > max ? null : line;
 };
 
+/** The screen prints "When students finish, they should be able to…" above the box: a goal that repeats it loses it. */
+const OPENING = /^when students finish,? (?:they )?should be able to(?:…|\.\.\.)?\s*/i;
+
+/** A goal as the box shows it: one line, without the opening, starting with a capital. */
+const tidyGoal = (text: string) => {
+  const goal = tidy(text.trim().replace(OPENING, ""), MAX_GOAL_CHARS);
+  return goal && goal[0].toUpperCase() + goal.slice(1);
+};
+
 /** The prompt for step 2's suggestion: every mode, then each material fenced. Exported for tests. */
 export function suggestPrompt(materials: SuggestMaterials): { system: string; prompt: string } {
   const modes = MODE_SLUGS.map((slug) => `- ${slug}: ${MODES[slug].label}. ${MODES[slug].description}`).join("\n");
@@ -113,7 +122,7 @@ export async function suggestTypes(
     for (const { mode, reason, goal } of answer.types) {
       const slug = MODE_SLUGS.find((m) => m === mode.trim().toLowerCase());
       if (!slug || types.some((t) => t.mode === slug)) continue;
-      types.push({ mode: slug, reason: tidy(reason, MAX_REASON_CHARS), goal: tidy(goal, MAX_GOAL_CHARS) });
+      types.push({ mode: slug, reason: tidy(reason, MAX_REASON_CHARS), goal: tidyGoal(goal) });
       if (types.length === 2) break;
     }
     return types.length > 0 ? types : FALLBACK;
@@ -125,8 +134,11 @@ export async function suggestTypes(
 
 const GoalAnswer = z.object({ goal: GOAL_FIELD });
 
-/** The prompt for a goal for one kind of chat. Exported for tests. */
-export function goalPrompt(materials: SuggestMaterials, mode: ModeSlug): { system: string; prompt: string } {
+/** The teacher's goal and what they want changed in it ("Tweak", feedback 78c8594e). */
+export type GoalTweak = { current: string; instruction: string };
+
+/** The prompt for a goal for one kind of chat, or for a rewrite of the teacher's (`tweak`). Exported for tests. */
+export function goalPrompt(materials: SuggestMaterials, mode: ModeSlug, tweak?: GoalTweak): { system: string; prompt: string } {
   const system = [
     "You help college teachers set up AI study chats: a conversation between one student and an AI character, based on material the student has read.",
     "Write the learning goal for the chat the teacher picked, from their material.",
@@ -136,15 +148,22 @@ export function goalPrompt(materials: SuggestMaterials, mode: ModeSlug): { syste
     MATERIAL_RULE,
   ].join("\n");
   const kind = `The kind of chat: ${MODES[mode].label}. ${MODES[mode].description}`;
-  return { system, prompt: [kind, ...materialBlocks(materials)].join("\n\n") };
+  const rewrite = tweak
+    ? [
+        `The teacher's goal so far, between <teacher-goal> tags. Rewrite it, keeping what they wrote unless asked to change it:\n<teacher-goal>${tweak.current}</teacher-goal>`,
+        `What the teacher wants changed: ${tweak.instruction.trim() || "make it clearer and easier to assess"}`,
+      ]
+    : [];
+  return { system, prompt: [kind, ...rewrite, ...materialBlocks(materials)].join("\n\n") };
 }
 
 /** How long a teacher waits for a goal for the kind they picked before writing their own. */
 export const GOAL_TIMEOUT_MS = 20_000;
 
 /**
- * A goal for the kind the teacher picked on step 2, when the first suggestion
- * had none for it; NULL when none comes back, or not within GOAL_TIMEOUT_MS.
+ * A goal for the kind the teacher picked on step 2 ("Draft"), or the
+ * teacher's goal rewritten as they ask (`tweak`); NULL when none comes back,
+ * or not within GOAL_TIMEOUT_MS.
  */
 export async function suggestGoalFor(
   db: Db,
@@ -152,14 +171,15 @@ export async function suggestGoalFor(
   ctx: Omit<AiCallContext, "purpose">,
   materials: SuggestMaterials,
   mode: ModeSlug,
+  tweak?: GoalTweak,
 ): Promise<string | null> {
   if (noReading(materials)) return null;
   try {
     const answer = await generateStructured(db, model, { ...ctx, purpose: "suggest.goal" }, GoalAnswer, {
-      ...goalPrompt(materials, mode),
+      ...goalPrompt(materials, mode, tweak),
       abortSignal: AbortSignal.timeout(GOAL_TIMEOUT_MS),
     });
-    return tidy(answer.goal, MAX_GOAL_CHARS);
+    return tidyGoal(answer.goal);
   } catch (error) {
     console.error("study-chat goal suggestion failed:", error instanceof Error ? error.name : "unknown error");
     return null;

@@ -17,7 +17,7 @@ import { createStudyChat, publishStudyChat, saveStudyChat, startStudyChat, STUDY
 import { isListPart, isPartKey } from "./parts";
 import { StudyChatSetupSettings } from "./schema";
 import { MODE_SLUGS, type ModeSlug } from "./modes";
-import { suggestGoalFor } from "./suggest";
+import { MAX_GOAL_CHARS, suggestGoalFor } from "./suggest";
 import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
 import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
@@ -100,18 +100,25 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
 export type TypeState = FormState & { mode?: string };
 
 /**
- * Step 2: a goal written for the kind the teacher just picked, when the first
- * suggestion had none for it (feedback 084938dc: the goal follows the kind).
- * NULL when none comes back; the teacher's own goal is never replaced here.
+ * Step 2's Draft and Tweak on the goal (feedback 78c8594e: the teacher
+ * writes it, or asks DALAA to draft or rewrite it). With `tweak`, the
+ * teacher's goal rewritten as they asked. NULL when none comes back.
  */
-export async function goalForTypeAction(courseId: string, contentIds: string[], guideIds: string[], mode: string): Promise<string | null> {
+export async function goalForTypeAction(
+  courseId: string,
+  contentIds: string[],
+  guideIds: string[],
+  mode: string,
+  tweak?: { current: string; instruction: string },
+): Promise<string | null> {
   const actor = await requireActor();
   const slug = MODE_SLUGS.find((m) => m === mode);
   if (!slug) return null;
   const materials = await pickedMaterials(db(), actor, courseId, { contentIds, guideIds });
   if (!materials.ok) return null;
+  const asked = tweak ? { current: tweak.current.slice(0, MAX_GOAL_CHARS), instruction: tweak.instruction.slice(0, 500) } : undefined;
   // The quick model: a teacher is waiting on it, and it's one or two sentences (feedback a1fc461e).
-  return suggestGoalFor(db(), chatModel(), { userId: actor.userId, courseId }, materials, slug);
+  return suggestGoalFor(db(), chatModel(), { userId: actor.userId, courseId }, materials, slug, asked);
 }
 
 /** Step 2's Next: saves the chat with its kind and goal, no AI draft, and opens step 3 for the teacher to write. */

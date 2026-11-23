@@ -18,7 +18,8 @@ const title = WIZARD_STEPS.find((s) => s.slug === "goal")!.question;
  * Wizard step 2: how students will work with the AI, then the learning goal
  * written for that kind, then the length. The kinds and their goals are
  * suggested from the ticked materials in one call (feedback 084938dc: the
- * interaction first, then the outcome). Next saves the chat
+ * interaction first, then the outcome); the goal box starts empty, with
+ * Draft and Tweak (feedback 78c8594e). Next saves the chat
  * (wizardTypeAction) and opens step 3; nothing more is drafted until the teacher asks.
  */
 export async function GoalStep({ actor, course, searchParams }: CreateScreenProps) {
@@ -53,7 +54,7 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
         suggested[0].reason ? (
           <p>
             I read your {count === 1 ? "material" : `${count} materials`}. {groupOf(suggested[0].mode).label} fits it best, so it&apos;s
-            picked, with a goal written for it. Pick another kind and I&apos;ll rewrite the goal for that one.
+            picked. Then write the learning goal, or press Draft and I&apos;ll write one for the kind you picked.
           </p>
         ) : (
           <p>Pick how students will work with the AI, then write the goal. Next, you&apos;ll set up the AI&apos;s role.</p>

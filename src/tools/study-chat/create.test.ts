@@ -315,8 +315,10 @@ describe("creating a Study Chat", () => {
     expect(activity?.settings).toEqual(blankSettings({ ...request, goal: "Defend a side." }));
     expect((await activityMaterials(db, started.activityId)).readings.map((r) => r.id)).toEqual([content]);
 
-    // The teacher writes the scenario only: saved, titled from it, still no points.
+    // A new chat shows progress and lets students type or speak (feedback 9abab88c).
     const blank = blankSettings(request);
+    expect(blank).toMatchObject({ showProgress: true, answerWith: "either" });
+    // The teacher writes the scenario only: saved, titled from it, still no points.
     const partly = { ...blank, scenarios: [{ title: "Bike debate", situation: "", opening: "" }] };
     expect(await saveStudyChat(db, prof, started.activityId, partly)).toEqual({ ok: true });
     expect(await getTaughtActivity(db, prof, started.activityId)).toMatchObject({ title: "Bike debate", points: null });

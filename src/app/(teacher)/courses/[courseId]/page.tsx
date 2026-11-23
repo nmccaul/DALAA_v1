@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
+import { REMINDER_COOKIE, reminderHidden } from "@/activities/draft-reminder";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { ActivityMenu } from "@/components/activity-menu";
@@ -15,6 +16,7 @@ import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
 import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
 import { copyActivityAction, deleteActivityAction } from "./actions";
+import { DraftReminder } from "./draft-reminder";
 import { activitiesView } from "./view";
 
 const pointsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -57,6 +59,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const assignOn = assignToCanvasOn();
   const view = activitiesView(q.show, { assigned: assigned.length, notAssigned: notAssigned.length, other: elsewhere.length });
   // The draft last worked on, so a teacher who stepped away finds it again (feedback 391261a8).
+  const jar = await cookies();
   const lastDraft = notAssigned.filter((a) => a.status === "draft").sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
   const views = [
     { key: "assigned", label: "Assigned", count: assigned.length },
@@ -94,15 +97,10 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           ))}
         </nav>
       </div>
-      {lastDraft && view !== "unassigned" && (
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-border bg-accent-soft px-4 py-3">
-          <span className="min-w-0 break-words">
-            You&apos;re still setting up <b>{lastDraft.title}</b>. Drafts are under Not assigned.
-          </span>
-          <Link href={teacherActivityPath(course.id, lastDraft)} className="font-medium text-accent-text underline">
-            Continue setting it up →
-          </Link>
-        </p>
+      {lastDraft && view !== "unassigned" && !reminderHidden(jar.get(REMINDER_COOKIE)?.value, lastDraft.id) && (
+        <DraftReminder draftId={lastDraft.id} href={teacherActivityPath(course.id, lastDraft)}>
+          You&apos;re still setting up <b>{lastDraft.title}</b>. Drafts are under Not assigned.
+        </DraftReminder>
       )}
       {q.deleted && (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
