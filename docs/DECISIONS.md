@@ -526,6 +526,11 @@ release notes"), from Lucy's feedback 3df5d2ca, 107d2eb9 and deead2c3*
   the team. **An admin sees everyone's by default** (Nathan, same day: "i
   want to see everyones"), with who sent each and a link to it in the
   Settings inbox, and can switch to just their own.
+- **Filters by tab or feature** (Nathan, same day: "filter the feedback by
+  section/feature/tab"): Activities, Creating an activity, Materials,
+  Results, Insights, Setup, Help, Student view, Courses, Settings, Other,
+  worked out from the page each report was sent on (`src/feedback/area.ts`).
+  Only areas with reports show, each with how many are still open.
 - **It's not the release notes.** A report is crossed off when it's resolved
   (`npm run feedback -- resolve` or the admin inbox). The release notes still
   list every change, whether or not someone asked for it.
