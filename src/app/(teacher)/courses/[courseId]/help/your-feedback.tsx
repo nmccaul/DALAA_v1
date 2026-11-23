@@ -2,17 +2,13 @@ import { CaretRight, Check } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
 import { PrioritySelect } from "@/components/priority-select";
+import { PRIORITY_TONE } from "@/components/priority-tone";
 import { standing, type MyReport, type Standing } from "@/feedback/mine";
 import { priorityLabel, type Kind, type Priority } from "@/feedback/report";
 import { setPriorityAction } from "@/feedback/actions";
 
 const KIND: Record<Kind, string> = { bug: "Bug", confusing: "Confusing", idea: "Idea" };
 
-const PRIORITY_PILL: Record<Priority, string> = {
-  p0: "bg-danger-soft text-danger",
-  p1: "bg-warn-soft text-warn-text",
-  p2: "bg-subtle text-muted",
-};
 
 /** Urgent first, unset last; newest first within each. */
 const RANK = (p: Priority | null) => (p === null ? 3 : Number(p.slice(1)));
@@ -107,7 +103,7 @@ function Group({
                   <PrioritySelect id={r.id} priority={r.priority} action={setPriorityAction} />
                 ) : (
                   r.priority && (
-                    <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-bold ${PRIORITY_PILL[r.priority]}`}>{priorityLabel(r.priority)}</span>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[13px] font-bold ${PRIORITY_TONE[r.priority]}`}>{priorityLabel(r.priority)}</span>
                   )
                 )}
                 <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[13px] font-bold ${pill(s)}`}>

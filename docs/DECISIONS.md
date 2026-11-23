@@ -538,6 +538,10 @@ release notes"), from Lucy's feedback 3df5d2ca, 107d2eb9 and deead2c3*
   inbox. Reports sent before it existed show "Not set" until triaged. Open
   reports sort Urgent first, and `npm run feedback -- list` puts them first
   too, so the bug loop takes urgent ones first.
+- **Each priority has its own color everywhere it shows** (Nathan, same
+  day): Urgent red, Soon amber, Can wait blue, Not set dashed grey
+  (`src/components/priority-tone.ts`). The team triages from the command line
+  with `npm run feedback -- priority <id> <p0|p1|p2|none>`.
 - **It's not the release notes.** A report is crossed off when it's resolved
   (`npm run feedback -- resolve` or the admin inbox). The release notes still
   list every change, whether or not someone asked for it.

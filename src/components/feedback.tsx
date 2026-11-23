@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { dataUrlBytes } from "@/feedback/annotate";
+import { PRIORITY_TONE } from "./priority-tone";
 import { KINDS, NOTE_MAX, PRIORITIES, SCREENSHOT_MAX_BYTES, type Kind, type Priority, type ReportInput } from "@/feedback/report";
 import { installRing } from "@/feedback/ring";
 import { ScreenshotEditor } from "./annotate";
@@ -230,7 +231,7 @@ export function FeedbackButton() {
                     key={p.value}
                     title={p.hint}
                     className={`cursor-pointer rounded-control border px-3 py-1.5 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
-                      priority === p.value ? "border-accent bg-accent-soft text-accent-text" : "border-border-strong text-muted hover:text-text"
+                      priority === p.value ? `${PRIORITY_TONE[p.value]} font-bold` : "border-border-strong text-muted hover:text-text"
                     }`}
                   >
                     <input type="radio" name="priority" value={p.value} checked={priority === p.value} onChange={() => setPriority(p.value)} className="sr-only" />

@@ -6,8 +6,9 @@
  *   npm run feedback -- claim <id> [--branch B]  mark it as being worked on
  *   npm run feedback -- record <id> <status> [--pr URL] [--commit SHA] [--note …] [--branch B]
  *   npm run feedback -- resolve <id> <sha>       merged and deployed: resolve it
+ *   npm run feedback -- priority <id> <p0|p1|p2|none>  triage: Urgent, Soon, Can wait (D-042)
  * <id> is a report id or its first 8 characters. `list` and `show` run read-only;
- * the others write only feedback_fixes and the report's resolve columns
+ * the others write only feedback_fixes, the report's resolve columns and its priority
  * (src/feedback/fixes.ts). Add --prod to use production's database: the URL is
  * pulled from Vercel into a temp dir that's deleted at once, and never printed.
  */
@@ -23,11 +24,11 @@ import { wrap } from "../src/db/client";
 import { databaseUrl } from "../src/db/url";
 import type { Db } from "../src/db/types";
 import {
-  FIX_STATUSES, claimReport, findReport, getFix, isFixStatus, listLine, openReports, readOnly, recordFix, resolveFixed,
+  FIX_STATUSES, claimReport, findReport, getFix, isFixStatus, listLine, openReports, readOnly, recordFix, resolveFixed, setPriority,
   type Fix,
 } from "../src/feedback/fixes";
 
-const USAGE = `usage: npm run feedback -- <list | show <id> | claim <id> | record <id> <status> | resolve <id> <sha>> [--prod]
+const USAGE = `usage: npm run feedback -- <list | show <id> | claim <id> | record <id> <status> | resolve <id> <sha> | priority <id> <p0|p1|p2|none>> [--prod]
   record options: --pr URL  --commit SHA  --note TEXT  --branch NAME
   statuses: ${FIX_STATUSES.join(", ")}`;
 
@@ -150,7 +151,7 @@ async function run(db: Db): Promise<string | void> {
     console.log(rows.length ? rows.map((r) => listLine(r)).join("\n") : "No open reports.");
     return;
   }
-  if (!["show", "claim", "record", "resolve"].includes(command ?? "")) return USAGE;
+  if (!["show", "claim", "record", "resolve", "priority"].includes(command ?? "")) return USAGE;
   const found = await readOnly(db, (tx) => findReport(tx, rawId ?? ""));
   if ("problem" in found) return found.problem;
   const { id } = found;
@@ -166,6 +167,11 @@ async function run(db: Db): Promise<string | void> {
     const outcome = await recordFix(db, id, { status: arg, prUrl: opts.pr, commit: opts.commit, note: opts.note, branch: opts.branch });
     if (!outcome.ok) return outcome.problem;
     console.log(`Recorded ${id.slice(0, 8)}: ${arg}.`);
+    return;
+  }
+  if (command === "priority") {
+    if (!arg || !(await setPriority(db, id, arg))) return USAGE;
+    console.log(`Priority ${id.slice(0, 8)}: ${arg}.`);
     return;
   }
   const outcome = await resolveFixed(db, id, arg ?? "");
