@@ -4,7 +4,8 @@ import Link from "next/link";
 import { PreviewNote } from "@/components/preview-note";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
-import { listEveryonesReports, listMyReports } from "@/feedback/mine";
+import { AREAS, feedbackArea, isArea } from "@/feedback/area";
+import { listEveryonesReports, listMyReports, standing } from "@/feedback/mine";
 import { noteDate, RELEASE_NOTES } from "@/help/release-notes";
 import { GiveFeedback } from "./give-feedback";
 import { YourFeedback } from "./your-feedback";
@@ -15,10 +16,23 @@ export const metadata: Metadata = { title: "Help" };
 export default async function HelpTabPage({ params, searchParams }: PageProps<"/courses/[courseId]/help">) {
   // Only the course's teachers see its tabs.
   const { actor, course } = await loadTaughtCourse((await params).courseId);
+  const q = await searchParams;
   // An admin sees everyone's reports here by default (Nathan, 2026-11-22); everyone else, only their own.
-  const everyone = actor.isAdmin && (await searchParams).feedback !== "mine";
-  const reports = await (everyone ? listEveryonesReports : listMyReports)(db(), actor);
+  const everyone = actor.isAdmin && q.feedback !== "mine";
+  const all = (await (everyone ? listEveryonesReports : listMyReports)(db(), actor)).map((r) => ({ ...r, area: feedbackArea(r.url) }));
+  // Filtered by tab or feature (Nathan, 2026-11-22); each filter counts what's still open there.
+  const area = isArea(q.area) ? q.area : null;
+  const reports = area ? all.filter((r) => r.area === area) : all;
+  const openIn = (key: string | null) => all.filter((r) => (key === null || r.area === key) && !standing(r).done).length;
   const base = `/courses/${course.id}/help`;
+  const href = (opts: { mine: boolean; area: string | null }) => {
+    const p = new URLSearchParams();
+    if (opts.mine) p.set("feedback", "mine");
+    if (opts.area) p.set("area", opts.area);
+    const query = p.toString();
+    return `${base}${query ? `?${query}` : ""}#feedback`;
+  };
+  const filters = [{ key: null, label: "All" }, ...AREAS.filter((a) => all.some((r) => r.area === a.key))];
 
   const section = "flex flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0";
   return (
@@ -46,8 +60,8 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
           {actor.isAdmin && (
             <nav aria-label="Whose feedback" className="inline-flex rounded-control border border-border-strong text-sm">
               {[
-                { key: "everyone", label: "Everyone", on: everyone, href: `${base}#feedback` },
-                { key: "mine", label: "Yours", on: !everyone, href: `${base}?feedback=mine#feedback` },
+                { key: "everyone", label: "Everyone", on: everyone, href: href({ mine: false, area }) },
+                { key: "mine", label: "Yours", on: !everyone, href: href({ mine: true, area }) },
               ].map((v, i) => (
                 <Link
                   key={v.key}
@@ -67,9 +81,25 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
           {everyone
             ? "Every report anyone has sent, and where it stands. Only admins see this; teachers see just their own. Open one for its picture and details."
             : "Everything you've sent, and where it stands."}{" "}
-          When one is fixed, it&apos;s crossed off and moves to Done. Release notes below list every change, whether or
-          not someone asked for it.
+          When one is fixed, it&apos;s crossed off and moves to Done. Filter by tab or feature; each number is how many
+          are still open there. Release notes below list every change, whether or not someone asked for it.
         </p>
+        {all.length > 0 && (
+          <nav aria-label="Filter feedback by area" className="flex flex-wrap gap-1.5 text-sm">
+            {filters.map((f) => (
+              <Link
+                key={f.label}
+                href={href({ mine: !everyone, area: f.key })}
+                aria-current={f.key === area ? "page" : undefined}
+                className={`rounded-full border px-3 py-1 ${
+                  f.key === area ? "border-accent bg-accent text-white" : "border-border-strong text-accent-text hover:bg-subtle"
+                }`}
+              >
+                {f.label} <span className={f.key === area ? "" : "text-muted"}>{openIn(f.key)}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
         <YourFeedback reports={reports} everyone={everyone} />
       </section>
 

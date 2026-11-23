@@ -19,6 +19,8 @@ export type MyReport = {
   note: string;
   /** Who sent it, as their account names them. */
   reporter: string;
+  /** The page it was sent from (its area: area.ts). */
+  url: string;
   createdAt: Date;
   status: "open" | "resolved";
   resolvedAt: Date | null;
@@ -67,7 +69,7 @@ export function listEveryonesReports(db: Db, actor: Actor): Promise<MyReport[]> 
 
 function listReportsIn(db: Db, scope: Scope): Promise<MyReport[]> {
   return db.query<MyReport>(
-    `select f.id, f.kind, f.note, u.display_name as reporter, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
+    `select f.id, f.kind, f.note, u.display_name as reporter, f.url, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
             x.status as "fixStatus", x.updated_at as "fixAt"
        from feedback_reports f
        join users u on u.id = f.user_id
