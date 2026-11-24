@@ -32,9 +32,12 @@ Nobody is watching, and nobody will answer questions until morning. Do exactly
 
 ## 3. Check, commit, record
 1. `npm run lint && npm run typecheck && npm test` must pass. Fix what you
-   broke. Don't skip or delete tests to get green. Local Node is 20: the two
-   PDF tests in `src/content/read.test.ts` (`Array.fromAsync`) are the only
-   acceptable local failures; CI (Node 22) is the real gate at checkpoints.
+   broke. Don't skip or delete tests to get green. Use Node 22, like CI
+   (`.nvmrc`): prefix commands with
+   `PATH=$HOME/.nvm/versions/node/v22.23.3/bin:$PATH`. The default `node` on
+   this Mac is another version. Two tests (`attempts/store`, `courses/roster`)
+   are sometimes flaky only in the full parallel run: rerun that file alone
+   before treating them as broken. CI is the real gate at checkpoints.
 2. Commit with explicit paths (`git add <paths>`, never `git add -A`). Use a
    plain, descriptive message. **No `Co-Authored-By` trailer and no "Generated
    with Claude" line.**
