@@ -37,9 +37,23 @@ export type GradesPreview =
   | { ok: true; activityId: string; title: string; points: number; plan: PushPlan; needsPreview: boolean }
   | { ok: false; reason: GradesRefusal };
 
+/** Why Canvas didn't take a grade, from its answer's status (feedback 3ad0e5ab: a refusal must say why). */
+export type PushFailure = "rejected" | "forbidden" | "not_found" | "unavailable";
+
+/** A failed postScore as a PushFailure: 400/422 Canvas said no to the score itself, 401/403 to DALAA, 404 it can't find the column or student. */
+export function pushFailure(e: unknown): PushFailure {
+  const status = e instanceof CanvasError ? e.status : undefined;
+  if (status === 401 || status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status !== undefined && status >= 400 && status < 500) return "rejected";
+  return "unavailable";
+}
+
 export type PushSummary = {
   sent: number;
   failed: number;
+  /** Why the failed ones failed (the first reason seen); none when nothing failed. */
+  why?: PushFailure;
   /** Students not sent, by why (src/results/push-plan.ts). */
   skipped: Partial<Record<PushCategory, number>>;
 };
@@ -235,8 +249,11 @@ export async function sendGrades(
         gradingProgress: "FullyGraded",
       });
       status = "sent";
-    } catch {
-      // Not confirmed, so not recorded as sent; the next push tries again.
+    } catch (e) {
+      // Not confirmed, so not recorded as sent; the next push tries again. Logged by status only: never headers or bodies.
+      const why = pushFailure(e);
+      summary.why ??= why;
+      console.error(`grade push: Canvas didn't take a score (${why}${e instanceof CanvasError && e.status ? `, ${e.status}` : ""})`);
     }
     summary[status]++;
     await db.query("insert into grade_push_lines (push_id, user_id, score, status) values ($1, $2, $3, $4)", [

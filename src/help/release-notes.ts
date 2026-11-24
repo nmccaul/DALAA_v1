@@ -11,6 +11,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-23",
     changes: [
+      "When Canvas turns down grades you send, Results now says so in a yellow warning, with why and what to do, instead of a quiet note.",
       "The Gradebook and Students tab no longer show the long code Canvas gives its test students in place of a login ID.",
     ],
   },
