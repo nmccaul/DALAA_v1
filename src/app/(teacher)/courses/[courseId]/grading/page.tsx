@@ -90,6 +90,8 @@ async function GradebookView({
   const assignment = typeof q.assignment === "string" && columns.some((c) => c.activityId === q.assignment) ? q.assignment : null;
   const open = typeof q.open === "string" ? q.open : null;
   const pushed = typeof q.pushed === "string" ? columns.find((c) => c.activityId === q.pushed) : undefined;
+  // Some grades Canvas didn't take: a warning, not a calm note (feedback 3ad0e5ab).
+  const pushFailed = pushed !== undefined && readSummary(q).failed > 0;
   const pushError = typeof q.pusherror === "string" ? (REFUSAL[q.pusherror as keyof typeof REFUSAL] ?? REFUSAL.unavailable) : null;
 
   const gridColumns: GridColumn[] = columns.map((c) => ({
@@ -150,7 +152,12 @@ async function GradebookView({
   return (
     <div className="flex flex-col gap-4">
       {pushed && (
-        <div role={pushError ? "alert" : "status"} className={`rounded-panel border px-4 py-3 text-sm ${pushError ? "border-danger text-danger" : "border-border-strong bg-accent-soft"}`}>
+        <div
+          role={pushError || pushFailed ? "alert" : "status"}
+          className={`rounded-panel border px-4 py-3 text-sm ${
+            pushError ? "border-danger text-danger" : pushFailed ? "border-border-strong bg-warn-soft text-warn-text" : "border-border-strong bg-accent-soft"
+          }`}
+        >
           <p className="font-bold">{pushed.title}</p>
           {pushError ? <p>{pushError}</p> : summaryLines(readSummary(q)).map((line) => <p key={line}>{line}</p>)}
         </div>

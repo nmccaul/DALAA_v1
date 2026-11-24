@@ -4,7 +4,7 @@
  * URL, and why Canvas refused.
  */
 
-import type { PushSummary, SendResult } from "@/lti/grades";
+import type { PushFailure, PushSummary, SendResult } from "@/lti/grades";
 import type { PushCategory } from "@/results/push-plan";
 
 export const CATEGORY: Record<PushCategory, { title: string; detail: string }> = {
@@ -54,12 +54,23 @@ export const REFUSAL: Record<Refusal, string> = {
   needs_preview: "There's something to decide first.",
 };
 
+/** Why Canvas didn't take grades, and what to do (feedback 3ad0e5ab, fdec6a2c: "the button does nothing"). */
+export const FAILURE: Record<PushFailure, string> = {
+  rejected: "Canvas turned them down, so they weren't recorded as sent. Try again; if it happens again, send feedback from this page so we can look.",
+  forbidden: "Canvas didn't let DALAA send grades to this course. Check that DALAA is still installed in the course, then try again.",
+  not_found: "Canvas couldn't find the assignment's column or these students. Open DALAA from the course in Canvas once, then try again.",
+  unavailable: "Canvas didn't answer. Nothing was recorded as sent; try again in a minute.",
+};
+
+const FAILURES = Object.keys(FAILURE) as PushFailure[];
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The Grading tab's query for a finished push, and back. */
 export function summaryQuery(activityId: string, s: PushSummary): URLSearchParams {
   const q = new URLSearchParams({ pushed: activityId, sent: String(s.sent), failed: String(s.failed) });
   for (const [category, n] of Object.entries(s.skipped)) if (n) q.set(`skip_${category}`, String(n));
+  if (s.failed && s.why) q.set("why", s.why);
   return q;
 }
 
@@ -70,13 +81,14 @@ export function readSummary(q: Record<string, string | string[] | undefined>): P
   };
   const skipped: PushSummary["skipped"] = {};
   for (const category of PREVIEW_ORDER) if (n(`skip_${category}`)) skipped[category] = n(`skip_${category}`);
-  return { sent: n("sent"), failed: n("failed"), skipped };
+  const why = FAILURES.find((f) => f === q.why);
+  return { sent: n("sent"), failed: n("failed"), skipped, ...(why ? { why } : {}) };
 }
 
 /** The result, one sentence per kind, for the line under the assignment. */
 export function summaryLines(s: PushSummary): string[] {
-  const lines = [s.sent ? `Sent ${plural(s.sent, "grade", "grades")} to Canvas.` : "No new grades to send."];
-  if (s.failed) lines.push(`Canvas didn't confirm ${plural(s.failed, "grade", "grades")}. Send again to retry them.`);
+  const lines = s.sent ? [`Sent ${plural(s.sent, "grade", "grades")} to Canvas.`] : s.failed ? [] : ["No new grades to send."];
+  if (s.failed) lines.push(`Canvas didn't take ${plural(s.failed, "grade", "grades")}. ${FAILURE[s.why ?? "unavailable"]}`);
   for (const category of PREVIEW_ORDER) {
     const n = s.skipped[category];
     if (n) lines.push(`${CATEGORY[category].title}: ${plural(n, "student", "students")}.`);
