@@ -69,3 +69,9 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - A draft with no mode yet (or old settings without one) falls back to "Study Chat" and the chat icon (seen on BUS M 499's one assigned activity locally).
 - Browser (local :3001, ralph.t04): BUS M 499 Not assigned shows scales/question/teach-back icons and labels at 1280 and 390; T04's other-courses rows show the kind. No data changed.
 - Not done (out of scope, in 04dcbd11): filtering or grouping the list by kind or Canvas module. Release note under 2026-11-27.
+
+## 2026-11-27 21:08 UTC · T08 Setup page wording · done
+- 1cb6be4f: one sentence, `AI_ONLY_EXPLAINED` in `src/content/guide-label.ts` (what AI-only notes are, with the negotiation example from her report), on the Setup tab's Materials line and in the Materials tab's help paragraph under the list (that tab's "Show" filters are by source, so there's no AI-only filter to attach it to).
+- 62dab3f4: "Publish it to students" now links "Not assigned" (`activityListPath(…, {assigned:false})`) instead of the course page; its line says to open a draft there, try it as a student, then Assign or Publish on its last step. Create still goes to + Activity.
+- 5bae9835: new short "Activities in Canvas modules" section on Setup: once it's in Canvas Assignments (Assign, or added from Canvas), add it to a module like any assignment (Modules, + on the module, Assignment).
+- Browser (local :3001, ralph.t04, BUS M 499 Setup) at 1280 and 390: links go to + Activity and `?show=unassigned`, text wraps fine. No data changed. Release note under 2026-11-27.
