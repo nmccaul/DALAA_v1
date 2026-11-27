@@ -11,7 +11,8 @@ export type DeleteState = { error?: string };
  * opens a dialog saying what goes, and only the dialog's red Delete sends
  * `action` (with `fields` as hidden inputs). With `mustTick`, Delete waits
  * for that box (sent as `confirmed=1`). With `blocked`, the dialog says why
- * it can't be deleted instead of asking.
+ * it can't be deleted instead of asking. With `label`, the button is that
+ * small text instead of a trash icon.
  */
 export function ConfirmDelete({
   action,
@@ -20,6 +21,7 @@ export function ConfirmDelete({
   children,
   mustTick,
   blocked,
+  label,
 }: {
   action: (state: DeleteState, form: FormData) => Promise<DeleteState>;
   fields: Record<string, string>;
@@ -29,6 +31,7 @@ export function ConfirmDelete({
   children?: ReactNode;
   mustTick?: string;
   blocked?: string;
+  label?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [ticked, setTicked] = useState(false);
@@ -37,15 +40,25 @@ export function ConfirmDelete({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => dialog.current?.showModal()}
-        aria-label={`Delete ${name}`}
-        title="Delete"
-        className="grid size-9 shrink-0 place-items-center rounded-control text-muted transition-colors hover:bg-danger-soft hover:text-danger"
-      >
-        <Trash size={18} aria-hidden />
-      </button>
+      {label ? (
+        <button
+          type="button"
+          onClick={() => dialog.current?.showModal()}
+          className="shrink-0 text-sm whitespace-nowrap text-muted underline hover:text-danger"
+        >
+          {label}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => dialog.current?.showModal()}
+          aria-label={`Delete ${name}`}
+          title="Delete"
+          className="grid size-9 shrink-0 place-items-center rounded-control text-muted transition-colors hover:bg-danger-soft hover:text-danger"
+        >
+          <Trash size={18} aria-hidden />
+        </button>
+      )}
       <dialog
         ref={dialog}
         aria-labelledby={titleId}

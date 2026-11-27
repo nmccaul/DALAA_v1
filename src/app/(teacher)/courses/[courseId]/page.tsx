@@ -7,7 +7,6 @@ import { REMINDER_COOKIE, reminderHidden } from "@/activities/draft-reminder";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { ActivityMenu } from "@/components/activity-menu";
-import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { Button, ButtonLink, EmptyState } from "@/components/ui";
@@ -16,7 +15,8 @@ import { keepFrom } from "@/courses/origin";
 import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
 import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
-import { copyActivityAction, deleteActivityAction } from "./actions";
+import { copyActivityAction } from "./actions";
+import { DeleteActivity } from "./delete-activity";
 import { DraftReminder } from "./draft-reminder";
 import { activitiesView } from "./view";
 
@@ -135,7 +135,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                       </Link>
                     )}
                     <EditButton href={editActivityPath(course.id, a)} />
-                    <DeleteActivity activity={a} show="assigned" />
+                    <DeleteActivity activity={a} />
                   </>
                 }
               />
@@ -165,7 +165,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
                   )}
                   <EditButton href={editActivityPath(course.id, a)} />
                   <CopyButton activityId={a.id} courseId={course.id} label="Copy" />
-                  <DeleteActivity activity={a} show="unassigned" />
+                  <DeleteActivity activity={a} />
                 </>
               }
             />
@@ -353,30 +353,5 @@ function CopyButton({ activityId, courseId, label }: { activityId: string; cours
         {label}
       </Button>
     </form>
-  );
-}
-
-/**
- * An activity's trash button (D-041). Once students have started it, Delete
- * waits for the teacher to tick that their work goes too. DALAA doesn't touch
- * Canvas, so an assigned one says to remove it there as well.
- */
-function DeleteActivity({ activity: a, show }: { activity: ActivityRow; show: "assigned" | "unassigned" }) {
-  const students = `${a.started} ${a.started === 1 ? "student's" : "students'"}`;
-  return (
-    <ConfirmDelete
-      action={deleteActivityAction}
-      fields={{ activityId: a.id, show }}
-      name={a.title}
-      mustTick={a.started > 0 ? `Also delete ${students} chats and grades. This can't be undone.` : undefined}
-    >
-      <p>It&apos;s deleted for good. Its materials stay in Materials.</p>
-      {a.assigned && (
-        <p className="text-muted">
-          It&apos;s also in Canvas Assignments: delete it there too, or students will get an error opening it. Grades
-          already sent to Canvas stay there.
-        </p>
-      )}
-    </ConfirmDelete>
   );
 }
