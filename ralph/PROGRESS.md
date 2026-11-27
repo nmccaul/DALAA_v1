@@ -14,3 +14,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Fix: `minutesForTurns()` in `wizard/query.ts` (tested); the matching length is filled and `aria-pressed`, labels `whitespace-nowrap` (`editor.tsx`).
 - Browser check (local, ralph.t04, activity f37809f2): each length sets 4/8/12/20/30 and shows chosen; 5–10 + Next, reload shows 8 and 5–10 chosen; 1280 and 390 fine. Set back to 12 afterwards.
 - Release note under 2026-11-27.
+
+## 2026-11-27 20:13 UTC · T03 Material titles without file names · done
+- `titleFromFileName` (`src/content/file-name.ts`, tested): drops the last extension, underscores → spaces; hyphens → spaces only when the name has no spaces (so "Dunning-Kruger Effect.pptx" keeps its hyphen); capitalization kept. CamelCase like "TruthAboutNegotiationsLeighfinal" is left alone (not split).
+- Applied once in `readContent` (`src/content/read.ts`) for every file input (upload, Canvas file, wizard upload, student work); refusals still name the file. Optional `title` on file inputs: the upload form's new optional Title field; a Canvas file renamed without its extension uses its Canvas display name as title.
+- Materials list (`src/content/materials.ts`): unsaved Canvas files show the tidied name, and saved Canvas files match under the old raw name or the tidied one, so no duplicate rows.
+- Added page shows "Its name comes from the file's name; Edit to give it a better one." when `?named=file` (set by `reviewPath` when an upload had no title). Existing materials not renamed.
+- Browser (local :3001, ralph.t04): `Harbor_bikes-case.md` with no title → "Harbor bikes case" + hint; with title → "Case: Harbor Bikes", no hint; form fine at 1280 and 390. Both test materials deleted afterwards. Release note under 2026-11-27.
