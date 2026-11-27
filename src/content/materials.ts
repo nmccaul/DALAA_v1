@@ -11,6 +11,7 @@ import { VaultError } from "@/canvas/vault";
 import { getTaughtCourse } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import { titleFromFileName } from "./file-name";
 import type { MaterialSource } from "./material-sources";
 
 export type Material = {
@@ -79,9 +80,11 @@ export function mergeMaterials(saved: Material[], canvas: CanvasContentList | nu
       rows.push(row);
     }
     for (const f of canvas.files) {
-      const row: MaterialRow = { key: `file-${f.id}`, name: f.display_name, source: "canvas-file", seenBy: "canvas", usedIn: [], date: new Date(f.updated_at), url: null, savedId: null, canvas: { kind: "file", id: f.id } };
-      fromCanvas.set(`canvas-file:${f.display_name}`, row);
-      fromCanvas.set(`canvas-file:${f.filename}`, row);
+      const row: MaterialRow = { key: `file-${f.id}`, name: titleFromFileName(f.display_name), source: "canvas-file", seenBy: "canvas", usedIn: [], date: new Date(f.updated_at), url: null, savedId: null, canvas: { kind: "file", id: f.id } };
+      // Saved before 2026-11-27 under the file's own name; since then under the tidied one (read.ts).
+      for (const name of [f.display_name, f.filename, titleFromFileName(f.display_name), titleFromFileName(f.filename)]) {
+        fromCanvas.set(`canvas-file:${name}`, row);
+      }
       rows.push(row);
     }
   }

@@ -127,6 +127,17 @@ describe("mergeMaterials", () => {
     expect(rows.find((r) => r.name === "Syllabus")).toMatchObject({ seenBy: "students", usedIn: [{ title: "Policies" }] });
   });
 
+  it("lists a Canvas file under its tidied name and matches it saved under either the old or the tidied name", () => {
+    const messy = { ...file, id: 10, display_name: "Harbor_bikes-case.pdf", filename: "Harbor_bikes-case.pdf" };
+    const listed = mergeMaterials([], { pages: [], files: [messy] });
+    expect(listed.map((r) => r.name)).toEqual(["Harbor bikes case"]);
+    for (const name of ["Harbor_bikes-case.pdf", "Harbor bikes case"]) {
+      const rows = mergeMaterials([saved({ name, source: "canvas-file" })], { pages: [], files: [messy] });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ name: "Harbor bikes case", seenBy: "students" });
+    }
+  });
+
   it("keeps uploads, pastes, AI-only notes and copies of Canvas items no longer in Canvas as their own rows", () => {
     const rows = mergeMaterials(
       [

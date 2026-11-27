@@ -6,6 +6,7 @@
  */
 
 import { convert } from "html-to-text";
+import { titleFromFileName } from "./file-name";
 import { FILE_TYPES, FILE_TYPES_LABEL } from "./file-types";
 import { docxText, pptxText } from "./office";
 import { pdfText } from "./pdf";
@@ -17,9 +18,9 @@ export const MAX_CHARS = 100_000;
 
 export type ContentInput =
   | { kind: "paste"; name: string; text: string }
-  | { kind: "file"; name: string; bytes: Uint8Array }
+  | { kind: "file"; name: string; bytes: Uint8Array; title?: string }
   | { kind: "canvas-page"; name: string; html: string }
-  | { kind: "canvas-file"; name: string; bytes: Uint8Array }
+  | { kind: "canvas-file"; name: string; bytes: Uint8Array; title?: string }
   | { kind: "web"; name: string; html: string; url: string };
 
 /** Matches the check on course_content.source. */
@@ -97,30 +98,35 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
     return read.ok ? { ...read, url: input.url } : read;
   }
 
-  const source = input.kind === "file" ? "upload" : "canvas-file";
   if (!name) return { ok: false, reason: "That file has no name." };
+  // Refusals name the file; the material is named by the teacher's title, else the tidied file name.
+  const read = await readFile(input.kind === "file" ? "upload" : "canvas-file", name, input.bytes);
+  return read.ok ? { ...read, name: input.title?.trim() || titleFromFileName(name) } : read;
+}
+
+async function readFile(source: ContentSource, name: string, bytes: Uint8Array): Promise<ReadContent> {
   const ext = extension(name);
   if (!isReadableFile(name)) {
     const old = ext === "doc" || ext === "ppt" ? ` Save it as .${ext}x in Word or PowerPoint first.` : "";
     return { ok: false, reason: `${name} isn't a file DALAA can read.${old} Use ${FILE_TYPES_LABEL}, or paste the text.` };
   }
-  if (input.bytes.byteLength > MAX_UPLOAD_BYTES) {
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) {
     return { ok: false, reason: `${name} is over 4 MB. Use a smaller file, or paste the part students need.` };
   }
 
   if (ext === "pdf") {
-    const isPdf = new TextDecoder("latin1").decode(input.bytes.subarray(0, 5)) === "%PDF-";
-    const text = isPdf ? await pdfText(input.bytes) : null;
+    const isPdf = new TextDecoder("latin1").decode(bytes.subarray(0, 5)) === "%PDF-";
+    const text = isPdf ? await pdfText(bytes) : null;
     if (text === null) return { ok: false, reason: `We couldn't read ${name}. It may be damaged or password-protected.` };
     if (!cleanText(text)) {
       return { ok: false, reason: `${name} has no text we can read; it may be a scan. Paste the text instead.` };
     }
     const read = finish(source, name, text);
-    return read.ok ? { ...read, pdf: input.bytes } : read;
+    return read.ok ? { ...read, pdf: bytes } : read;
   }
 
   if (ext === "docx" || ext === "pptx") {
-    const text = ext === "docx" ? docxText(input.bytes) : pptxText(input.bytes);
+    const text = ext === "docx" ? docxText(bytes) : pptxText(bytes);
     if (text === null) return { ok: false, reason: `We couldn't read ${name}. It may be damaged or password-protected.` };
     if (!cleanText(text.replace(/^Slide \d+$/gm, ""))) {
       return { ok: false, reason: `${name} has no text we can read; it may be only pictures. Paste the text instead.` };
@@ -130,7 +136,7 @@ export async function readContent(input: ContentInput): Promise<ReadContent> {
 
   let text: string;
   try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(input.bytes);
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     return { ok: false, reason: `${name} isn't plain text. Save it as UTF-8 text, or paste it.` };
   }

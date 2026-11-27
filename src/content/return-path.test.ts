@@ -51,4 +51,8 @@ describe("reviewPath", () => {
     expect(url.searchParams.get("next")).toBe(step);
     expect(url.searchParams.get("saved")).toBe("1");
   });
+
+  it("says when the name came from the file (feedback 28111d81)", () => {
+    expect(reviewPath(C, ID, null, false, true)).toBe(`/courses/${C}/materials/${ID}?added=1&named=file`);
+  });
 });

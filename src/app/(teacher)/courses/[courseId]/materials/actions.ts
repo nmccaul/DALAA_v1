@@ -28,13 +28,14 @@ export async function addMaterialAction(_prev: AddMaterialState, form: FormData)
   const file = form.get("file");
   const input =
     file instanceof File && file.size > 0
-      ? { kind: "file" as const, name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }
+      ? { kind: "file" as const, name: file.name, bytes: new Uint8Array(await file.arrayBuffer()), title: String(form.get("name") ?? "") }
       : { kind: "paste" as const, name: String(form.get("name") ?? ""), text: String(form.get("text") ?? "") };
 
   const aiOnly = form.get("seenBy") === "ai";
   const saved = await (aiOnly ? saveGuide : saveContent)(db(), actor, courseId, creationKey, input);
   if (!saved.ok) return { error: saved.reason };
-  redirect(reviewPath(courseId, saved.content.id, form.get("next")));
+  const namedByFile = input.kind === "file" && !input.title.trim();
+  redirect(reviewPath(courseId, saved.content.id, form.get("next"), false, namedByFile));
 }
 
 export type WebPageState = { error?: string; preview?: { url: string; title: string; excerpt: string } };

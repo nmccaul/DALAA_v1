@@ -40,7 +40,7 @@ describe("Word and PowerPoint text", () => {
     expect(await readContent({ kind: "file", name: "case.docx", bytes: docx(para("Sales fell.")) })).toEqual({
       ok: true,
       source: "upload",
-      name: "case.docx",
+      name: "case",
       body: "Sales fell.",
     });
     const deck = zipSync({ "ppt/slides/slide1.xml": slide("Agenda") });

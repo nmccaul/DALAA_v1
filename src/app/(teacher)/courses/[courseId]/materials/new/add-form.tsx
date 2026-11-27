@@ -7,7 +7,7 @@ import { addMaterialAction, type AddMaterialState } from "../actions";
 import { SeenByField } from "./seen-by";
 
 /** Upload or paste one material, and say who sees it. */
-export function AddMaterialForm({ courseId, creationKey, kind, next }: { courseId: string; creationKey: string; next: string | null; kind: "upload" | "paste" }) {
+export function AddMaterialForm({ courseId, creationKey, kind, next, nameMax }: { courseId: string; creationKey: string; next: string | null; kind: "upload" | "paste"; nameMax: number }) {
   const [state, action, pending] = useActionState<AddMaterialState, FormData>(addMaterialAction, {});
   return (
     <form action={action} className="flex max-w-2xl flex-col gap-5">
@@ -21,6 +21,11 @@ export function AddMaterialForm({ courseId, creationKey, kind, next }: { courseI
           </label>
           <p className="-mt-1 text-sm text-muted">{capitalize(FILE_TYPES_LABEL)}, up to 4 MB. Kept in DALAA, not in Canvas Files.</p>
           <input id="file" name="file" type="file" accept={FILE_ACCEPT} required className={fileInputStyles} />
+          <label htmlFor="name" className="mt-3 font-bold">
+            Title <span className="font-normal text-muted">(optional)</span>
+          </label>
+          <p className="-mt-1 text-sm text-muted">What students and you see in lists. Leave it empty to use the file&apos;s name without the .pdf or underscores.</p>
+          <input id="name" name="name" maxLength={nameMax} placeholder="Case: Harbor Bikes" autoComplete="off" className={inputStyles} />
         </div>
       ) : (
         <>

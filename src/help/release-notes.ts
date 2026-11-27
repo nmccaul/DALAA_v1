@@ -13,6 +13,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     changes: [
       "In the Gradebook, Next and Previous student now open each student with their own score and an empty note, instead of the score you just typed for the last one. The yellow Feedback tab stays visible while a student's grade is open.",
       "On a Study Chat's Chat options, the \"About how long?\" length you pick now shows as chosen, and stays chosen when you come back. Picking one sets \"Most student messages\" just below it.",
+      "A file you upload or pick from Canvas is now named without its .pdf or .docx and with spaces for underscores: \"Harbor_bikes-case.pdf\" becomes \"Harbor bikes case\". Uploading, you can type a title instead. Materials you already added keep their names; rename one with Edit on its page.",
     ],
   },
   {

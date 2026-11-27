@@ -35,7 +35,7 @@ describe("readContent: .txt and .md files", () => {
     expect(await readContent({ kind: "file", name: "case.txt", bytes: bytes("﻿Café\u0000 owner") })).toEqual({
       ok: true,
       source: "upload",
-      name: "case.txt",
+      name: "case",
       body: "Café owner",
     });
   });
@@ -60,10 +60,21 @@ describe("readContent: .txt and .md files", () => {
   });
 });
 
+describe("readContent: a file's name", () => {
+  it("names the material by the teacher's title, else the tidied file name; refusals name the file", async () => {
+    const file = { kind: "file" as const, name: "Harbor_bikes-case.md", bytes: bytes("# Harbor Bikes") };
+    expect(await readContent(file)).toMatchObject({ ok: true, name: "Harbor bikes case" });
+    expect(await readContent({ ...file, title: "  " })).toMatchObject({ ok: true, name: "Harbor bikes case" });
+    expect(await readContent({ ...file, title: " Case: Harbor Bikes " })).toMatchObject({ ok: true, name: "Case: Harbor Bikes" });
+    expect(await readContent({ kind: "canvas-file", name: "Week_3-reading.txt", bytes: bytes("Hi") })).toMatchObject({ name: "Week 3 reading" });
+    expect(await readContent({ ...file, bytes: bytes("\n") })).toEqual({ ok: false, reason: "Harbor_bikes-case.md has no text in it." });
+  });
+});
+
 describe("readContent: .pdf files", () => {
   it("extracts the text", async () => {
     const r = await readContent({ kind: "file", name: "harbor.pdf", bytes: pdf(["Harbor Bikes", "Sales fell 20 percent."]) });
-    expect(r).toMatchObject({ ok: true, source: "upload", name: "harbor.pdf" });
+    expect(r).toMatchObject({ ok: true, source: "upload", name: "harbor" });
     expect(r.ok && r.body).toMatch(/Harbor Bikes\s+Sales fell 20 percent\./);
   });
 
