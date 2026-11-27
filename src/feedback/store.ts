@@ -89,6 +89,8 @@ export type ReportSummary = {
   fixedCommit: string | null;
   hasScreenshot: boolean;
   createdAt: Date;
+  /** When the sender said they think it's fixed (mine.ts `sayFixed`); NULL: they haven't. */
+  reporterFixedAt: Date | null;
 };
 
 /** Every report the actor may read, newest first; nothing for anyone but an admin. */
@@ -96,7 +98,7 @@ export async function listReports(db: Db, actor: Actor): Promise<ReportSummary[]
   const scope = feedbackReadableBy(actor);
   return db.query<ReportSummary>(
     `select f.id, f.kind, f.note, f.url, f.status, f.priority, u.display_name as reporter, f.fixed_commit as "fixedCommit",
-            f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt"
+            f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt", f.reporter_fixed_at as "reporterFixedAt"
        from feedback_reports f
        join users u on u.id = f.user_id
       where ${scope.text}
@@ -112,7 +114,7 @@ export async function getReport(db: Db, actor: Actor, id: string): Promise<Repor
   const scope = feedbackReadableBy(actor);
   const [row] = await db.query<ReportDetail>(
     `select f.id, f.kind, f.note, f.url, f.status, f.priority, u.display_name as reporter, f.fixed_commit as "fixedCommit",
-            f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt",
+            f.screenshot is not null as "hasScreenshot", f.created_at as "createdAt", f.reporter_fixed_at as "reporterFixedAt",
             f.context, f.app_commit as "appCommit",
             case when x.report_id is null then null else json_build_object(
               'status', x.status, 'branch', x.branch, 'prUrl', x.pr_url, 'note', x.note, 'commit', x.commit_sha

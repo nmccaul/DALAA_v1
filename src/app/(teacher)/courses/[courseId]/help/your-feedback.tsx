@@ -3,9 +3,10 @@ import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
 import { PrioritySelect } from "@/components/priority-select";
 import { PRIORITY_TONE } from "@/components/priority-tone";
-import { standing, type MyReport, type Standing } from "@/feedback/mine";
+import { reportHref } from "@/feedback/back";
+import { REPORTER_FIXED, standing, type MyReport, type Standing } from "@/feedback/mine";
 import { priorityLabel, type Kind, type Priority } from "@/feedback/report";
-import { setPriorityAction } from "@/feedback/actions";
+import { sayFixedAction, setPriorityAction } from "@/feedback/actions";
 
 const KIND: Record<Kind, string> = { bug: "Bug", confusing: "Confusing", idea: "Idea" };
 
@@ -24,7 +25,7 @@ const PILL: Record<string, string> = {
 function pill(s: Standing): string {
   if (s.done) return PILL[s.done];
   if (s.label === "Received") return PILL.received;
-  if (s.label === "Waiting on a decision") return PILL.waiting;
+  if (s.label === "Waiting on a decision" || s.label === REPORTER_FIXED) return PILL.waiting;
   return PILL.working;
 }
 
@@ -32,9 +33,21 @@ function pill(s: Standing): string {
  * The Help tab's "Your feedback" (feedback 3df5d2ca, 107d2eb9): what the
  * teacher sent and where it stands. Open ones first; fixed ones are crossed
  * off under Done, which folds away. `everyone` is an admin's view of all
- * reports: it names who sent each, and each opens in the Settings inbox.
+ * reports: it names who sent each, and each opens in the Settings inbox,
+ * whose ‹ Back returns to `here` (this list, filters kept). A teacher can say
+ * one of their open reports looks fixed; an admin still resolves it.
  */
-export function YourFeedback({ reports, everyone = false, filtered = false }: { reports: MyReport[]; everyone?: boolean; filtered?: boolean }) {
+export function YourFeedback({
+  reports,
+  here,
+  everyone = false,
+  filtered = false,
+}: {
+  reports: MyReport[];
+  here: string;
+  everyone?: boolean;
+  filtered?: boolean;
+}) {
   if (reports.length === 0) {
     return (
       <p className="text-muted">
@@ -51,8 +64,8 @@ export function YourFeedback({ reports, everyone = false, filtered = false }: { 
   const done = rows.filter((x) => x.s.done).sort((a, b) => (b.s.at?.getTime() ?? 0) - (a.s.at?.getTime() ?? 0));
   return (
     <div className="flex flex-col divide-y divide-border rounded-panel border border-border">
-      <Group title="Open" rows={open} open everyone={everyone} empty={everyone ? "Nothing open." : "Nothing open: everything you sent has been dealt with."} />
-      <Group title="Done" rows={done} open={false} everyone={everyone} empty="Nothing fixed yet." />
+      <Group title="Open" rows={open} open everyone={everyone} here={here} empty={everyone ? "Nothing open." : "Nothing open: everything you sent has been dealt with."} />
+      <Group title="Done" rows={done} open={false} everyone={everyone} here={here} empty="Nothing fixed yet." />
     </div>
   );
 }
@@ -62,12 +75,14 @@ function Group({
   rows,
   open,
   everyone,
+  here,
   empty,
 }: {
   title: string;
   rows: { r: MyReport; s: Standing }[];
   open: boolean;
   everyone: boolean;
+  here: string;
   empty: string;
 }) {
   return (
@@ -86,7 +101,7 @@ function Group({
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <p className={`break-words whitespace-pre-line ${s.done === "fixed" ? "text-muted line-through" : ""}`}>
                   {everyone ? (
-                    <Link href={`/settings/feedback/${r.id}`} className="hover:text-accent hover:underline">
+                    <Link href={reportHref(r.id, here)} className="hover:text-accent hover:underline">
                       {r.note}
                     </Link>
                   ) : (
@@ -116,6 +131,14 @@ function Group({
                     </span>
                   )}
                 </span>
+                {!everyone && !s.done && !r.reporterFixedAt && (
+                  <form action={sayFixedAction}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <button className="rounded-full border border-border-strong px-2.5 py-0.5 text-[13px] text-accent-text hover:bg-subtle">
+                      I think this is fixed
+                    </button>
+                  </form>
+                )}
               </div>
             </li>
           ))}

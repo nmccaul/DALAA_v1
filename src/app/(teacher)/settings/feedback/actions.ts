@@ -9,5 +9,11 @@ import { resolveReport } from "@/feedback/store";
 export async function resolveReportAction(form: FormData): Promise<void> {
   const id = String(form.get("id"));
   const ok = await resolveReport(db(), await requireActor(), id, String(form.get("commit") ?? ""));
-  redirect(`/settings/feedback/${id}${ok ? "" : "?error=commit"}`);
+  // Keep the way back to the list it was opened from (feedback 42c212ac); the page checks it again.
+  const q = new URLSearchParams();
+  if (!ok) q.set("error", "commit");
+  const from = form.get("from");
+  if (typeof from === "string" && from) q.set("from", from);
+  const query = q.toString();
+  redirect(`/settings/feedback/${id}${query ? `?${query}` : ""}`);
 }

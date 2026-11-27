@@ -29,6 +29,8 @@ export type MyReport = {
   fixStatus: FixStatus | null;
   /** When the fix status last changed; NULL with no fix status. */
   fixAt: Date | null;
+  /** When the sender said "I think this is fixed" (feedback 2e7b873b); NULL: they haven't. */
+  reporterFixedAt: Date | null;
 };
 
 export type Standing = {
@@ -40,9 +42,14 @@ export type Standing = {
   at: Date | null;
 };
 
+/** What an open report says once its sender thinks it's fixed, until an admin resolves it. */
+export const REPORTER_FIXED = "Fixed? Waiting for an admin to confirm";
+
 /** Where one report stands, in the reporter's words. */
-export function standing(r: Pick<MyReport, "status" | "resolvedAt" | "fixStatus" | "fixAt">): Standing {
+export function standing(r: Pick<MyReport, "status" | "resolvedAt" | "fixStatus" | "fixAt"> & { reporterFixedAt?: Date | null }): Standing {
   if (r.status === "resolved") return { label: "Fixed", done: "fixed", at: r.resolvedAt };
+  const closed = r.fixStatus === "wont_fix" || r.fixStatus === "cant_reproduce";
+  if (r.reporterFixedAt && !closed) return { label: REPORTER_FIXED, done: false, at: null };
   switch (r.fixStatus) {
     case "fixed":
       return { label: "Fixed, coming in the next update", done: false, at: null };
@@ -72,7 +79,7 @@ export function listEveryonesReports(db: Db, actor: Actor): Promise<MyReport[]> 
 function listReportsIn(db: Db, scope: Scope): Promise<MyReport[]> {
   return db.query<MyReport>(
     `select f.id, f.kind, f.priority, f.note, u.display_name as reporter, f.url, f.created_at as "createdAt", f.status, f.resolved_at as "resolvedAt",
-            x.status as "fixStatus", x.updated_at as "fixAt"
+            x.status as "fixStatus", x.updated_at as "fixAt", f.reporter_fixed_at as "reporterFixedAt"
        from feedback_reports f
        join users u on u.id = f.user_id
        left join feedback_fixes x on x.report_id = f.id
@@ -80,4 +87,21 @@ function listReportsIn(db: Db, scope: Scope): Promise<MyReport[]> {
       order by f.created_at desc, f.id`,
     scope.values,
   );
+}
+
+/**
+ * "I think this is fixed" on the sender's own open report (feedback 2e7b873b).
+ * The report stays open: an admin still checks and resolves it. Saying it
+ * twice keeps the first time. False for anyone else's report or a closed one.
+ */
+export async function sayFixed(db: Db, actor: Actor, id: string): Promise<boolean> {
+  const scope = feedbackSentBy(actor, "f");
+  const n = scope.values.length;
+  const rows = await db.query<{ id: string }>(
+    `update feedback_reports f set reporter_fixed_at = coalesce(f.reporter_fixed_at, now())
+      where f.id::text = $${n + 1} and f.status = 'open' and (${scope.text})
+      returning f.id`,
+    [...scope.values, id],
+  );
+  return rows.length === 1;
 }
