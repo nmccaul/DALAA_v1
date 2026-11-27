@@ -12,6 +12,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     date: "2026-11-27",
     changes: [
       "In the Gradebook, Next and Previous student now open each student with their own score and an empty note, instead of the score you just typed for the last one. The yellow Feedback tab stays visible while a student's grade is open.",
+      "On a Study Chat's Chat options, the \"About how long?\" length you pick now shows as chosen, and stays chosen when you come back. Picking one sets \"Most student messages\" just below it.",
     ],
   },
   {
