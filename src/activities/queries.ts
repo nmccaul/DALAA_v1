@@ -1,6 +1,7 @@
 /**
  * Activities across every tool (db/migrations/*_activities.sql), as the
- * chassis lists them. Nothing here reads a tool's settings.
+ * chassis lists them. Nothing here reads a tool's settings: rows carry them
+ * whole, for the tool to name its kind (src/tools/screens.ts).
  */
 
 import { and, coursesTakenBy, coursesTaughtBy, type Actor } from "@/db/scope";
@@ -27,6 +28,8 @@ export type ActivityRow = {
   /** The Canvas assignment DALAA made for it (Assign), if any. */
   canvasAssignmentId: string | null;
   updatedAt: Date;
+  /** The tool's own settings, unread here. */
+  settings: Record<string, unknown>;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,7 +48,7 @@ export async function listCourseActivities(db: Db, actor: Actor, courseId: strin
             (select count(*)::int from attempts t join results r on r.attempt_id = t.id
               where t.activity_id = a.id and r.status = 'graded') as graded,
             ${ASSIGNED_SQL} as assigned,
-            a.canvas_assignment_id as "canvasAssignmentId", a.updated_at as "updatedAt"
+            a.canvas_assignment_id as "canvasAssignmentId", a.updated_at as "updatedAt", a.settings
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}
@@ -67,6 +70,8 @@ export type OtherCourseActivity = {
   updatedAt: Date;
   /** When it was last copied into this course; NULL if it never was (or those copies were deleted). */
   copiedAt: Date | null;
+  /** The tool's own settings, unread here. */
+  settings: Record<string, unknown>;
 };
 
 /**
@@ -80,7 +85,7 @@ export async function listOtherCourseActivities(db: Db, actor: Actor, courseId: 
   const where = and({ text: "c.id <> $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
   return db.query<OtherCourseActivity>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
-            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt",
+            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt", a.settings,
             (select max(k.created_at) from activities k where k.copied_from = a.id and k.course_id = $1) as "copiedAt"
        from activities a
        join courses c on c.id = a.course_id

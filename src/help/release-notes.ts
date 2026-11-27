@@ -18,6 +18,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "Opening an activity from \"From my other courses\" now says which course it's in, with a link back to the course you came from. ‹ Activities and Save and finish later there take you back too, even after saving a setup step.",
       "In \"From my other courses\", an activity you already copied into this course now says \"Copied\" with the date, and its button reads \"Copy again\".",
       "Every setup step of an activity now has \"Delete activity\" at the top right. Deleting an activity (there or from its row) now says what it touches: how many students started and finished it, whether it's in Canvas Assignments (DALAA doesn't delete it there, so delete it in Canvas too), and that its materials stay in Materials.",
+      "On the Activities tab, each Study Chat now shows what kind it is, with the same picture as when you set it up: \"Study Chat · Argue · Debate\", \"Study Chat · Explain / teach back\" and so on.",
     ],
   },
   {

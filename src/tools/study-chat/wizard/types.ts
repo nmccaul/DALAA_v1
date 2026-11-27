@@ -5,6 +5,16 @@
  * settings store the mode, so grouping changes only what the teacher sees.
  */
 
+import type { Icon } from "@phosphor-icons/react";
+import {
+  ChalkboardTeacher,
+  ChatsCircle,
+  LinkSimple,
+  Lightbulb,
+  Question,
+  Scales,
+  ShieldCheck,
+} from "@phosphor-icons/react/dist/ssr";
 import { MODES, type ModeSlug } from "../modes";
 
 export type TypeGroup = {
@@ -16,6 +26,8 @@ export type TypeGroup = {
   ai: string;
   /** The modes in this group, the usual one first. Two or more show a "Style" choice. */
   modes: readonly ModeSlug[];
+  /** A picture for the kind, so the seven are easy to tell apart at a glance: on step 2 and on the Activities list. */
+  icon: Icon;
 };
 
 export const TYPE_GROUPS: readonly TypeGroup[] = [
@@ -25,6 +37,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students teach the idea in their own words.",
     ai: "The AI plays a curious beginner who keeps asking \"why?\" and \"what does that mean?\"",
     modes: ["explain"],
+    icon: ChalkboardTeacher,
   },
   {
     key: "apply",
@@ -32,6 +45,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students use the material to solve a new problem or a case.",
     ai: "The AI presents the situation (or plays someone in the case) and asks what they'd do.",
     modes: ["apply", "case-chat"],
+    icon: Lightbulb,
   },
   {
     key: "argue",
@@ -39,6 +53,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students take a position, or pitch an idea, and back it up.",
     ai: "The AI pushes back with counter-arguments and tough questions.",
     modes: ["debate", "pitch"],
+    icon: Scales,
   },
   {
     key: "question",
@@ -46,6 +61,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students reason through an idea out loud.",
     ai: "The AI asks probing questions (\"how do you know?\") but never gives the answer.",
     modes: ["socratic"],
+    icon: Question,
   },
   {
     key: "practice",
@@ -53,6 +69,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students rehearse a real conversation: an interview, a negotiation, a hard talk.",
     ai: "The AI plays the other person, realistically.",
     modes: ["roleplay", "interview"],
+    icon: ChatsCircle,
   },
   {
     key: "connect",
@@ -60,6 +77,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students relate the material to their own life, or a passage to life today.",
     ai: "The AI asks for examples from their experience and how the idea applies.",
     modes: ["liken-to-me", "liken-to-us"],
+    icon: LinkSimple,
   },
   {
     key: "defend",
@@ -67,6 +85,7 @@ export const TYPE_GROUPS: readonly TypeGroup[] = [
     does: "Students add their own paper, code or plan, then explain and defend it.",
     ai: "The AI is an examiner who has read their work and asks about it.",
     modes: ["defend"],
+    icon: ShieldCheck,
   },
 ];
 

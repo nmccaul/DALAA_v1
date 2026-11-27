@@ -14,7 +14,8 @@ import { loadTaughtCourse } from "@/courses/load";
 import { keepFrom } from "@/courses/origin";
 import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
-import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
+import { editActivityPath, teacherActivityPath } from "@/tools/catalog";
+import { describeActivity } from "@/tools/screens";
 import { copyActivityAction } from "./actions";
 import { DeleteActivity } from "./delete-activity";
 import { DraftReminder } from "./draft-reminder";
@@ -210,8 +211,7 @@ function SearchableList<T extends { id: string; title: string }>({
 }
 
 function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; courseId: string; actions?: ReactNode }) {
-  const tool = findTool(a.tool);
-  const Icon = tool?.icon;
+  const { label, icon: Icon } = describeActivity(a);
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 pr-4 pl-4 hover:bg-subtle">
       {Icon && (
@@ -227,7 +227,7 @@ function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; 
           {a.title}
         </Link>
         <span className="mt-0.5 text-[13px] text-muted">
-          {tool?.name ?? a.tool}
+          {label}
           {points(a.points)}
           {" · "}
           {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
@@ -270,8 +270,7 @@ function OtherCourses({ activities, courseId }: { activities: OtherCourseActivit
             </h2>
             <ul className="flex flex-col divide-y divide-border">
               {rows.map((a) => {
-                const tool = findTool(a.tool);
-                const Icon = tool?.icon;
+                const { label, icon: Icon } = describeActivity(a);
                 return (
                   <SearchItem key={a.id} text={a.title}>
                     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 pr-4 pl-4 hover:bg-subtle">
@@ -288,7 +287,7 @@ function OtherCourses({ activities, courseId }: { activities: OtherCourseActivit
                           {a.title}
                         </Link>
                         <span className="mt-0.5 text-[13px] text-muted">
-                          {tool?.name ?? a.tool}
+                          {label}
                           {points(a.points)}
                           {" · Last edit "}
                           <LocalTime value={a.updatedAt} style="day" />

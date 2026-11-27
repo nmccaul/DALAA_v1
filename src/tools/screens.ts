@@ -14,9 +14,12 @@ import type { CourseCard } from "@/courses/queries";
 import type { Db } from "@/db/types";
 import type { Actor } from "@/db/scope";
 import type { TaughtAttempt } from "@/results/attempt";
+import { findTool } from "./catalog";
+import type { ActivityKind } from "./kind";
 import { studyChatConversation } from "./study-chat/conversation";
 import { STUDY_CHAT } from "./study-chat/create";
 import { StudyChatCreate } from "./study-chat/create-screen";
+import { studyChatKind } from "./study-chat/kind";
 import { StudyChatReview } from "./study-chat/review-screen";
 import { StudyChatTake } from "./study-chat/take-screen";
 import { StudyChatTranscript } from "./study-chat/transcript";
@@ -56,6 +59,8 @@ type ToolScreens = {
   transcript?: (props: TranscriptProps) => ReactNode | Promise<ReactNode>;
   /** The attempt as text, for the class-prep brief. */
   conversation?: (db: Db, attemptId: string) => Promise<ConversationText>;
+  /** The kind of activity its settings make it, for lists; NULL when it has none yet. */
+  kind?: (settings: Record<string, unknown>) => ActivityKind | null;
 };
 
 const SCREENS: Readonly<Record<string, ToolScreens>> = {
@@ -66,9 +71,25 @@ const SCREENS: Readonly<Record<string, ToolScreens>> = {
     take: StudyChatTake,
     transcript: StudyChatTranscript,
     conversation: studyChatConversation,
+    kind: studyChatKind,
   },
 };
 
 export function screensFor(tool: string): ToolScreens | undefined {
   return Object.hasOwn(SCREENS, tool) ? SCREENS[tool] : undefined;
+}
+
+/**
+ * How a list row names an activity: the tool, then its kind when the tool
+ * has one ("Study Chat · Argue · Pitch"), with the kind's icon, else the
+ * tool's.
+ */
+export function describeActivity(a: { tool: string; settings: Record<string, unknown> }): {
+  label: string;
+  icon: ActivityKind["icon"] | undefined;
+} {
+  const tool = findTool(a.tool);
+  const kind = screensFor(a.tool)?.kind?.(a.settings) ?? null;
+  const name = tool?.name ?? a.tool;
+  return { label: kind ? `${name} · ${kind.label}` : name, icon: kind?.icon ?? tool?.icon };
 }

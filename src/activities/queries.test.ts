@@ -67,6 +67,7 @@ describe("listCourseActivities", () => {
       assigned: false,
       canvasAssignmentId: null,
       updatedAt: expect.any(Date),
+      settings: {},
     });
     expect(rows[1]).toMatchObject({ submitted: 0 });
     expect(rows[2]).toMatchObject({ status: "draft", points: null, dueAt: null });
@@ -133,6 +134,7 @@ describe("listOtherCourseActivities", () => {
       courseTerm: "Fall 2026",
       updatedAt: new Date("2026-09-01T00:00:00Z"),
       copiedAt: null,
+      settings: {},
     });
     expect((await listOtherCourseActivities(db, other, current)).map((r) => r.title)).toEqual(["Not mine"]);
     expect(await listOtherCourseActivities(db, { ...prof, isStaff: false }, current)).toEqual([]);
