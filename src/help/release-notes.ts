@@ -9,6 +9,12 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-27",
+    changes: [
+      "In the Gradebook, Next and Previous student now open each student with their own score and an empty note, instead of the score you just typed for the last one. The yellow Feedback tab stays visible while a student's grade is open.",
+    ],
+  },
+  {
     date: "2026-11-23",
     changes: [
       "When Canvas turns down grades you send, Results now says so in a yellow warning, with why and what to do, instead of a quiet note.",

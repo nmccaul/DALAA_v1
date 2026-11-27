@@ -180,8 +180,9 @@ export function FeedbackButton() {
         onPointerDown={prime}
         onClick={open}
         // A thin tab on the right edge, halfway down, so it never covers Next or Send (Nathan, 2026-11-18). Sideways
-        // text swaps inline and block, so the padding is set per side.
-        className="fixed top-1/2 right-0 z-30 -translate-y-1/2 rounded-l-control bg-highlight pt-2.5 pr-0.5 pb-2.5 pl-1 text-xs leading-none font-semibold tracking-wide text-text shadow-md [writing-mode:vertical-rl] hover:bg-highlight-hover hover:pl-2 print:hidden"
+        // text swaps inline and block, so the padding is set per side. Above the Gradebook's side panel (z-50), so
+        // a teacher can report what's in it (Lucy's 7f546133).
+        className="fixed top-1/2 right-0 z-[60] -translate-y-1/2 rounded-l-control bg-highlight pt-2.5 pr-0.5 pb-2.5 pl-1 text-xs leading-none font-semibold tracking-wide text-text shadow-md [writing-mode:vertical-rl] hover:bg-highlight-hover hover:pl-2 print:hidden"
       >
         Feedback
       </button>
