@@ -21,3 +21,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Materials list (`src/content/materials.ts`): unsaved Canvas files show the tidied name, and saved Canvas files match under the old raw name or the tidied one, so no duplicate rows.
 - Added page shows "Its name comes from the file's name; Edit to give it a better one." when `?named=file` (set by `reviewPath` when an upload had no title). Existing materials not renamed.
 - Browser (local :3001, ralph.t04): `Harbor_bikes-case.md` with no title → "Harbor bikes case" + hint; with title → "Case: Harbor Bikes", no hint; form fine at 1280 and 390. Both test materials deleted afterwards. Release note under 2026-11-27.
+
+## 2026-11-27 20:18 UTC · T04a Leaving an activity returns to its list · done
+- T04 split into a/b/c in TASKS (three separate changes). This pass did (1), report a5b82cc1.
+- Instead of carrying `?show=` through every link, the way back is the list the activity is in: `activityListPath(courseId, {assigned})` in `src/tools/catalog.ts` → `?show=unassigned` or `?show=assigned`. Used by ‹ Activities on the activity page, every wizard step and the Assign page, and by Save and finish later (`finishLaterPath` now takes the activity; the server actions look up whether it's assigned). Also right after a draft gets assigned. Delete already kept the view. There's no Cancel link in the wizard.
+- Leaving an activity opened from *From my other courses* is T04b (banner and the way back).
+- Browser (local :3001, ralph.t04): a Not assigned draft's wizard step, ‹ Activities lands on "Not assigned (7)" at 390px; a published unassigned activity's back and later links go to `?show=unassigned`, an assigned one's to `?show=assigned`. Nothing changed in local data.
+- Release note under 2026-11-27.
