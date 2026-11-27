@@ -1,10 +1,10 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { AgsLineItem } from "@/canvas/client";
+import { CanvasError, type AgsLineItem } from "@/canvas/client";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { previewGrades, sendGrades } from "./grades";
+import { previewGrades, pushFailure, sendGrades } from "./grades";
 import { loadToolKey, type ToolKey } from "./keys";
 import { ensurePlatform, envRegistration, type Platform } from "./registration";
 import { forgetServiceTokens } from "./services";
@@ -13,6 +13,16 @@ import { rememberLtiUser } from "./users";
 const CANVAS = "https://canvas.example.edu";
 const LINEITEMS = `${CANVAS}/api/lti/courses/42/line_items`;
 const COLUMN = `${LINEITEMS}/7`;
+
+describe("pushFailure", () => {
+  it("names why Canvas didn't take a score, from its status (feedback 3ad0e5ab)", () => {
+    expect(pushFailure(new CanvasError("bad-response", 422))).toBe("rejected");
+    expect(pushFailure(new CanvasError("forbidden", 403))).toBe("forbidden");
+    expect(pushFailure(new CanvasError("bad-response", 404))).toBe("not_found");
+    expect(pushFailure(new CanvasError("unavailable", 503))).toBe("unavailable");
+    expect(pushFailure(new TypeError("fetch failed"))).toBe("unavailable");
+  });
+});
 
 describe("previewGrades / sendGrades", () => {
   let db: Db;
@@ -206,7 +216,7 @@ describe("previewGrades / sendGrades", () => {
     await student("ana", { score: 8 });
     await student("ben", { score: 7 });
     failPostsFor.add("sub-ben");
-    expect(await send()).toEqual({ ok: true, summary: { sent: 1, failed: 1, skipped: {} } });
+    expect(await send()).toEqual({ ok: true, summary: { sent: 1, failed: 1, skipped: {}, why: "unavailable" } });
     failPostsFor.clear();
     expect(await categories()).toEqual({ ana: "unchanged", ben: "send" });
     expect(await send()).toMatchObject({ ok: true, summary: { sent: 1, failed: 0 } });
