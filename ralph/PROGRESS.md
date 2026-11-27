@@ -41,3 +41,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - One redirect for every saved step: `savedStepRedirect` in `wizard/steps.ts` (tested in `setup-cards.test.ts`); `finishLaterPath` takes the origin and is what the step page's link uses too. `actions.ts`'s `afterSavedStep` loads the activity and re-checks `from` with `originCourse` (only a course the teacher teaches) before keeping it; `laterPath` is gone. Step 2's ← Back keeps it too.
 - Browser (local :3001, ralph.t04): from T04's other-courses list, BUS M 499 draft 0ee3e13c step 3 Next → grading with `?from=` and the banner; Save and finish later → T04 `?show=other`. Step 2 Next keeps it; a made-up `from` has no banner or hidden field (390px). The saves wrote unchanged values; nothing else changed in local data.
 - Not covered: "+ Materials" from step 1 and its way back to the step still drop `from` (the add-material return path); small, not in the report.
+
+## 2026-11-27 20:37 UTC · T04c "Copied <date>" on other-course rows · done
+- Nothing recorded copies, so new additive migration `20261127203241_activity_copied_from.sql`: nullable `activities.copied_from` → activities(id) `on delete set null`, partial index. Applied locally (twice: second "nothing to apply"); **goes to production at CHECKPOINT A (T06)**.
+- `copyActivity` passes `copiedFrom` through `createActivity` (`NewActivity.copiedFrom`). `listOtherCourseActivities` returns `copiedAt`: the latest copy of that row in *this* course (copies into a third course don't count; deleted copies are forgotten). Tests in `copy.test.ts`, `queries.test.ts`.
+- Row shows "✓ Copied <day>" and the button becomes "Copy again" (`courses/[courseId]/page.tsx`). Copies made before this change aren't recognized (no record of their source).
+- Browser (local :3001, ralph.t04): copied a BUS M 499 draft into T04 → row says "✓ Copied Nov 27" + "Copy again" at 1280 and 390. Deleted the copy and the material it brought along; back to as before.
+- Note: `npm run migrate` doesn't read `.env.local`; ran it with the README's local DATABASE_URL. Release note under 2026-11-27.
