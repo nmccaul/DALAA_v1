@@ -16,6 +16,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "A file you upload or pick from Canvas is now named without its .pdf or .docx and with spaces for underscores: \"Harbor_bikes-case.pdf\" becomes \"Harbor bikes case\". Uploading, you can type a title instead. Materials you already added keep their names; rename one with Edit on its page.",
       "Leaving an activity (‹ Activities, or Save and finish later) now takes you back to the list it's in, Assigned or Not assigned, instead of always to Assigned.",
       "Opening an activity from \"From my other courses\" now says which course it's in, with a link back to the course you came from. ‹ Activities and Save and finish later there take you back too, even after saving a setup step.",
+      "In \"From my other courses\", an activity you already copied into this course now says \"Copied\" with the date, and its button reads \"Copy again\".",
     ],
   },
   {

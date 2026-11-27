@@ -296,7 +296,17 @@ function OtherCourses({ activities, courseId }: { activities: OtherCourseActivit
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-3.5">
                         <StatusPill status={a.status} />
-                        <CopyButton activityId={a.id} courseId={courseId} label="Copy to this course" />
+                        {a.copiedAt && (
+                          // Already copied here (feedback f7026325); copying again stays possible.
+                          <span className="text-[13px] font-bold whitespace-nowrap text-accent-text">
+                            ✓ Copied <LocalTime value={a.copiedAt} style="day" />
+                          </span>
+                        )}
+                        <CopyButton
+                          activityId={a.id}
+                          courseId={courseId}
+                          label={a.copiedAt ? "Copy again" : "Copy to this course"}
+                        />
                       </div>
                     </li>
                   </SearchItem>
