@@ -1,3 +1,5 @@
+import { activityListPath } from "@/tools/catalog";
+
 /**
  * The Study Chat wizard's six steps, in order (D-034; reworked 2026-11-13 by
  * Nathan: each step answers one question the teacher has). `label` is the
@@ -55,9 +57,10 @@ export const setupPath = (courseId: string, activityId: string, step: WizardStep
 
 /**
  * "Save and finish later" (PRD: one meaning everywhere): save, then the
- * course's activities with drafts shown, where the teacher picks it up again.
+ * Activities list the activity is in (Not assigned for a draft), where the
+ * teacher picks it up again.
  */
-export const finishLaterPath = (courseId: string) => `/courses/${courseId}?show=unassigned`;
+export const finishLaterPath = (courseId: string, activity: { assigned: boolean }) => activityListPath(courseId, activity);
 
 /** Where a saved activity's step goes after saving: Next's step, a `goto:<step>` step, or null to stay. */
 export function savedStepTarget(step: unknown, intent: unknown): WizardStep | null {

@@ -5,6 +5,7 @@ import { getTaughtActivity } from "@/activities/store";
 import { loadTaughtCourse } from "@/courses/load";
 import { PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { db } from "@/db/client";
+import { activityListPath } from "@/tools/catalog";
 import { screensFor } from "@/tools/screens";
 
 export const metadata: Metadata = { title: "Set up activity" };
@@ -24,7 +25,7 @@ export default async function SetupStepPage({ params, searchParams }: PageProps<
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
+      <Link href={activityListPath(course.id, activity)} className="-mb-2 text-sm text-accent-text hover:underline">
         ‹ Activities
       </Link>
       <Setup actor={actor} activity={activity} step={step} addToCanvas={pickerRequest(query[PICKER_PARAM])} searchParams={query} />

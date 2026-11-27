@@ -100,6 +100,15 @@ export function editActivityPath(courseId: string, a: { id: string; tool: string
   return `/courses/${courseId}/activities/${a.id}${opens ?? ""}`;
 }
 
+/**
+ * The Activities tab's list an activity sits in: Assigned or Not assigned.
+ * Leaving an activity goes back there, not to whichever list the tab opens
+ * on (feedback a5b82cc1).
+ */
+export function activityListPath(courseId: string, a: { assigned: boolean }): string {
+  return `/courses/${courseId}?show=${a.assigned ? "assigned" : "unassigned"}`;
+}
+
 export function teacherActivityPath(courseId: string, a: { id: string; tool: string; status: "draft" | "published" }): string {
   const path = `/courses/${courseId}/activities/${a.id}`;
   const opens = a.status === "draft" ? findTool(a.tool)?.draftOpens : undefined;

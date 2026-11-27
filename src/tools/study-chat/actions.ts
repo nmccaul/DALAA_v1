@@ -95,13 +95,19 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
 
   const attached = await setActivityMaterials(db(), actor, activityId, saved);
   if (!attached.ok) return { error: attached.reason, ticked };
-  afterSavedStep(courseId, activityId, "materials", form.get("intent"), picker);
+  await afterSavedStep(courseId, activityId, "materials", form.get("intent"), picker);
   return { savedAt: Date.now(), ticked };
 }
 
+/** "Save and finish later" on a saved activity: the Activities list it's in. */
+async function laterPath(courseId: string, activityId: string): Promise<string> {
+  const activity = await getTaughtActivity(db(), await requireActor(), activityId);
+  return finishLaterPath(courseId, { assigned: activity?.assigned ?? false });
+}
+
 /** After a saved activity's step 1 or 2 saves: "Save and finish later", Next, or a step in the list. */
-function afterSavedStep(courseId: string, activityId: string, step: "materials" | "goal", intent: unknown, picker: string | null) {
-  if (intent === "later") redirect(keepPicker(finishLaterPath(courseId), picker));
+async function afterSavedStep(courseId: string, activityId: string, step: "materials" | "goal", intent: unknown, picker: string | null) {
+  if (intent === "later") redirect(keepPicker(await laterPath(courseId, activityId), picker));
   const target = savedStepTarget(step, intent);
   if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
 }
@@ -121,7 +127,7 @@ export async function editTypeAction(_prev: TypeState, form: FormData): Promise<
   const reason = form.get(reasonField(mode));
   const saved = await retypeStudyChat(db(), actor, activityId, { mode, goal, typeReason: typeof reason === "string" ? reason : null });
   if (!saved.ok) return { error: saved.reason, mode };
-  afterSavedStep(courseId, activityId, "goal", form.get("intent"), pickerRequest(form.get(PICKER_PARAM)));
+  await afterSavedStep(courseId, activityId, "goal", form.get("intent"), pickerRequest(form.get(PICKER_PARAM)));
   return { savedAt: Date.now(), mode };
 }
 
@@ -244,7 +250,7 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   const saved = await saveStudyChat(db(), actor, activityId, settings);
   if (!saved.ok) return { error: saved.reason, problems: saved.problems };
   const picker = pickerRequest(form.get(PICKER_PARAM));
-  if (form.get("intent") === "later") redirect(keepPicker(finishLaterPath(courseId), picker));
+  if (form.get("intent") === "later") redirect(keepPicker(await laterPath(courseId, activityId), picker));
   const target = savedStepTarget(form.get("wizardStep"), form.get("intent"));
   if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
   if (form.get("intent") !== "publish") return { savedAt: Date.now() };

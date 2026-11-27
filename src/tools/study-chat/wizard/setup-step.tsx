@@ -41,7 +41,7 @@ import { SavedMaterialsStep } from "./materials-step";
 export async function StudyChatSetup({ actor, activity, step, addToCanvas, searchParams }: SetupScreenProps) {
   if (step === RESUME_STEP) redirect(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas));
   const path = (s: WizardStep) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
-  const later = keepPicker(finishLaterPath(activity.courseId), addToCanvas);
+  const later = keepPicker(finishLaterPath(activity.courseId, activity), addToCanvas);
   // Every step works on the saved draft, so any can be opened from the list; from a step with a form, saving first.
   const go = (save: boolean) =>
     Object.fromEntries(WIZARD_STEPS.map((s) => [s.slug, { href: path(s.slug), save }])) as Record<WizardStep, { href: string; save: boolean }>;

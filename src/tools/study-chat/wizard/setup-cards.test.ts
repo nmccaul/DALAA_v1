@@ -57,7 +57,8 @@ describe("setup steps", () => {
 
   it("\"Save and finish later\" is not a step: it goes to the course's drafts (feedback deea6853)", () => {
     expect(savedStepTarget("options", "later")).toBeNull();
-    expect(finishLaterPath("c1")).toBe("/courses/c1?show=unassigned");
+    expect(finishLaterPath("c1", { assigned: false })).toBe("/courses/c1?show=unassigned");
+    expect(finishLaterPath("c1", { assigned: true })).toBe("/courses/c1?show=assigned");
   });
 
   it("goes nowhere it shouldn't from a save: not before step 3, not off the wizard", () => {

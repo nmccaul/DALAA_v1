@@ -6,7 +6,7 @@ import { loadTaughtCourse } from "@/courses/load";
 import { PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { db } from "@/db/client";
 import { ButtonLink } from "@/components/ui";
-import { editActivityPath } from "@/tools/catalog";
+import { activityListPath, editActivityPath } from "@/tools/catalog";
 import { screensFor } from "@/tools/screens";
 
 export const metadata: Metadata = { title: "Activity" };
@@ -27,7 +27,7 @@ export default async function ActivityPage({ params, searchParams }: PageProps<"
   return (
     <div className="flex flex-col gap-6">
       <div className="-mb-2 flex flex-wrap items-center justify-between gap-3">
-        <Link href={`/courses/${course.id}`} className="text-sm text-accent-text hover:underline">
+        <Link href={activityListPath(course.id, activity)} className="text-sm text-accent-text hover:underline">
           ‹ Activities
         </Link>
         {editActivityPath(course.id, activity) !== `/courses/${course.id}/activities/${activity.id}` && (
