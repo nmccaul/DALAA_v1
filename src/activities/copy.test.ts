@@ -123,6 +123,16 @@ describe("copyActivity", () => {
     expect(await count("course_guides", nextTerm)).toBe(1);
   });
 
+  it("remembers what it was copied from, until the original is deleted", async () => {
+    const copied = await copyActivity(db, prof, activity, nextTerm, randomUUID());
+    if (!copied.ok) throw new Error(copied.reason);
+    const copiedFrom = async () =>
+      (await db.query<{ copied_from: string | null }>("select copied_from from activities where id = $1", [copied.id]))[0].copied_from;
+    expect(await copiedFrom()).toBe(activity);
+    await db.query("delete from activities where id = $1", [activity]);
+    expect(await copiedFrom()).toBeNull();
+  });
+
   it("copies nothing student-side", async () => {
     const copied = await copyActivity(db, prof, activity, nextTerm, randomUUID());
     if (!copied.ok) throw new Error(copied.reason);

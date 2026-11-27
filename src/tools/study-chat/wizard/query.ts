@@ -84,6 +84,11 @@ export const MINUTES = [
   { value: "45+", label: "45 minutes or more", turns: 30 },
 ] as const;
 
+/** The length whose message count "Most student messages" holds, shown as chosen (feedback 9432d821); null when it's a number of the teacher's own. */
+export function minutesForTurns(maxTurns: number | null): Minutes | null {
+  return MINUTES.find((m) => m.turns === maxTurns)?.value ?? null;
+}
+
 /** The length a new chat starts with. */
 export const DEFAULT_MINUTES: Minutes = "10-15";
 

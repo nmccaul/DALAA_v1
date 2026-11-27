@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { activityMaterials } from "@/activities/materials";
 import { graderModel } from "@/ai/models";
+import { keepFrom } from "@/courses/origin";
 import { db } from "@/db/client";
 import { keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
@@ -82,10 +83,10 @@ export async function GoalStep({ actor, course, searchParams }: CreateScreenProp
  * its goal is in the box. Changing them saves in place; the later steps keep
  * what's written, and their Draft and Tweak rewrite it for the new kind.
  */
-export async function SavedGoalStep({ activity, addToCanvas, go, later, started }: SavedStepProps) {
+export async function SavedGoalStep({ activity, addToCanvas, from, go, later, started }: SavedStepProps) {
   const settings = StudyChatSetupSettings.safeParse(activity.settings);
   const { readings, guides } = await activityMaterials(db(), activity.id);
-  const back = keepPicker(setupPath(activity.courseId, activity.id, "materials"), addToCanvas);
+  const back = keepFrom(keepPicker(setupPath(activity.courseId, activity.id, "materials"), addToCanvas), from);
   if (!settings.success) {
     return (
       <WizardShell step="goal" title={title} note={null} go={go}>
@@ -118,6 +119,7 @@ export async function SavedGoalStep({ activity, addToCanvas, go, later, started 
         suggested={[{ mode, reason: typeReason ?? null, goal: null }]}
         back={back}
         activityId={activity.id}
+        from={from}
       />
     </WizardShell>
   );

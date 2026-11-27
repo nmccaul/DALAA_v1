@@ -16,6 +16,8 @@ export type NewActivity = {
   settings: Record<string, unknown>;
   /** NULL until the activity has points; publishing needs them. */
   points: number | null;
+  /** The activity this one is a copy of (./copy.ts); absent for a new one. */
+  copiedFrom?: string;
 };
 
 export type TaughtActivity = {
@@ -66,11 +68,20 @@ export async function createActivity(
   // Through text: postgres.js would otherwise send the JSON string as a JSON string.
   // Materials are attached afterwards with setActivityMaterials (./materials.ts).
   const [inserted] = await db.query<{ id: string }>(
-    `insert into activities (course_id, tool, title, settings, points, creation_key, created_by)
-     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7)
+    `insert into activities (course_id, tool, title, settings, points, creation_key, created_by, copied_from)
+     values ($1, $2, $3, $4::text::jsonb, $5, $6, $7, $8)
      on conflict (creation_key) do nothing
      returning id`,
-    [courseId, activity.tool, activity.title, JSON.stringify(activity.settings), activity.points, creationKey, actor.userId],
+    [
+      courseId,
+      activity.tool,
+      activity.title,
+      JSON.stringify(activity.settings),
+      activity.points,
+      creationKey,
+      actor.userId,
+      activity.copiedFrom ?? null,
+    ],
   );
   if (inserted) return { ok: true, id: inserted.id };
 

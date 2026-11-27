@@ -5,6 +5,7 @@ import { assignToCanvasOn } from "@/activities/assign";
 import { activityMaterials } from "@/activities/materials";
 import { rememberSetupStep } from "@/activities/store";
 import { countStartedAttempts } from "@/attempts/store";
+import { FROM_PARAM, keepFrom } from "@/courses/origin";
 import { ButtonLink } from "@/components/ui";
 import { db } from "@/db/client";
 import { keepPicker } from "@/lti/picker";
@@ -39,16 +40,18 @@ import { SavedMaterialsStep } from "./materials-step";
  * (ASSIGN_TO_CANVAS) or publishes it. The panel's note comes from the stored settings.
  */
 export async function StudyChatSetup({ actor, activity, step, addToCanvas, searchParams }: SetupScreenProps) {
-  if (step === RESUME_STEP) redirect(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas));
-  const path = (s: WizardStep) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
-  const later = keepPicker(finishLaterPath(activity.courseId), addToCanvas);
+  // Opened from another course's list (checked by the page): its links keep that course and lead back to it (feedback 12b101b4).
+  const from = typeof searchParams[FROM_PARAM] === "string" ? searchParams[FROM_PARAM] : null;
+  if (step === RESUME_STEP) redirect(keepFrom(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas), from));
+  const path = (s: WizardStep) => keepFrom(keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas), from);
+  const later = keepPicker(finishLaterPath(activity.courseId, activity, from), addToCanvas);
   // Every step works on the saved draft, so any can be opened from the list; from a step with a form, saving first.
   const go = (save: boolean) =>
     Object.fromEntries(WIZARD_STEPS.map((s) => [s.slug, { href: path(s.slug), save }])) as Record<WizardStep, { href: string; save: boolean }>;
   // Steps 1–2 open again on a saved activity, to change its materials or kind (feedback 21e8c594).
   if (step === "materials" || step === "goal") {
     const started = startedBanner(startedNote(await countStartedAttempts(db(), activity.id)));
-    const props = { actor, activity, addToCanvas, searchParams, go: go(true), later: { href: later, save: true }, started };
+    const props = { actor, activity, addToCanvas, from, searchParams, go: go(true), later: { href: later, save: true }, started };
     return step === "materials" ? SavedMaterialsStep(props) : SavedGoalStep(props);
   }
   if (!isSetupStep(step)) notFound();
@@ -154,6 +157,7 @@ export async function StudyChatSetup({ actor, activity, step, addToCanvas, searc
         published={activity.status === "published"}
         initial={parsed.data}
         addToCanvas={addToCanvas}
+        from={from}
         cards={setupCards(step, parsed.data)}
         wizard={{ step, previous }}
       />

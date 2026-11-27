@@ -132,6 +132,7 @@ describe("listOtherCourseActivities", () => {
       courseCode: "BUS M 361",
       courseTerm: "Fall 2026",
       updatedAt: new Date("2026-09-01T00:00:00Z"),
+      copiedAt: null,
     });
     expect((await listOtherCourseActivities(db, other, current)).map((r) => r.title)).toEqual(["Not mine"]);
     expect(await listOtherCourseActivities(db, { ...prof, isStaff: false }, current)).toEqual([]);
@@ -220,5 +221,56 @@ describe("listStudentAssignments", () => {
 
     expect((await listStudentAssignments(db, kim)).find((r) => r.id === fresh)).toMatchObject({ status: "graded", score: 9 });
     expect(await listStudentAssignments(db, prof)).toEqual([]);
+  });
+});
+
+describe("listOtherCourseActivities copiedAt", () => {
+  it("says when a row was last copied into this course, and only this course", async () => {
+    const db = await testDb();
+    const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
+    const [{ id: user }] = await db.query<{ id: string }>(
+      "insert into users (institution_id, external_id, display_name) values ($1, 'prof', 'prof') returning id",
+      [inst],
+    );
+    const prof: Actor = { userId: user, institutionId: inst, netId: "prof", displayName: "prof", isStaff: true, isAdmin: false };
+    const course = async (term: string) => {
+      const [{ id }] = await db.query<{ id: string }>(
+        "insert into courses (institution_id, code, title, term, created_by) values ($1, 'C', 'T', $2, $3) returning id",
+        [inst, term, user],
+      );
+      await db.query("insert into course_members (course_id, user_id, role) values ($1, $2, 'instructor')", [id, user]);
+      return id;
+    };
+    const current = await course("Winter 2027");
+    const old = await course("Fall 2026");
+    const third = await course("Spring 2027");
+    const activity = async (courseId: string, title: string, copiedFrom: string | null, createdAt: string) =>
+      (
+        await db.query<{ id: string }>(
+          `insert into activities (course_id, tool, title, settings, copied_from, created_by, created_at)
+           values ($1, 'study-chat', $2, '{}', $3, $4, $5) returning id`,
+          [courseId, title, copiedFrom, user, createdAt],
+        )
+      )[0].id;
+    const copiedTwice = await activity(old, "Copied twice", null, "2026-09-01T00:00:00Z");
+    const elsewhere = await activity(old, "Copied elsewhere", null, "2026-09-01T00:00:00Z");
+    await activity(old, "Never copied", null, "2026-09-01T00:00:00Z");
+    await activity(current, "Copy 1", copiedTwice, "2026-11-20T00:00:00Z");
+    await activity(current, "Copy 2", copiedTwice, "2026-11-24T00:00:00Z");
+    await activity(third, "Copy 3", elsewhere, "2026-11-25T00:00:00Z");
+
+    const copiedAt = async () =>
+      Object.fromEntries(
+        (await listOtherCourseActivities(db, prof, current)).filter((r) => r.courseId === old).map((r) => [r.title, r.copiedAt]),
+      );
+    expect(await copiedAt()).toEqual({
+      "Copied twice": new Date("2026-11-24T00:00:00Z"),
+      "Copied elsewhere": null,
+      "Never copied": null,
+    });
+
+    // Deleting the copies forgets the copy.
+    await db.query("delete from activities where copied_from = $1", [copiedTwice]);
+    expect((await copiedAt())["Copied twice"]).toBeNull();
   });
 });

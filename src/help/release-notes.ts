@@ -9,6 +9,18 @@ export type ReleaseNote = { date: string; changes: string[] };
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-27",
+    changes: [
+      "In the Gradebook, Next and Previous student now open each student with their own score and an empty note, instead of the score you just typed for the last one. The yellow Feedback tab stays visible while a student's grade is open.",
+      "On a Study Chat's Chat options, the \"About how long?\" length you pick now shows as chosen, and stays chosen when you come back. Picking one sets \"Most student messages\" just below it.",
+      "A file you upload or pick from Canvas is now named without its .pdf or .docx and with spaces for underscores: \"Harbor_bikes-case.pdf\" becomes \"Harbor bikes case\". Uploading, you can type a title instead. Materials you already added keep their names; rename one with Edit on its page.",
+      "Leaving an activity (‹ Activities, or Save and finish later) now takes you back to the list it's in, Assigned or Not assigned, instead of always to Assigned.",
+      "Opening an activity from \"From my other courses\" now says which course it's in, with a link back to the course you came from. ‹ Activities and Save and finish later there take you back too, even after saving a setup step.",
+      "In \"From my other courses\", an activity you already copied into this course now says \"Copied\" with the date, and its button reads \"Copy again\".",
+      "Every setup step of an activity now has \"Delete activity\" at the top right. Deleting an activity (there or from its row) now says what it touches: how many students started and finished it, whether it's in Canvas Assignments (DALAA doesn't delete it there, so delete it in Canvas too), and that its materials stay in Materials.",
+    ],
+  },
+  {
     date: "2026-11-23",
     changes: [
       "When Canvas turns down grades you send, Results now says so in a yellow warning, with why and what to do, instead of a quiet note.",

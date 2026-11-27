@@ -7,6 +7,7 @@ import { clientFor } from "@/canvas/connection";
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
+import { activityListPath } from "@/tools/catalog";
 import { AssignForm } from "./assign-form";
 
 export const metadata: Metadata = { title: "Assign" };
@@ -67,7 +68,7 @@ export default async function AssignPage({ params }: PageProps<"/courses/[course
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/courses/${course.id}`} className="-mb-2 text-sm text-accent-text hover:underline">
+      <Link href={activityListPath(course.id, activity)} className="-mb-2 text-sm text-accent-text hover:underline">
         ‹ Activities
       </Link>
       <div className="flex max-w-2xl flex-col gap-1">

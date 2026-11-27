@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { afterAddPath } from "@/content/return-path";
-import { addMaterialPath, goalFromQuery, goalStepPath, materialsFromQuery, materialsStepPath, savedIds } from "./query";
+import { addMaterialPath, goalFromQuery, goalStepPath, materialsFromQuery, materialsStepPath, minutesForTurns, MINUTES, savedIds } from "./query";
 
 const C = "33333333-3333-4333-8333-333333333333";
 const A = "11111111-1111-4111-8111-111111111111";
@@ -64,3 +64,18 @@ describe("step 2's answers in the URL", () => {
   });
 });
 
+
+describe("the chosen length on Chat options", () => {
+  it("is the length whose message count is set", () => {
+    for (const m of MINUTES) expect(minutesForTurns(m.turns)).toBe(m.value);
+  });
+
+  it("is none for a teacher's own number or no limit", () => {
+    expect(minutesForTurns(13)).toBeNull();
+    expect(minutesForTurns(null)).toBeNull();
+  });
+
+  it("gives every length its own message count, so one click shows one choice", () => {
+    expect(new Set(MINUTES.map((m) => m.turns)).size).toBe(MINUTES.length);
+  });
+});

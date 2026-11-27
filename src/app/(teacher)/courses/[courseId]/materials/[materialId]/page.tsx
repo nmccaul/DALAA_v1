@@ -94,6 +94,7 @@ export default async function MaterialPage({ params, searchParams }: PageProps<"
             {q.saved ? "Saved. " : "Added. "}
             {material.seenBy === "ai" ? "This is what the AI reads." : material.hasFile ? "This is how students see it." : "This is how students read it."} Check
             it came through right; Edit to fix anything{material.hasFile ? " in its text" : ""}.
+            {q.named === "file" && !q.saved && " Its name comes from the file's name; Edit to give it a better one."}
           </p>
           <ButtonLink href={done}>{next ? "Looks good, back to the activity" : "Looks good"}</ButtonLink>
         </div>

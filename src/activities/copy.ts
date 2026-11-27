@@ -38,6 +38,7 @@ export async function copyActivity(
       title: source.title,
       settings: source.settings,
       points: source.points,
+      copiedFrom: source.id,
     });
     if (!created.ok) return created;
 

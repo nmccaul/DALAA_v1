@@ -37,11 +37,13 @@ export async function fetchCanvasPage(client: CanvasClient, courseId: number, pa
 export async function fetchCanvasFile(client: CanvasClient, courseId: number, fileId: number): Promise<FetchedContent> {
   try {
     const file = await client.file(courseId, fileId);
-    // display_name is what the teacher sees; filename keeps the extension if they renamed it.
-    const name = isReadableFile(file.display_name) ? file.display_name : file.filename;
+    // display_name is what the teacher sees; filename keeps the extension if they renamed it,
+    // and then their new name is the material's title.
+    const renamed = !isReadableFile(file.display_name);
+    const name = renamed ? file.filename : file.display_name;
     if (file.size > MAX_UPLOAD_BYTES) throw new CanvasError("too-large");
     const bytes = await client.download(file.url, MAX_UPLOAD_BYTES);
-    return { ok: true, input: { kind: "canvas-file", name, bytes } };
+    return { ok: true, input: { kind: "canvas-file", name, bytes, ...(renamed && { title: file.display_name }) } };
   } catch (e) {
     return refusal(e, "That file");
   }

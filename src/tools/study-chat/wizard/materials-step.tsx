@@ -61,7 +61,7 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
  * ticked (or what the URL carries, coming back from adding one), and Next
  * saves the change in place, then opens step 2.
  */
-export async function SavedMaterialsStep({ actor, activity, addToCanvas, searchParams, go, later, started }: SavedStepProps) {
+export async function SavedMaterialsStep({ actor, activity, addToCanvas, from, searchParams, go, later, started }: SavedStepProps) {
   const here = keepPicker(setupPath(activity.courseId, activity.id, "materials"), addToCanvas);
   const { rows, canvas } = await loadMaterialRows(db(), actor, activity.courseId);
   const carried = materialsFromQuery(searchParams);
@@ -103,6 +103,7 @@ export async function SavedMaterialsStep({ actor, activity, addToCanvas, searchP
         back={null}
         activityId={activity.id}
         savedStep={setupPath(activity.courseId, activity.id, "materials")}
+        from={from}
       />
     </WizardShell>
   );

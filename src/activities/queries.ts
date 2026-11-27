@@ -65,6 +65,8 @@ export type OtherCourseActivity = {
   courseCode: string;
   courseTerm: string;
   updatedAt: Date;
+  /** When it was last copied into this course; NULL if it never was (or those copies were deleted). */
+  copiedAt: Date | null;
 };
 
 /**
@@ -74,10 +76,12 @@ export type OtherCourseActivity = {
  */
 export async function listOtherCourseActivities(db: Db, actor: Actor, courseId: string): Promise<OtherCourseActivity[]> {
   if (!UUID.test(courseId)) return [];
+  // `and` keeps the first fragment's $1, so the copied-at lookup can use it too.
   const where = and({ text: "c.id <> $1", values: [courseId] }, coursesTaughtBy(actor, "c"));
   return db.query<OtherCourseActivity>(
     `select a.id, a.tool, a.title, a.status, a.points::float8 as points,
-            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt"
+            c.id as "courseId", c.code as "courseCode", c.term as "courseTerm", a.updated_at as "updatedAt",
+            (select max(k.created_at) from activities k where k.copied_from = a.id and k.course_id = $1) as "copiedAt"
        from activities a
        join courses c on c.id = a.course_id
       where ${where.text}

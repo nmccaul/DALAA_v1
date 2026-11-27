@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { capitalize, FILE_ACCEPT, FILE_TYPES_LABEL } from "@/content/file-types";
 import { Button, fileInputStyles, inputStyles } from "@/components/ui";
 import { GUIDE_LABEL } from "@/content/guide-label";
+import { FROM_PARAM } from "@/courses/origin";
 import { PICKER_PARAM } from "@/lti/picker";
 import { draftAction, publishAction, removeGuideAction, saveMaterialAction, type FormState } from "./actions";
 import type { Mode } from "./modes";
@@ -18,8 +19,14 @@ function Problem({ state }: { state: FormState }) {
 }
 
 /** Keeps an open "Add to Canvas" picker through the create flow (src/lti/picker.ts). */
-export function PickerField({ addToCanvas }: { addToCanvas: string | null }) {
-  return addToCanvas ? <input type="hidden" name={PICKER_PARAM} value={addToCanvas} /> : null;
+export function PickerField({ addToCanvas, from = null }: { addToCanvas: string | null; from?: string | null }) {
+  return (
+    <>
+      {addToCanvas && <input type="hidden" name={PICKER_PARAM} value={addToCanvas} />}
+      {/* The course the teacher opened the activity from, so a save keeps it (feedback 12b101b4). */}
+      {from && <input type="hidden" name={FROM_PARAM} value={from} />}
+    </>
+  );
 }
 
 /**

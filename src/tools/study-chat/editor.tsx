@@ -12,7 +12,7 @@ import { MODES } from "./modes";
 import { applyParts, isEmpty, partTitle, PARTS, STEP_PARTS, type PartKey } from "./parts";
 import { ANSWER_WITH, ANSWER_WITH_LABELS, rubricPoints, settingHelp, settingTitle, STRICTNESS, type AnswerWith, type StudyChatSettings } from "./schema";
 import { OptionTable } from "./wizard/option-table";
-import { MINUTES } from "./wizard/query";
+import { MINUTES, minutesForTurns } from "./wizard/query";
 import { SETUP_COMING_SOON, STUDENT_SWITCHES_STEP } from "./wizard/setup-cards";
 import { WIZARD_FORM_ID } from "./wizard/steps";
 
@@ -145,6 +145,7 @@ export function StudyChatEditor({
   addToCanvas,
   cards,
   wizard,
+  from = null,
 }: {
   courseId: string;
   activityId: string;
@@ -153,6 +154,8 @@ export function StudyChatEditor({
   addToCanvas: string | null;
   cards?: readonly CardKey[];
   wizard?: WizardEditing;
+  /** The course the teacher opened the activity from (checked), kept through its saves (feedback 12b101b4). */
+  from?: string | null;
 }) {
   const shown = shownCards(cards);
   const [s, setS] = useState(initial);
@@ -313,6 +316,7 @@ export function StudyChatEditor({
   const comingSoon = wizard ? (SETUP_COMING_SOON[wizard.step as keyof typeof SETUP_COMING_SOON] ?? []) : [];
 
   const scenario = s.scenarios[0];
+  const chosenLength = minutesForTurns(s.completion.maxTurns);
   return (
     <form
       id={wizard ? WIZARD_FORM_ID : undefined}
@@ -325,7 +329,7 @@ export function StudyChatEditor({
       <input type="hidden" name="activityId" value={activityId} />
       <input type="hidden" name="settings" value={json} />
       {wizard && <input type="hidden" name="wizardStep" value={wizard.step} />}
-      <PickerField addToCanvas={addToCanvas} />
+      <PickerField addToCanvas={addToCanvas} from={from} />
 
       {!wizard && (
         <div className="relative max-w-md">
@@ -492,13 +496,18 @@ export function StudyChatEditor({
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium">About how long?</span>
               <span className="-mt-0.5 text-[13px] text-muted">Pick a length to set “{settingTitle(["completion", "maxTurns"])}” to fit. Add a time limit below for a hard stop.</span>
-              <span className="flex flex-wrap gap-2">
+              <span role="group" aria-label="About how long?" className="flex flex-wrap gap-2">
                 {MINUTES.map((m) => (
                   <button
                     key={m.value}
                     type="button"
+                    aria-pressed={chosenLength === m.value}
                     onClick={() => change((d) => void (d.completion.maxTurns = m.turns))}
-                    className="rounded-full border border-border-strong bg-surface px-3 py-0.5 text-sm text-accent-text hover:bg-subtle"
+                    className={`whitespace-nowrap rounded-full border px-3 py-0.5 text-sm ${
+                      chosenLength === m.value
+                        ? "border-accent bg-accent text-white"
+                        : "border-border-strong bg-surface text-accent-text hover:bg-subtle"
+                    }`}
                   >
                     {m.label}
                   </button>

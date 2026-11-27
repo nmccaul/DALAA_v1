@@ -111,7 +111,7 @@ describe("fetchCanvasFile", () => {
     expect(await readContent(fetched.input)).toEqual({
       ok: true,
       source: "canvas-file",
-      name: "Harbor Bikes data.md",
+      name: "Harbor Bikes data",
       body: "# Harbor Bikes data\n\nRentals by month: May 310, June 420.",
     });
     expect(calls.at(-1)).toBe(`${BASE}/files/8001/download?verifier=practice-8001`);
@@ -135,10 +135,11 @@ describe("fetchCanvasFile", () => {
     expect(downloads).toEqual([]);
   });
 
-  it("uses the stored filename when the display name lost its extension", async () => {
+  it("uses the stored filename when the display name lost its extension, and the display name as the title", async () => {
     const { client } = scripted({ display_name: "Case notes", filename: "case-notes.txt" }, () => new Response("Notes"));
     const fetched = await fetchCanvasFile(client, 1, 1);
-    expect(fetched.ok && fetched.input.name).toBe("case-notes.txt");
+    expect(fetched.ok && fetched.input).toMatchObject({ name: "case-notes.txt", title: "Case notes" });
+    expect(fetched.ok && (await readContent(fetched.input))).toMatchObject({ ok: true, name: "Case notes" });
   });
 
   it("says so when the file is gone", async () => {
@@ -206,7 +207,7 @@ describe("a course's Canvas content", () => {
   it("saves a picked file", async () => {
     expect(await saveFromCanvas(db, prof, asPractice(), courseId, randomUUID(), { kind: "file", id: 8001 })).toMatchObject({
       ok: true,
-      content: { source: "canvas-file", name: "Harbor Bikes data.md" },
+      content: { source: "canvas-file", name: "Harbor Bikes data" },
     });
   });
 

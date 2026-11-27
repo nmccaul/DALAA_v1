@@ -15,6 +15,8 @@ export type SavedStepProps = {
   actor: Actor;
   activity: TaughtActivity;
   addToCanvas: string | null;
+  /** The checked course the teacher opened the activity from, or null (feedback 12b101b4). */
+  from: string | null;
   searchParams: Record<string, string | string[] | undefined>;
   go: Partial<Record<WizardStep, StepLink>>;
   later: StepLink;

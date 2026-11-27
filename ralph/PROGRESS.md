@@ -1,159 +1,57 @@
 # Progress
 
-One entry per pass, newest last. Run started 2026-11-09: creation wizard,
-several materials per activity, reuse across courses, Library removed, Assign
-to Canvas. See `ralph/PLAN.md` and `ralph/TASKS.md`. The previous run is in
-`ralph/archive/2026-10-29-study-chat-lti/`.
+One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 
-## 2026-11-09 07:15 UTC · T01 Decisions + ideas · done
-- Added D-034 to `docs/DECISIONS.md` (wizard order, several materials, Coming-soon shown not hidden, Library removed, Assign behind `ASSIGN_TO_CANVAS`); the open D-013 row now points at it ("still open for BYU").
-- `CLAUDE.md` product rule 2 and `docs/PRD.md` goal 2 / next-term reuse now say **Courses · Settings**, reuse in the Activities tab.
-- `docs/IDEAS.md`: new section listing the wizard chat panel and each Coming-soon option. `.env.example`: `ASSIGN_TO_CANVAS=`.
-- There is no D-033 in DECISIONS; numbered D-034 as the task said. Nathan: renumber if D-033 was meant to exist.
-- Local tests: 12 failures, all `Array.fromAsync` on Node 20 — not only the two PDF tests but also helpers in `study-chat/progress.test.ts` (9) and `work.test.ts` (1). Pre-existing; CI (Node 22) is the gate. Treat these as acceptable local failures too.
+## 2026-11-27 19:55 UTC · T01 Grade panel: each student's own score, and Feedback reachable · done
+- Cause: Next/Previous re-renders the same server-rendered panel, so React reused the uncontrolled score input (`defaultValue`) and NoteField's `useState`. Fix: `key={attempt.id}` on `ScoreForm`/`DisputeForm` in `grading/grade-panel.tsx` (dispute answer box is inside the keyed form too). No action state to reset: the forms use plain server actions.
+- Feedback tab (`src/components/feedback.tsx`) raised from z-30 to z-[60], above the panel (z-50) and its backdrop (z-40). The dialog itself is a modal `<dialog>` (top layer), so it already opened above everything.
+- Browser check (local, course 1ce67d02, ralph.t04): typed 2 + a note on Hyrum (stored 5), Next → Ivy shows her own 9.5 and an empty note; Previous → Hyrum back to 5. Feedback tab hit-tests as topmost with the panel open at 1280 and 390 and opens its dialog. Nothing saved, local data unchanged.
+- No unit test: the repo has no DOM test library and the fix is React reconciliation; verified in the browser instead.
+- Release note under 2026-11-27.
 
-## 2026-11-09 07:19 UTC · T02 activity_materials table · done
-- Migration `20261109071641_activity_materials.sql` (additive): adds `unique (id, course_id)` on activities, the `activity_materials` table (exactly one of content_id/guide_id, same-course FKs, partial unique indexes per kind, RLS) and backfills reading at position 0, guide at 1. Applied locally.
-- `src/activities/materials.ts`: `activityMaterials`, `activityReadings` (readings only — what student paths should use in T03), `setActivityMaterials` (replaces the set, dedupes, refuses non-teacher and other-course materials before touching rows).
-- Guide reads stay in `src/content/guide.ts` (new `activityGuides`, `guidesInCourse`), keeping it the only reader of `course_guides`.
-- `src/test/db.ts`: `testDb({ before })` + `migrateRest()` so a migration's backfill can be tested.
-- Local `npm run migrate` needs `.env.local` loaded into the shell (`set -a; . ./.env.local`). Same 12 Node-20 `Array.fromAsync` failures, nothing new.
+## 2026-11-27 20:05 UTC · T02 "About how long?" buttons on Chat options · done
+- Cause: the buttons worked (they set "Most student messages"), but nothing near them changed: no chosen state, the number sits below, and at Lucy's width (Edge, 1.25x) the labels wrapped into two lines over the next label. Clicking 10–15 on a 12-message chat changed nothing at all. Same code as her deployed commit e1b8bc0.
+- Fix: `minutesForTurns()` in `wizard/query.ts` (tested); the matching length is filled and `aria-pressed`, labels `whitespace-nowrap` (`editor.tsx`).
+- Browser check (local, ralph.t04, activity f37809f2): each length sets 4/8/12/20/30 and shows chosen; 5–10 + Next, reload shows 8 and 5–10 chosen; 1280 and 390 fine. Set back to 12 afterwards.
+- Release note under 2026-11-27.
 
-## 2026-11-09 07:28 UTC · T03 Readers take lists · done
-- `draftPrompt`/`chatSystemPrompt`/`gradePrompt`/`studentPrompt` take `readings[]` and `guides[]`, each fenced under its own name (`material.ts` `Material`, `guideBlocks`); single-material wording unchanged. `chat.ts`, `grade.ts`, `trial.ts` read `activityGuides`/`activityMaterials`; `aiGuide` removed.
-- Student side: `TakenActivity.content` → `readings[]` from `activityReadings` (never touches `course_guides`/`guide_id`); take screen shows every reading. New guide.test cases prove two notes reach the chat model and never the student payload.
-- Cap: `MAX_MATERIALS_CHARS = 150_000` / `materialsTooLong` in `src/activities/materials.ts`, enforced in `setActivityMaterials` and `createStudyChat` (before any model call). `guidesInCourse` now returns id → length.
-- Bridge until T04: `createActivity` and `setActivityGuide` also write `activity_materials` from `content_id`/`guide_id`, so the new readers see activities made by the old writers. Test fixtures that insert activities by hand call `mirrorMaterials`.
-- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+## 2026-11-27 20:13 UTC · T03 Material titles without file names · done
+- `titleFromFileName` (`src/content/file-name.ts`, tested): drops the last extension, underscores → spaces; hyphens → spaces only when the name has no spaces (so "Dunning-Kruger Effect.pptx" keeps its hyphen); capitalization kept. CamelCase like "TruthAboutNegotiationsLeighfinal" is left alone (not split).
+- Applied once in `readContent` (`src/content/read.ts`) for every file input (upload, Canvas file, wizard upload, student work); refusals still name the file. Optional `title` on file inputs: the upload form's new optional Title field; a Canvas file renamed without its extension uses its Canvas display name as title.
+- Materials list (`src/content/materials.ts`): unsaved Canvas files show the tidied name, and saved Canvas files match under the old raw name or the tidied one, so no duplicate rows.
+- Added page shows "Its name comes from the file's name; Edit to give it a better one." when `?named=file` (set by `reviewPath` when an upload had no title). Existing materials not renamed.
+- Browser (local :3001, ralph.t04): `Harbor_bikes-case.md` with no title → "Harbor bikes case" + hint; with title → "Case: Harbor Bikes", no hint; form fine at 1280 and 390. Both test materials deleted afterwards. Release note under 2026-11-27.
 
-## 2026-11-09 07:35 UTC · T04 Writers use the list · done
-- `createStudyChat` attaches materials with `setActivityMaterials`; `createActivity` no longer takes or mirrors `contentId`/`guideId` (and `TaughtActivity` dropped them). `setActivityMaterials` now also sets `activities.content_id`/`guide_id` to the first reading/note, so the columns stay written until T18 retires them.
-- `setActivityGuide` replaced by `addActivityGuide` / `removeActivityGuide` (`src/activities/materials.ts`); the review screen and the Canvas picker add notes, and `RemoveGuideForm` removes one note by id. Adding a note from another course now says "We couldn't find one of those materials in this course."
-- Review screen: a "Materials" list with every reading and note and its pill; the "Additional AI instructions" fold below always offers adding another. The pill is now the shared `src/components/seen-by-pill.tsx` (Materials tab uses it too; the wizard will).
-- Materials tab "used in" reads `activity_materials` instead of the old columns.
-- Checked locally on the running dev server (:3000): an activity with one reading and two notes lists all three with pills. A local-only user `ralph.t04` (staff allowlist) and course "T04 check" were added to the local DB for that.
-- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+## 2026-11-27 20:18 UTC · T04a Leaving an activity returns to its list · done
+- T04 split into a/b/c in TASKS (three separate changes). This pass did (1), report a5b82cc1.
+- Instead of carrying `?show=` through every link, the way back is the list the activity is in: `activityListPath(courseId, {assigned})` in `src/tools/catalog.ts` → `?show=unassigned` or `?show=assigned`. Used by ‹ Activities on the activity page, every wizard step and the Assign page, and by Save and finish later (`finishLaterPath` now takes the activity; the server actions look up whether it's assigned). Also right after a draft gets assigned. Delete already kept the view. There's no Cancel link in the wizard.
+- Leaving an activity opened from *From my other courses* is T04b (banner and the way back).
+- Browser (local :3001, ralph.t04): a Not assigned draft's wizard step, ‹ Activities lands on "Not assigned (7)" at 390px; a published unassigned activity's back and later links go to `?show=unassigned`, an assigned one's to `?show=assigned`. Nothing changed in local data.
+- Release note under 2026-11-27.
 
-## 2026-11-09 07:45 UTC · T05 CHECKPOINT B · done
-- Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). One new migration since main, `20261109071641_activity_materials.sql`: additive (new table, unique (id, course_id) over the PK, backfill inserts). Applied to production with `scripts/migrate-prod.sh` → `migrations up to date`.
-- PR #124 (feat/creation-wizard → main), CI passed in 6m12s, merged; main is `c2ae5b9`.
-- Production deploy of `c2ae5b9` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
-- Nathan: an activity created in production between the migration and the deploy (a few minutes, overnight) would have no `activity_materials` row; unlikely, but if one exists, re-attach its material on the review screen.
+## 2026-11-27 20:30 UTC · T04b Banner when an activity from another course opens · done
+- *From my other courses* rows now link with `?from=<this course>`. `src/courses/origin.ts` (tested): `originCourse` accepts it only for a course the teacher teaches that isn't the activity's own (`getTaughtCourse` does the uuid and teaching check); `keepFrom`, `originListPath` (`?show=other`).
+- Activity page and wizard step page show "This is in <code>, not <origin>. ‹ Back to <origin>" (`activities/[activityId]/origin-banner.tsx`), and their ‹ Activities goes back to the origin's *From my other courses*. Edit in the wizard, the wizard's resume redirect, step links and the review step's plain Save and finish later keep it. The step page passes the checked origin to the tool, so a made-up `from` never reaches a link.
+- Not done, split to T04b2: a wizard step's save buttons (Next, step list, Save and finish later) go through server actions that redirect without `from`, so after the first save the banner is gone. Editing on the activity page itself (cards with Edit) doesn't navigate, so Lucy's main path is covered.
+- Browser (local :3001, ralph.t04): from T04's other-courses list into a BUS M 499 draft: banner at 1280 and 390, ‹ Activities and Back → T04 `?show=other`; Edit in the wizard → `setup/scenario?from=…` with the banner; a made-up `from` shows no banner. No local data changed.
+- Release note under 2026-11-27.
 
-## 2026-11-09 07:49 UTC · T06 copyActivity · done
-- `src/activities/copy.ts` `copyActivity`: one transaction — `createActivity` (target-course check, idempotent by `creationKey`; a retry short-circuits via `activityForKey`), then materials re-attached with `setActivityMaterials`. Copies title, tool, settings, points; status draft; no due date, no LTI link/line item, no attempts/results/grades.
-- Cross-course materials go through new `copyTo` in `src/content/store.ts` (`copyContent`; `copyGuides` in `guide.ts`, so guide.ts stays the only reader of `course_guides`). Readings stay readings and notes stay notes.
-- Choice not in the task: a material the target course already has word for word (same source, name, text) is reused rather than copied again, so copying several activities that share a case from last term doesn't fill the Materials tab with duplicates. Nathan: say if you'd rather always copy.
-- Due date is deliberately not copied (a copy is usually for another term). `src/activities/copy.test.ts`: 6 tests. Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+## 2026-11-27 20:31 UTC · T04b2 Keep the other course through the wizard's saves · done
+- `PickerField` (`study-chat/forms.tsx`) also carries a hidden `from`; the editor, step 1's pick form and step 2's goal form pass the step page's checked origin.
+- One redirect for every saved step: `savedStepRedirect` in `wizard/steps.ts` (tested in `setup-cards.test.ts`); `finishLaterPath` takes the origin and is what the step page's link uses too. `actions.ts`'s `afterSavedStep` loads the activity and re-checks `from` with `originCourse` (only a course the teacher teaches) before keeping it; `laterPath` is gone. Step 2's ← Back keeps it too.
+- Browser (local :3001, ralph.t04): from T04's other-courses list, BUS M 499 draft 0ee3e13c step 3 Next → grading with `?from=` and the banner; Save and finish later → T04 `?show=other`. Step 2 Next keeps it; a made-up `from` has no banner or hidden field (390px). The saves wrote unchanged values; nothing else changed in local data.
+- Not covered: "+ Materials" from step 1 and its way back to the step still drop `from` (the add-material return path); small, not in the report.
 
-## 2026-11-09 07:54 UTC · T07 Activities tab sections · done
-- `listCourseActivities` rows now carry `assigned` (has `lti_resource_link_id`; add `canvas_assignment_id` in T09-era work). New `listOtherCourseActivities(db, actor, courseId)`: every activity in the teacher's other courses, drafts included, newest course first. `listLibraryActivities` is left for the Library page; T08 can delete it with the page.
-- `courses/[courseId]/page.tsx`: *Assigned* section on top (same Canvas-style rows); filter pills `?show=unassigned` / `?show=other`; other courses grouped under "CODE · Term". Defaults to *From my other courses* when this course has nothing unassigned but other courses have activities. The empty state shows only when there's nothing anywhere.
-- New `courses/[courseId]/actions.ts` `copyActivityAction` (Copy / Copy to this course, `creationKey` from `randomUUID()` at render), landing on the copy. A refusal shows a fixed sentence (`?copyerror=1`), never text from the URL.
-- Checked locally with playwright-cli at desktop and 390px: three lists render; Copy and Copy to this course each opened the new draft. Local-only data added: course "T07 other" for `ralph.t04` and an activity with a fake LTI link `local-t07-link`. Dark mode not screenshotted (only design tokens used).
-- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
+## 2026-11-27 20:37 UTC · T04c "Copied <date>" on other-course rows · done
+- Nothing recorded copies, so new additive migration `20261127203241_activity_copied_from.sql`: nullable `activities.copied_from` → activities(id) `on delete set null`, partial index. Applied locally (twice: second "nothing to apply"); **goes to production at CHECKPOINT A (T06)**.
+- `copyActivity` passes `copiedFrom` through `createActivity` (`NewActivity.copiedFrom`). `listOtherCourseActivities` returns `copiedAt`: the latest copy of that row in *this* course (copies into a third course don't count; deleted copies are forgotten). Tests in `copy.test.ts`, `queries.test.ts`.
+- Row shows "✓ Copied <day>" and the button becomes "Copy again" (`courses/[courseId]/page.tsx`). Copies made before this change aren't recognized (no record of their source).
+- Browser (local :3001, ralph.t04): copied a BUS M 499 draft into T04 → row says "✓ Copied Nov 27" + "Copy again" at 1280 and 390. Deleted the copy and the material it brought along; back to as before.
+- Note: `npm run migrate` doesn't read `.env.local`; ran it with the README's local DATABASE_URL. Release note under 2026-11-27.
 
-## 2026-11-09 07:56 UTC · T08 Library removed · done
-- `main-nav.tsx`: Library dropped from `AREAS` (rail is Courses · Settings). `library/page.tsx` is now just `redirect("/courses")` (signed-out visitors still hit the sign-in guard first; checked with curl: 307 → /sign-in).
-- The "Reuse it from your Library" line on the activity-type picker now links to `/courses/<id>?show=other` ("Copy it into this course").
-- `listLibraryActivities` and its test deleted (no callers left); `LibraryActivity` type renamed `OtherCourseActivity`.
-- No `/library` link remains in `src`. Lint, typecheck green; tests: the same 12 Node-20 `Array.fromAsync` failures only.
-
-## 2026-11-09 08:05 UTC · T09 CHECKPOINT C · done
-- Green locally (lint, typecheck; tests: the same 12 Node-20 `Array.fromAsync` failures only). No new migrations since checkpoint B, so nothing applied to production.
-- PR #125 (feat/creation-wizard → main): copyActivity, Activities tab sections with Copy / Copy to this course, Library page removed. CI passed in 5m1s, merged; main is `3f33fad`.
-- Production deploy of `3f33fad` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200.
-
-## 2026-11-09 08:08 UTC · T10 Canvas client + column · done
-- Migration `20261109080544_activity_canvas_assignment.sql` (additive): nullable `activities.canvas_assignment_id text` (check `<> ''`) and a partial unique index on (course_id, canvas_assignment_id) where not null. Applied locally only; checkpoint D applies it to production.
-- `src/canvas/client.ts`: `assignmentGroups`, `createAssignment` (POST), `updateAssignment` (PUT), `AssignmentInput` and `assignmentBody`. Sent as a JSON body `{ assignment: … }`; dates ISO; on update a field left out is untouched and a `null` date clears it (JSON null, never `''`). Only a reply with a numeric id counts as done. `request()` now takes a method.
-- Practice Canvas: `practiceCanvas` is now async; it lists assignment groups (two per practice course, `PRACTICE_ASSIGNMENT_GROUPS`) and keeps created assignments in process memory (lost on restart), checking name, points, dates and group like Canvas. The route also exports POST/PUT.
-- `materials.test.ts` backfill test expected its migration to be the last one; now it checks it runs first.
-- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
-
-## 2026-11-09 08:11 UTC · T11 Launch finds the activity from the link URI · done
-- `src/lti/launch.ts`: new exported `launchActivityId(claims)` — the `activity_id` custom field when present, else `activity_id` from the target link URI's query; only a UUID counts (lowercased). `linkedActivity` uses it, so the same-course check and first-launch recording of resource link + line item apply to both.
-- A custom field that is present but not a UUID does not fall back to the URI (the task says fallback only when the field is missing).
-- Tests in `src/lti/deep-link.test.ts`: link-URI launch opens and records link + line item; activity in another DALAA course and a non-UUID value open the course and record nothing; unit test of the precedence rules.
-- Same 12 Node-20 `Array.fromAsync` failures locally, nothing new.
-
-## 2026-11-09 08:16 UTC · T12a assignActivity · done
-- T12 split: T12a (service, this pass) and T12b (Assign dialog + due-date edit behind `ASSIGN_TO_CANVAS`).
-- `src/activities/assign.ts` `assignActivity(db, actor, canvas, activityId, { dueAt, lockAt, groupId, publish }, appUrl)`: publishes in DALAA (`publishActivity`), then creates the external-tool assignment (launch URL `<APP_URL>/api/lti/launch?activity_id=…`) or updates the one in `canvas_assignment_id`; stores the id and `due_at`. The activity row is locked (`for update`) while Canvas is asked, so a double click makes one assignment.
-- Departures from the task text: **points aren't an input** — Canvas gets the activity's own points (they follow the rubric; one place per concept, no rescaling). `appUrl` is a 6th argument (callers pass `appUrl(request)` / `APP_URL`). An activity already linked from Canvas the old way (`lti_resource_link_id`, no `canvas_assignment_id`) is refused rather than given a second assignment that would split its grades.
-- Publishing uses the chassis `publishActivity` (points check only), not `publishStudyChat`'s schema check, since the chassis can't branch on the tool. T12b's action should run the tool's publish first, or the catalog should register a publish check.
-- `listCourseActivities` counts `canvas_assignment_id` as assigned. 11 tests in `assign.test.ts`. Same 12 local failures as before (Node 20; note: `progress.test.ts`/`work.test.ts` are in that 12 too, not only `read.test.ts`).
-
-## 2026-11-09 08:24 UTC · T12b Assign UI · done
-- New page `courses/[courseId]/activities/[activityId]/assign` (+ `assign-form.tsx`, `actions.ts`): due, closes, assignment group (from `assignmentGroups`, by position), "Students can see it in Canvas now". For an activity with a `canvas_assignment_id` the same page is "Change the due date" with only the due field. 404 unless `ASSIGN_TO_CANVAS=1`. Not connected / reconnect links to `/canvas/connect?next=<assign page>`; course not linked links to the course's Connect to Canvas page; added-from-Canvas activities are told to change dates in Canvas.
-- Activities tab (flag on): *Not assigned* rows get **Assign**; *Assigned* rows with a `canvas_assignment_id` get **Change due date**. Flag off: unchanged.
-- `src/activities/assign.ts`: `lockAt` and `publish` are now optional (left out on update = unchanged in Canvas, so the due-date edit doesn't clear the close date or unpublish); new `assignToCanvasOn()`, `assignSetup()` and `assignRequestFrom(form)`. Dates go to the server as ISO from the browser (teacher's zone), via `localInputValue` in `components/time.ts`. `appUrlFromHeaders` in `lti/config.ts` for server actions (APP_URL wins).
-- Checked locally with playwright-cli: practice course BUS M 499 imported for `ralph.t04`, an activity copied in, assigned (group "Case discussions", due Feb 1 11:59 PM) → moved to Assigned; Change due date → Feb 3 5:00 PM saved. 390px fine. Dark mode not screenshotted (tokens only).
-- Added `ASSIGN_TO_CANVAS=1` to local `.env.local` (non-secret, named in PLAN) so the running dev server on :3000 shows it. Production stays off.
-- Publishing still uses the chassis `publishActivity` (points check), not Study Chat's schema check — fine while every save is schema-checked, but a tool publish hook in the catalog would be cleaner later. Same 12 Node-20 local failures, nothing new.
-
-## 2026-11-09 08:33 UTC · T13 CHECKPOINT D · done
-- Green locally (lint, typecheck; tests: the same 12 Node-20 failures only). One new migration since checkpoint C, `20261109080544_activity_canvas_assignment.sql` (additive: nullable column + partial unique index), applied to production with `scripts/migrate-prod.sh` → `migrations up to date`.
-- PR #126 (feat/creation-wizard → main): Canvas assignment client, link-URI launch fallback, `assignActivity`, Assign UI behind `ASSIGN_TO_CANVAS`. CI passed in 5m17s, merged; main is `feb13a4`.
-- Production deploy of `feb13a4` READY. Smoke: `/api/health` `{"ok":true,"db":"up"}`, `/api/lti/jwks` returns an RSA key, `/` 200. `ASSIGN_TO_CANVAS` stays unset in production.
-- VERIFY (Nathan): set ASSIGN_TO_CANVAS=1 locally or in a preview, assign in gitgrade course 42, open it as Student View from Canvas Assignments, chat, grade, send grade; then turn the flag on in production.
-
-## 2026-11-09 12:42 UTC · T14a Wizard shell + step 1 Materials · done
-- T14 split: T14a (shell + step 1 pick, this pass), T14b (step 1's "+ Materials" link with `next` support, Case Writer chip, `+ Activity` going straight to the wizard). A crashed pass had left `parseCanvasPick`/`canvasPickValue` and `MaterialRow.savedId`/`canvas` uncommitted; finished and committed with this task.
-- `src/tools/study-chat/wizard/`: `steps.ts` (7 steps), `shell.tsx` (`WizardShell`), `picks.ts` (`pickValue`, `parsePicks`, `pickCreationKey`, `savePicks`, `materialsQuery`/`materialsFromQuery`), `materials-step.tsx` + `materials-form.tsx`; `wizardMaterialsAction` in `study-chat/actions.ts`. `StudyChatCreate` routes `?step=materials` to the wizard; other step slugs show a Preview note ("isn't built yet"); no `?step=` keeps the old flow.
-- A Canvas pick's creation key is derived (sha256 → UUID shape) from the form's random key + the pick, so resending the same form saves each page once. Ticked ids are checked as this course's before going on.
-- `loadMaterialRows` and `CANVAS_PROBLEM` moved into `src/content/materials.ts` (the Materials tab uses them too).
-- Surprise: React 19 resets the form after a server action, which unticked boxes after an error; the action now returns `ticked` and the boxes use it as their default.
-- Checked locally (playwright-cli, ralph.t04, course "T04 check"): notes-only refused with a sentence and ticks kept; reading + note → step 2 with both ids; Back keeps both ticked; 390px fine. Canvas-item picking not exercised in the browser (practice Canvas lists ralph.t04 as not a teacher of BUS M 499); covered by tests. Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 12:47 UTC · T14b Step 1 links + entry · done
-- Step 1 has a "+ Materials" row (Upload a file · Paste text · Add a web page) and a disabled "Write a new case with Case Writer · Coming soon"; it moved out of the panel's chips. The empty course now shows the form with "Add one below" instead of pointing at the Materials tab.
-- `next` on `materials/new`: `src/content/return-path.ts` (`materialReturnPath` accepts only a path inside the same course; `afterAddPath` appends `added=content:<id>`/`guide:<id>`). Both add forms and the web form carry it; "‹ Back to the new activity" when present. The wizard's `materialsFromQuery` counts `added` as ticked.
-- The links read the boxes as ticked at click time (client `router.push`), so ticks made before clicking survive. Unsaved Canvas Page/File ticks are not carried (only saved ids travel in the URL).
-- `materialsQuery`/`materialsFromQuery` moved from `picks.ts` to the client-safe `wizard/query.ts` (picks.ts imports node:crypto). `newActivityPath` in `src/tools/catalog.ts` (tool registers `start`): "+ Activity" on the Activities tab and the course checklist go straight to `study-chat?step=materials` while it's the only live tool.
-- Checked locally (playwright-cli, ralph.t04, "T04 check"): ticked a reading, Paste text → AI-only note saved → back on step 1 with both ticked; 390px fine. Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 12:53 UTC · T15 Suggest goal + step 2 · done
-- `src/tools/study-chat/suggest.ts`: `suggestGoal(db, model, ctx, { readings, guides })` → `{ ok, goal }`; one `generateStructured` call, purpose `suggest.goal`, readings and AI-only notes fenced as in drafting; any failure, blank or over-600-character answer is `{ ok: false }` (no retry, it's only a suggestion). Tests in `suggest.test.ts` (mock model).
-- Step 2 (`wizard/goal-step.tsx`, routed from `create-screen.tsx`): textarea pre-filled with the suggestion, "About how long?" (10–15 / 20–30 / 45+, default 20–30), Activity group and Start from disabled "Coming soon". A plain GET form: Next goes to `?step=type&content=…&guide=…&goal=…&minutes=…`. If the AI fails the field is empty with a one-line note. Coming back from step 3 shows the teacher's own goal and asks the AI nothing.
-- `wizard/picks.ts` `pickedMaterials` loads the URL's ids in order (teacher-only, same course, combined 150,000-character cap). `wizard/query.ts`: `MINUTES`, `goalFromQuery`, `goalStepPath`. Step 3 is still the "isn't built yet" note, now with "← Back to the learning goal".
-- Checked locally (playwright-cli, ralph.t04, "T04 check", real AI via gateway): reading + note → a suggested goal; edited it, picked 45+, Next → step 3 URL; Back → same goal and length. 390px fine. First live answer used markdown italics, so the prompt now says plain text.
-- The suggestion runs on every load of step 2 without `goal` in the URL (a reload costs one more call). Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 12:58 UTC · T16a suggestTypes + createStudyChat for the wizard · done
-- T16 split: T16a (service, this pass) and T16b (step 3 screen + action → step 4).
-- `suggest.ts` `suggestTypes(db, model, ctx, materials, goal)` → up to 3 `{ mode, reason | null }`, best first; one call, purpose `suggest.type`; the answer's `mode` is a free string so unknown slugs and repeats are dropped (case-insensitive) rather than failing the whole answer; nothing usable or any failure → `[{ mode: "explain", reason: null }]`.
-- `createStudyChat` now takes `contentIds`/`guideIds` (loaded and checked with the wizard's `pickedMaterials`, so one-course + 150,000-character cap in one place), `goal` (trimmed, kept verbatim over whatever the model wrote; over 1,000 characters refused), `minutes` (a sentence in the draft prompt) and `typeReason`. The old create flow's action passes one-item lists. A missing guide now says "One of those materials isn't in this course anymore. Go back and pick again." (guide.test.ts updated).
-- Type reason stored as optional `settings.typeReason` (schema; omitted from `StudyChatDraftFields`, so the model is never asked for it). The student view and the chat/grader prompts are built field by field, so it never reaches a student; a test checks the student view.
-- Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 13:07 UTC · T16b Step 3 screen · done
-- `wizard/type-step.tsx` (server, `?step=type`): loads the picks with `pickedMaterials`, runs `suggestTypes` with the goal, shows the three suggestions as cards (first marked *Suggested*, each with its reason) and every other mode under "More types"; "The type can't be changed once students start." Missing goal or bad picks → a plain sentence and Back. Back goes to step 2 with the goal and length kept.
-- `wizard/type-form.tsx` (client) posts to `wizardTypeAction` (`actions.ts`); `wizard/type-request.ts` `typeRequestFrom(form)` parses it (tested in `type-request.test.ts`). Each suggested card's reason travels as a hidden `reason-<slug>` field; only the one matching the chosen mode is kept, so a type from "More types" stores no reason. Students-bring-work follows the mode (on for Defend) until step 5 exists. A failed draft returns `{ error, mode }` so the choice stays picked.
-- Step 4 doesn't exist yet (T17): Next lands on the activity's review screen.
-- Checked locally (playwright-cli, ralph.t04, "T04 check", real AI): Reading Harbor + Note Alpha → goal → step 3 suggested Socratic / Defend / Explain with reasons → Next drafted a Socratic chat with both materials and the goal word for word. 390px fine.
-- Worth a look: the AI suggested Defend (needs students' own work) for a goal about interpreting a reading, despite the prompt's rule. Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 13:10 UTC · T17a Setup route + step 4 · done
-- T17 split: T17a (route, editor `cards`, step 4, this pass) and T17b (step 5/6 Coming soon rows, moving show progress / students bring work to step 5, drafts opening the wizard).
-- New route `courses/[courseId]/activities/[activityId]/setup/[step]`; tools register a `setup` screen in `src/tools/screens.ts` (chassis doesn't branch on the tool). `wizard/setup-step.tsx` `StudyChatSetup`: steps 4–6 show their editor cards (`wizard/setup-cards.ts` `SETUP_CARDS`), step 7 is a Preview "isn't built yet" note linking to the activity.
-- `StudyChatEditor` takes `cards` (`fields.ts` `CARD_KEYS`/`shownCards`) and `wizard` (cards start open, no search box, Next / Save as draft / Back). `saveSettingsAction` with `intent=next` saves, then redirects to the next step computed server-side from `wizardStep` (no client-supplied path). `wizardTypeAction` now lands on step 4.
-- Panel note from stored data (`setupNote`): "I drafted this chat as Socratic, with 5 touchpoints, and … to lead it." Step 4 has no Back (step 3 was before the draft existed).
-- Checked locally (playwright-cli, ralph.t04, "T04 check"): step 4 of an existing draft shows steps 1–3 checked, four cards open; Next saved and opened step 5; 390px fine. Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 13:15 UTC · T17b Steps 5–6 details + drafts open the wizard · done
-- Step 5 ("options") now has a "What students see and do" table: Students bring their own work and Show students their progress (moved out of the scenario/touchpoints cards in wizard mode; the review screen keeps them in their cards), then Coming soon rows: Hints, Reading beside the chat, Minimum exchanges, Feedback on each criterion. Step 6 shows "Total: N points" and a "More grading options" table of Coming soon rows (Redraft with AI, Use a saved rubric, Allowed attempts, Score to keep).
-- New `wizard/option-table.tsx` (`OptionTable`); `setup-cards.ts` gained `STUDENT_SWITCHES_STEP` and `SETUP_COMING_SOON`; the editor defines each switch once and places it by mode.
-- Drafts on the Activities tab link to their setup steps: `teacherActivityPath` in `src/tools/catalog.ts` (tool registers `draftOpens: "/setup/scenario"`; a test ties it to `setupPath(…, SETUP_STEPS[0])`). Published activities still open their page.
-- Checked locally (playwright-cli, ralph.t04, "T04 check"): Not assigned rows link to /setup/scenario; step 4 has no switches; step 5 ticked Show progress → Next → step 6 with total and Coming soon rows; back on step 5 the tick was saved. 390px fine. Dark mode not screenshotted (tokens only). Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 13:20 UTC · T18 Step 7 + cleanup · done
-- Step 7 (`wizard/setup-step.tsx`, now async): a summary card from `reviewSummary` in `setup-cards.ts` (title, type, N materials, positions only when the chat has them, touchpoints, points; NULL points says "Not set"), the existing `TrialPanel`, then **Assign** (links to the T12 assign page) when `ASSIGN_TO_CANVAS=1` and not inside Canvas's picker, else **Publish** (new `PublishForm` / `publishAction`, lands on the course or back on the picker) with an "add it from Canvas" note. "Save as draft" goes to the course's Not assigned list.
-- `setActivityMaterials` no longer writes `activities.content_id`/`guide_id` (columns stay; nothing reads them). create/guide tests updated to expect them empty.
-- `docs/TESTING-GITGRADE.md` section 3 now walks the seven wizard steps.
-- Checked locally (playwright-cli, ralph.t04, "T04 check", flag on): step 7 shows the summary, trial and Assign; Assign opened the assign page ("Connect this course to Canvas first", as that course isn't linked). 390px fine. The flag-off Publish path wasn't clicked in a browser (would need a dev-server restart); it reuses `publishStudyChat`. Same 12 Node-20 local test failures, nothing new.
-
-## 2026-11-09 17:20 UTC · T19 CHECKPOINT E (final) · done (by the supervising session)
-- The loop was paused on the usage limit; the supervising session ran the checkpoint. No migrations since checkpoint D. Lint and typecheck green.
-- PR #127 (wizard, T14–T18): CI passed, merged; main is `7452071`. Production deploy of `7452071` READY. Smoke: `/api/health` db up, `/api/lti/jwks` 200, `/` 200.
-- Nathan: try the wizard in gitgrade course 42 (testing guide section 3); Assign still needs the ASSIGN_TO_CANVAS check from checkpoint D.
+## 2026-11-27 20:43 UTC · T05 Delete from the wizard, and say what deleting touches · done
+- One delete control for both places: `courses/[courseId]/delete-activity.tsx` (moved out of the course page). `ConfirmDelete` takes an optional `label` for a small text button instead of the trash icon. Returns to the list the activity is in (`show` from `assigned`), with "Activity deleted."
+- Wizard: "Delete activity" sits in the setup page's top row, right of ‹ Activities (`setup/[step]/page.tsx`, chassis), so every step and every tool gets it without threading it through WizardShell; Save and finish later is just below it, Next is far away.
+- Dialog facts come from `deleteFacts` + `deleteImpact` (`src/activities/delete.ts`, tested): started and finished counts, in Canvas Assignments or not (DALAA doesn't delete the Canvas assignment; students opening it get an error; grades sent stay), materials stay. The tick box wording moved there too.
+- Browser (local :3001, ralph.t04): a throwaway draft (inserted locally, copied from "Second store") on step 3 at 1280 and 390: link top right, dialog lists the four facts; Delete → T04 `?show=unassigned&deleted=1` with "Activity deleted."; row gone. No local assigned activity with attempts to view that wording; covered by the unit test.
+- Deleting an activity opened from another course lands on its own course's list, not the origin's. Release note under 2026-11-27.

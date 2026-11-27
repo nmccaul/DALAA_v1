@@ -126,8 +126,11 @@ export async function GradePanel({
               </p>
             ) : (
               <>
+                {/* Keyed by attempt: Next/Previous re-renders the same panel, and without a key React keeps the
+                    last student's typed score, note and answer in the boxes (Lucy's 7f546133). */}
                 {dispute?.status === "open" ? (
                   <DisputeForm
+                    key={attempt.id}
                     courseId={courseId}
                     from={here}
                     student={{ ...scored, disputeId: dispute.id, disputeReason: dispute.reason }}
@@ -135,6 +138,7 @@ export async function GradePanel({
                   />
                 ) : (
                   <ScoreForm
+                    key={attempt.id}
                     courseId={courseId}
                     from={here}
                     student={scored}

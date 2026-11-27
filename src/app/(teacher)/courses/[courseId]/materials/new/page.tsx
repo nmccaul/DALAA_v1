@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { NAME_MAX } from "@/content/material";
 import { materialReturnPath } from "@/content/return-path";
 import { loadTaughtCourse } from "@/courses/load";
 import { AddMaterialForm } from "./add-form";
@@ -30,7 +31,7 @@ export default async function NewMaterialPage({ params, searchParams }: PageProp
       {kind === "web" ? (
         <WebPageForm courseId={course.id} creationKey={randomUUID()} next={next} />
       ) : (
-        <AddMaterialForm courseId={course.id} creationKey={randomUUID()} kind={kind} next={next} />
+        <AddMaterialForm courseId={course.id} creationKey={randomUUID()} kind={kind} next={next} nameMax={NAME_MAX} />
       )}
     </div>
   );
