@@ -48,3 +48,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Row shows "✓ Copied <day>" and the button becomes "Copy again" (`courses/[courseId]/page.tsx`). Copies made before this change aren't recognized (no record of their source).
 - Browser (local :3001, ralph.t04): copied a BUS M 499 draft into T04 → row says "✓ Copied Nov 27" + "Copy again" at 1280 and 390. Deleted the copy and the material it brought along; back to as before.
 - Note: `npm run migrate` doesn't read `.env.local`; ran it with the README's local DATABASE_URL. Release note under 2026-11-27.
+
+## 2026-11-27 20:43 UTC · T05 Delete from the wizard, and say what deleting touches · done
+- One delete control for both places: `courses/[courseId]/delete-activity.tsx` (moved out of the course page). `ConfirmDelete` takes an optional `label` for a small text button instead of the trash icon. Returns to the list the activity is in (`show` from `assigned`), with "Activity deleted."
+- Wizard: "Delete activity" sits in the setup page's top row, right of ‹ Activities (`setup/[step]/page.tsx`, chassis), so every step and every tool gets it without threading it through WizardShell; Save and finish later is just below it, Next is far away.
+- Dialog facts come from `deleteFacts` + `deleteImpact` (`src/activities/delete.ts`, tested): started and finished counts, in Canvas Assignments or not (DALAA doesn't delete the Canvas assignment; students opening it get an error; grades sent stay), materials stay. The tick box wording moved there too.
+- Browser (local :3001, ralph.t04): a throwaway draft (inserted locally, copied from "Second store") on step 3 at 1280 and 390: link top right, dialog lists the four facts; Delete → T04 `?show=unassigned&deleted=1` with "Activity deleted."; row gone. No local assigned activity with attempts to view that wording; covered by the unit test.
+- Deleting an activity opened from another course lands on its own course's list, not the origin's. Release note under 2026-11-27.
