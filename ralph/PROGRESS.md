@@ -55,3 +55,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Dialog facts come from `deleteFacts` + `deleteImpact` (`src/activities/delete.ts`, tested): started and finished counts, in Canvas Assignments or not (DALAA doesn't delete the Canvas assignment; students opening it get an error; grades sent stay), materials stay. The tick box wording moved there too.
 - Browser (local :3001, ralph.t04): a throwaway draft (inserted locally, copied from "Second store") on step 3 at 1280 and 390: link top right, dialog lists the four facts; Delete → T04 `?show=unassigned&deleted=1` with "Activity deleted."; row gone. No local assigned activity with attempts to view that wording; covered by the unit test.
 - Deleting an activity opened from another course lands on its own course's list, not the origin's. Release note under 2026-11-27.
+
+## 2026-11-27 20:56 UTC · T06 CHECKPOINT A · done
+- Lint, typecheck and tests green locally (102 files, 736 tests) on Node 22; branch was pushed and contained origin/main.
+- One new migration since the last checkpoint, `20261127203241_activity_copied_from.sql` (nullable column + partial index, additive); `scripts/migrate-prod.sh` applied it, ended "migrations up to date".
+- PR #196 (https://github.com/nmccaul/DALAA_v1/pull/196) auto-merged on green `ci-ok`; main HEAD a8af7d7. Production deployment for it READY; /api/health db up, /api/lti/jwks returns a key, / is 200.
+- Resolved T01–T05's reports in production with that sha and PR: 7f546133, 9432d821, 28111d81, a5b82cc1, 12b101b4, f7026325, 9689e37b, 3f6eb879, 3b4df425.
+- Branch pulled origin/main afterwards.
