@@ -62,3 +62,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - PR #196 (https://github.com/nmccaul/DALAA_v1/pull/196) auto-merged on green `ci-ok`; main HEAD a8af7d7. Production deployment for it READY; /api/health db up, /api/lti/jwks returns a key, / is 200.
 - Resolved T01–T05's reports in production with that sha and PR: 7f546133, 9432d821, 28111d81, a5b82cc1, 12b101b4, f7026325, 9689e37b, 3f6eb879, 3b4df425.
 - Branch pulled origin/main afterwards.
+
+## 2026-11-27 21:03 UTC · T07 Activity type on each row · done
+- Rows on Assigned, Not assigned and From my other courses now read "Study Chat · Argue · Debate" (the wizard's `typeName`) with the wizard's group icon. 04dcbd11's "icon mismatch" was the list using the tool's chat icon for every row while the wizard showed per-kind icons.
+- Icons moved into `TYPE_GROUPS` (`wizard/types.ts`, `icon` per group; ssr imports) so step 2 and the list share them. Chassis stays tool-blind: `ToolScreens.kind` (`src/tools/screens.ts`, type in `src/tools/kind.ts`) and `describeActivity`; Study Chat's reader is `study-chat/kind.ts` (tested). The list queries now return `settings` whole, unread by the chassis.
+- A draft with no mode yet (or old settings without one) falls back to "Study Chat" and the chat icon (seen on BUS M 499's one assigned activity locally).
+- Browser (local :3001, ralph.t04): BUS M 499 Not assigned shows scales/question/teach-back icons and labels at 1280 and 390; T04's other-courses rows show the kind. No data changed.
+- Not done (out of scope, in 04dcbd11): filtering or grouping the list by kind or Canvas module. Release note under 2026-11-27.
