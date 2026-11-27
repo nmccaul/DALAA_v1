@@ -35,3 +35,9 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Not done, split to T04b2: a wizard step's save buttons (Next, step list, Save and finish later) go through server actions that redirect without `from`, so after the first save the banner is gone. Editing on the activity page itself (cards with Edit) doesn't navigate, so Lucy's main path is covered.
 - Browser (local :3001, ralph.t04): from T04's other-courses list into a BUS M 499 draft: banner at 1280 and 390, ‹ Activities and Back → T04 `?show=other`; Edit in the wizard → `setup/scenario?from=…` with the banner; a made-up `from` shows no banner. No local data changed.
 - Release note under 2026-11-27.
+
+## 2026-11-27 20:31 UTC · T04b2 Keep the other course through the wizard's saves · done
+- `PickerField` (`study-chat/forms.tsx`) also carries a hidden `from`; the editor, step 1's pick form and step 2's goal form pass the step page's checked origin.
+- One redirect for every saved step: `savedStepRedirect` in `wizard/steps.ts` (tested in `setup-cards.test.ts`); `finishLaterPath` takes the origin and is what the step page's link uses too. `actions.ts`'s `afterSavedStep` loads the activity and re-checks `from` with `originCourse` (only a course the teacher teaches) before keeping it; `laterPath` is gone. Step 2's ← Back keeps it too.
+- Browser (local :3001, ralph.t04): from T04's other-courses list, BUS M 499 draft 0ee3e13c step 3 Next → grading with `?from=` and the banner; Save and finish later → T04 `?show=other`. Step 2 Next keeps it; a made-up `from` has no banner or hidden field (390px). The saves wrote unchanged values; nothing else changed in local data.
+- Not covered: "+ Materials" from step 1 and its way back to the step still drop `from` (the add-material return path); small, not in the report.
