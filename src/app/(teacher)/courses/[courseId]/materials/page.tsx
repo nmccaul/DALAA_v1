@@ -4,6 +4,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch, NoMatches, SearchBox, SearchGroup, SearchItem } from "@/components/list-search";
 import { LocalTime } from "@/components/local-time";
 import { SeenByPill } from "@/components/seen-by-pill";
+import { AI_ONLY_EXPLAINED } from "@/content/guide-label";
 import { CANVAS_PROBLEM, loadMaterialRows, SOURCE_LABEL, type MaterialRow } from "@/content/materials";
 import { SOURCE_FILTERS } from "@/content/material-sources";
 import { loadTaughtCourse } from "@/courses/load";
@@ -143,7 +144,7 @@ export default async function MaterialsPage({ params, searchParams }: PageProps<
       <p className="text-sm text-muted">
         Open a material to read it the way students do, or to edit it. This course&apos;s Canvas Pages and Files are
         listed automatically; one an activity uses can be opened and edited here too. Students see a material
-        only inside an activity that uses it, and AI-only materials never reach students. Canvas Files are listed when
+        only inside an activity that uses it. {AI_ONLY_EXPLAINED} Canvas Files are listed when
         DALAA can read them: PDF, Word, PowerPoint, .txt and .md.
       </p>
     </ListSearch>
