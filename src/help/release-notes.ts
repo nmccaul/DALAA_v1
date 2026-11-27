@@ -20,6 +20,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "Every setup step of an activity now has \"Delete activity\" at the top right. Deleting an activity (there or from its row) now says what it touches: how many students started and finished it, whether it's in Canvas Assignments (DALAA doesn't delete it there, so delete it in Canvas too), and that its materials stay in Materials.",
       "On the Activities tab, each Study Chat now shows what kind it is, with the same picture as when you set it up: \"Study Chat · Argue · Debate\", \"Study Chat · Explain / teach back\" and so on.",
       "The Setup tab now explains AI-only notes with an example (so does Materials), its \"Publish it to students\" step links to your Not assigned activities instead of the same place as \"Create an activity\", and it says how to put an activity in a Canvas module.",
+      "In \"Try it as a student\", the sample student now says goodbye and stops once the chat wraps up, instead of sending messages until time runs out.",
     ],
   },
   {

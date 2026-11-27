@@ -9,6 +9,11 @@
  * and the reading: never the situation, the guide, the positions, the
  * touchpoints or the rubric. A teacher runs one trial at a time.
  *
+ * Once the chat's AI wraps up, the sample student says a short goodbye with
+ * `GOODBYE` and the run stops after the AI's answer to it, like a real
+ * student pressing Finish (feedback 26038b58: it used to chat on until the
+ * time ran out).
+ *
  * Each step is reported as it happens (`onStep`), so the teacher watches the
  * conversation instead of a spinner (feedback 21b68dd3), and the run stops
  * when they leave (`signal`).
@@ -22,7 +27,7 @@ import type { StudentWork } from "@/attempts/work";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import type { GradedResult } from "@/results/store";
-import { questionAnswered } from "./chat";
+import { questionAnswered, reachedMinimum } from "./chat";
 import { STUDY_CHAT } from "./create";
 import { gradeTurns } from "./grade";
 import { fence, type Material } from "./material";
@@ -52,6 +57,7 @@ export function trialEnding(trial: Pick<Trial, "endedBy" | "turns">): string {
   const after = `Ended after ${n} ${n === 1 ? "message" : "messages"} from the sample student`;
   if (trial.endedBy === "turns") return `${after}: it reached the chat's message limit.`;
   if (trial.endedBy === "question") return `${after}: they answered the chat's question.`;
+  if (trial.endedBy === "student") return `${after}: the chat wrapped up and they said goodbye.`;
   if (trial.endedBy === "time") return `${after}: a practice run stops after 3 minutes of chatting.`;
   return `${after}: a sample student stops at ${TRIAL_MAX_TURNS}.`;
 }
@@ -64,8 +70,8 @@ export type Trial = {
   /** The work the sample student brought, when the chat asks for it. */
   work: StudentWork | null;
   turns: Exchange[];
-  /** What ended it: the chat's turn limit, its question answered, the trial's cap, or its time. */
-  endedBy: "turns" | "question" | "cap" | "time";
+  /** What ended it: the chat's turn limit, its question answered, the sample student saying goodbye, the trial's cap, or its time. */
+  endedBy: "turns" | "question" | "student" | "cap" | "time";
   /** NULL when the grader's answer never fit the rubric. */
   grade: GradedResult | null;
 };
@@ -92,6 +98,17 @@ const LEVEL: Record<TrialLevel, string> = {
     "and back up what you say.",
 };
 
+/** The sample student ends its goodbye with this once the chat has wrapped up; it's taken out of the message. */
+export const GOODBYE = "[END]";
+
+/** The sample student's line without `GOODBYE`, and whether it said goodbye. Exported for tests. */
+export function readGoodbye(line: string): { message: string; goodbye: boolean } {
+  const goodbye = line.includes(GOODBYE);
+  if (!goodbye) return { message: line, goodbye };
+  // A bare mark still says goodbye, so the chat has something to answer.
+  return { message: line.split(GOODBYE).join("").trim() || "Thanks, goodbye!", goodbye };
+}
+
 /** What the simulated student is told: only what a real student would see. Exported for tests. */
 export function studentPrompt(settings: StudyChatSettings, level: TrialLevel, readings: readonly Material[], work: StudentWork | null): string {
   const view = studentView(settings);
@@ -99,6 +116,8 @@ export function studentPrompt(settings: StudyChatSettings, level: TrialLevel, re
     `You're a college student in a class chat assignment called "${view.title}", talking with ${view.persona.name} (${view.persona.role}).`,
     LEVEL[level],
     "Write only your own next message, in the first person, as a student would type it: a few sentences at most. Never write the other side.",
+    `When ${view.persona.name} has wrapped up the conversation (summed it up, thanked you or said goodbye) and isn't asking you anything, ` +
+      `don't keep it going: write a short, polite goodbye and end it with ${GOODBYE}. Never write ${GOODBYE} otherwise.`,
   ];
   if (view.limits.question !== null) parts.push(`Your assignment asks you to answer: ${view.limits.question}`);
   for (const reading of readings) parts.push(`What you were given to read ("${reading.name}"):\n${fence("student-reading", reading.body)}`);
@@ -191,10 +210,15 @@ export async function runTrial(
         endedBy = "time";
         break;
       }
-      const message = await say(db, models.student, ctx, {
-        system: studentPrompt(settings, level, readings, work),
-        messages: studentMessages(opening, turns),
-      });
+      const line = readGoodbye(
+        await say(db, models.student, ctx, {
+          system: studentPrompt(settings, level, readings, work),
+          messages: studentMessages(opening, turns),
+        }),
+      );
+      // A goodbye before the chat's minimum is just a message, as a real student's Finish is refused then.
+      const goodbye = line.goodbye && reachedMinimum(settings, turns.length + 1);
+      const { message } = line;
       const reply = await say(db, models.reply, ctx, {
         system: chatSystemPrompt(settings, readings, guides, work),
         messages: chatMessages(turns, message),
@@ -205,7 +229,12 @@ export async function runTrial(
         endedBy = "turns";
         break;
       }
-      if (await questionAnswered(db, models.check, ctx, question, turns)) {
+      if (goodbye) {
+        endedBy = "student";
+        break;
+      }
+      // As for a real student, the question ends the chat only once they've sent the minimum.
+      if (reachedMinimum(settings, turns.length) && await questionAnswered(db, models.check, ctx, question, turns)) {
         endedBy = "question";
         break;
       }
