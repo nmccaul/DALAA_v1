@@ -28,3 +28,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Leaving an activity opened from *From my other courses* is T04b (banner and the way back).
 - Browser (local :3001, ralph.t04): a Not assigned draft's wizard step, ‹ Activities lands on "Not assigned (7)" at 390px; a published unassigned activity's back and later links go to `?show=unassigned`, an assigned one's to `?show=assigned`. Nothing changed in local data.
 - Release note under 2026-11-27.
+
+## 2026-11-27 20:30 UTC · T04b Banner when an activity from another course opens · done
+- *From my other courses* rows now link with `?from=<this course>`. `src/courses/origin.ts` (tested): `originCourse` accepts it only for a course the teacher teaches that isn't the activity's own (`getTaughtCourse` does the uuid and teaching check); `keepFrom`, `originListPath` (`?show=other`).
+- Activity page and wizard step page show "This is in <code>, not <origin>. ‹ Back to <origin>" (`activities/[activityId]/origin-banner.tsx`), and their ‹ Activities goes back to the origin's *From my other courses*. Edit in the wizard, the wizard's resume redirect, step links and the review step's plain Save and finish later keep it. The step page passes the checked origin to the tool, so a made-up `from` never reaches a link.
+- Not done, split to T04b2: a wizard step's save buttons (Next, step list, Save and finish later) go through server actions that redirect without `from`, so after the first save the banner is gone. Editing on the activity page itself (cards with Edit) doesn't navigate, so Lucy's main path is covered.
+- Browser (local :3001, ralph.t04): from T04's other-courses list into a BUS M 499 draft: banner at 1280 and 390, ‹ Activities and Back → T04 `?show=other`; Edit in the wizard → `setup/scenario?from=…` with the banner; a made-up `from` shows no banner. No local data changed.
+- Release note under 2026-11-27.
