@@ -5,6 +5,7 @@ import { assignToCanvasOn } from "@/activities/assign";
 import { activityMaterials } from "@/activities/materials";
 import { rememberSetupStep } from "@/activities/store";
 import { countStartedAttempts } from "@/attempts/store";
+import { FROM_PARAM, keepFrom, originListPath } from "@/courses/origin";
 import { ButtonLink } from "@/components/ui";
 import { db } from "@/db/client";
 import { keepPicker } from "@/lti/picker";
@@ -39,9 +40,11 @@ import { SavedMaterialsStep } from "./materials-step";
  * (ASSIGN_TO_CANVAS) or publishes it. The panel's note comes from the stored settings.
  */
 export async function StudyChatSetup({ actor, activity, step, addToCanvas, searchParams }: SetupScreenProps) {
-  if (step === RESUME_STEP) redirect(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas));
-  const path = (s: WizardStep) => keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas);
-  const later = keepPicker(finishLaterPath(activity.courseId, activity), addToCanvas);
+  // Opened from another course's list (checked by the page): its links keep that course and lead back to it (feedback 12b101b4).
+  const from = typeof searchParams[FROM_PARAM] === "string" ? searchParams[FROM_PARAM] : null;
+  if (step === RESUME_STEP) redirect(keepFrom(keepPicker(setupPath(activity.courseId, activity.id, resumeStep(activity.setupStep)), addToCanvas), from));
+  const path = (s: WizardStep) => keepFrom(keepPicker(setupPath(activity.courseId, activity.id, s), addToCanvas), from);
+  const later = keepPicker(from ? originListPath(from) : finishLaterPath(activity.courseId, activity), addToCanvas);
   // Every step works on the saved draft, so any can be opened from the list; from a step with a form, saving first.
   const go = (save: boolean) =>
     Object.fromEntries(WIZARD_STEPS.map((s) => [s.slug, { href: path(s.slug), save }])) as Record<WizardStep, { href: string; save: boolean }>;
