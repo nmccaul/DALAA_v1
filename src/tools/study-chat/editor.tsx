@@ -145,6 +145,7 @@ export function StudyChatEditor({
   addToCanvas,
   cards,
   wizard,
+  from = null,
 }: {
   courseId: string;
   activityId: string;
@@ -153,6 +154,8 @@ export function StudyChatEditor({
   addToCanvas: string | null;
   cards?: readonly CardKey[];
   wizard?: WizardEditing;
+  /** The course the teacher opened the activity from (checked), kept through its saves (feedback 12b101b4). */
+  from?: string | null;
 }) {
   const shown = shownCards(cards);
   const [s, setS] = useState(initial);
@@ -326,7 +329,7 @@ export function StudyChatEditor({
       <input type="hidden" name="activityId" value={activityId} />
       <input type="hidden" name="settings" value={json} />
       {wizard && <input type="hidden" name="wizardStep" value={wizard.step} />}
-      <PickerField addToCanvas={addToCanvas} />
+      <PickerField addToCanvas={addToCanvas} from={from} />
 
       {!wizard && (
         <div className="relative max-w-md">

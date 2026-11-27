@@ -4,7 +4,7 @@ import { draft } from "../test-fixtures";
 import { teacherActivityPath } from "@/tools/catalog";
 import { blankSettings, STUDY_CHAT } from "../create";
 import { reviewSummary, SETUP_CARDS, SETUP_COMING_SOON, setupCards, setupNote, STUDENT_SWITCHES_STEP } from "./setup-cards";
-import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, RESUME_STEP, resumeStep, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
+import { finishLaterPath, isSetupStep, nextSetupStep, previousSetupStep, RESUME_STEP, resumeStep, savedStepRedirect, savedStepTarget, SETUP_STEPS, setupPath } from "./steps";
 
 describe("shownCards", () => {
   it("shows every card without a filter, and only the asked-for ones in screen order with one", () => {
@@ -59,6 +59,19 @@ describe("setup steps", () => {
     expect(savedStepTarget("options", "later")).toBeNull();
     expect(finishLaterPath("c1", { assigned: false })).toBe("/courses/c1?show=unassigned");
     expect(finishLaterPath("c1", { assigned: true })).toBe("/courses/c1?show=assigned");
+  });
+
+  it("keeps the course an activity was opened from through a step's saves (feedback 12b101b4)", () => {
+    const activity = { courseId: "c1", id: "a1", assigned: false };
+    expect(savedStepRedirect(activity, "scenario", "next", null, "c2")).toBe("/courses/c1/activities/a1/setup/grading?from=c2");
+    expect(savedStepRedirect(activity, "goal", "goto:review", null, "c2")).toBe("/courses/c1/activities/a1/setup/review?from=c2");
+    // Save and finish later goes back to the other course's list, not the activity's own.
+    expect(savedStepRedirect(activity, "options", "later", null, "c2")).toBe("/courses/c2?show=other");
+    expect(finishLaterPath("c1", { assigned: true }, "c2")).toBe("/courses/c2?show=other");
+    // Without one, as before; a plain save stays on the step.
+    expect(savedStepRedirect(activity, "scenario", "next", null, null)).toBe("/courses/c1/activities/a1/setup/grading");
+    expect(savedStepRedirect({ ...activity, assigned: true }, "options", "later", null, null)).toBe("/courses/c1?show=assigned");
+    expect(savedStepRedirect(activity, "options", "save", null, "c2")).toBeNull();
   });
 
   it("goes nowhere it shouldn't from a save: not before step 3, not off the wizard", () => {

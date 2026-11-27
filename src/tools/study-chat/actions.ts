@@ -8,6 +8,7 @@ import { clientFor } from "@/canvas/connection";
 import { VaultError } from "@/canvas/vault";
 import { saveGuide } from "@/content/guide";
 import { saveContent } from "@/content/store";
+import { FROM_PARAM, originCourse } from "@/courses/origin";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import { getTaughtActivity } from "@/activities/store";
@@ -20,7 +21,7 @@ import { MODE_SLUGS, type ModeSlug } from "./modes";
 import { MAX_GOAL_CHARS, suggestGoalFor } from "./suggest";
 import { parsePicks, pickedMaterials, savePicks } from "./wizard/picks";
 import { materialsQuery } from "./wizard/query";
-import { finishLaterPath, savedStepTarget, setupPath } from "./wizard/steps";
+import { savedStepRedirect, setupPath } from "./wizard/steps";
 import { reasonField, typeRequestFrom } from "./wizard/type-request";
 
 export type FormState = { error?: string; problems?: string[]; savedAt?: number };
@@ -95,21 +96,23 @@ export async function wizardMaterialsAction(_prev: MaterialsPickState, form: For
 
   const attached = await setActivityMaterials(db(), actor, activityId, saved);
   if (!attached.ok) return { error: attached.reason, ticked };
-  await afterSavedStep(courseId, activityId, "materials", form.get("intent"), picker);
+  await afterSavedStep(activityId, "materials", form);
   return { savedAt: Date.now(), ticked };
 }
 
-/** "Save and finish later" on a saved activity: the Activities list it's in. */
-async function laterPath(courseId: string, activityId: string): Promise<string> {
-  const activity = await getTaughtActivity(db(), await requireActor(), activityId);
-  return finishLaterPath(courseId, { assigned: activity?.assigned ?? false });
-}
-
-/** After a saved activity's step 1 or 2 saves: "Save and finish later", Next, or a step in the list. */
-async function afterSavedStep(courseId: string, activityId: string, step: "materials" | "goal", intent: unknown, picker: string | null) {
-  if (intent === "later") redirect(keepPicker(await laterPath(courseId, activityId), picker));
-  const target = savedStepTarget(step, intent);
-  if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
+/**
+ * After a saved activity's step saves: "Save and finish later" (the list it's
+ * in, or the course it was opened from), Next, or a step in the list. Stays
+ * on the step otherwise.
+ */
+async function afterSavedStep(activityId: string, step: unknown, form: FormData) {
+  const actor = await requireActor();
+  const activity = await getTaughtActivity(db(), actor, activityId);
+  if (!activity) return;
+  // Opened from another course's list (feedback 12b101b4): kept only for a course the teacher teaches.
+  const origin = await originCourse(db(), actor, form.get(FROM_PARAM), activity.courseId);
+  const to = savedStepRedirect(activity, step, form.get("intent"), pickerRequest(form.get(PICKER_PARAM)), origin?.id ?? null);
+  if (to) redirect(to);
 }
 
 /**
@@ -118,7 +121,6 @@ async function afterSavedStep(courseId: string, activityId: string, step: "mater
  */
 export async function editTypeAction(_prev: TypeState, form: FormData): Promise<TypeState> {
   const actor = await requireActor();
-  const courseId = String(form.get("courseId") ?? "");
   const activityId = String(form.get("activityId") ?? "");
   const mode = MODE_SLUGS.find((m) => m === form.get("mode"));
   if (!mode) return { error: "Pick a type of activity." };
@@ -127,7 +129,7 @@ export async function editTypeAction(_prev: TypeState, form: FormData): Promise<
   const reason = form.get(reasonField(mode));
   const saved = await retypeStudyChat(db(), actor, activityId, { mode, goal, typeReason: typeof reason === "string" ? reason : null });
   if (!saved.ok) return { error: saved.reason, mode };
-  await afterSavedStep(courseId, activityId, "goal", form.get("intent"), pickerRequest(form.get(PICKER_PARAM)));
+  await afterSavedStep(activityId, "goal", form);
   return { savedAt: Date.now(), mode };
 }
 
@@ -249,10 +251,7 @@ export async function saveSettingsAction(_prev: FormState, form: FormData): Prom
   }
   const saved = await saveStudyChat(db(), actor, activityId, settings);
   if (!saved.ok) return { error: saved.reason, problems: saved.problems };
-  const picker = pickerRequest(form.get(PICKER_PARAM));
-  if (form.get("intent") === "later") redirect(keepPicker(await laterPath(courseId, activityId), picker));
-  const target = savedStepTarget(form.get("wizardStep"), form.get("intent"));
-  if (target) redirect(keepPicker(setupPath(courseId, activityId, target), picker));
+  await afterSavedStep(activityId, form.get("wizardStep"), form);
   if (form.get("intent") !== "publish") return { savedAt: Date.now() };
 
   const published = await publishStudyChat(db(), actor, activityId);

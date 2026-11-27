@@ -53,6 +53,7 @@ export function GoalTypeForm({
   suggested,
   back,
   activityId,
+  from = null,
 }: {
   courseId: string;
   creationKey: string;
@@ -66,6 +67,8 @@ export function GoalTypeForm({
   back: string;
   /** On a saved activity (feedback 21e8c594): its current kind leads, and Next saves it in place. */
   activityId?: string;
+  /** The course the teacher opened the activity from (checked), kept through its saves (feedback 12b101b4). */
+  from?: string | null;
 }) {
   const [state, action, pending] = useActionState<TypeState, FormData>(activityId ? editTypeAction : wizardTypeAction, {});
   const first = suggested[0].mode;
@@ -175,7 +178,7 @@ export function GoalTypeForm({
       <input type="hidden" name="courseId" value={courseId} />
       {activityId && <input type="hidden" name="activityId" value={activityId} />}
       <input type="hidden" name="creationKey" value={creationKey} />
-      <PickerField addToCanvas={addToCanvas} />
+      <PickerField addToCanvas={addToCanvas} from={from} />
       <input type="hidden" name="content" value={contentIds.join(",")} />
       {guideIds.length > 0 && <input type="hidden" name="guide" value={guideIds.join(",")} />}
       <input type="hidden" name="mode" value={mode} />

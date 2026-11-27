@@ -1,3 +1,5 @@
+import { keepFrom, originListPath } from "@/courses/origin";
+import { keepPicker } from "@/lti/picker";
 import { activityListPath } from "@/tools/catalog";
 
 /**
@@ -60,7 +62,26 @@ export const setupPath = (courseId: string, activityId: string, step: WizardStep
  * Activities list the activity is in (Not assigned for a draft), where the
  * teacher picks it up again.
  */
-export const finishLaterPath = (courseId: string, activity: { assigned: boolean }) => activityListPath(courseId, activity);
+export const finishLaterPath = (courseId: string, activity: { assigned: boolean }, from: string | null = null) =>
+  from ? originListPath(from) : activityListPath(courseId, activity);
+
+/**
+ * Where a saved activity's step goes after its form saves: "Save and finish
+ * later", Next's step or a step in the list, or null to stay. `from` is the
+ * checked course the teacher opened it from (feedback 12b101b4), kept on every
+ * step and led back to by "Save and finish later".
+ */
+export function savedStepRedirect(
+  activity: { courseId: string; id: string; assigned: boolean },
+  step: unknown,
+  intent: unknown,
+  picker: string | null,
+  from: string | null,
+): string | null {
+  if (intent === "later") return keepPicker(finishLaterPath(activity.courseId, activity, from), picker);
+  const target = savedStepTarget(step, intent);
+  return target ? keepFrom(keepPicker(setupPath(activity.courseId, activity.id, target), picker), from) : null;
+}
 
 /** Where a saved activity's step goes after saving: Next's step, a `goto:<step>` step, or null to stay. */
 export function savedStepTarget(step: unknown, intent: unknown): WizardStep | null {

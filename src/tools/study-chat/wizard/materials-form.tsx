@@ -39,6 +39,7 @@ export function MaterialsPickForm({
   back,
   activityId,
   savedStep,
+  from = null,
 }: {
   courseId: string;
   formKey: string;
@@ -49,6 +50,8 @@ export function MaterialsPickForm({
   activityId?: string;
   /** Step 1 of the saved activity, for "+ Materials" to come back to; step 1 of a new chat without it. */
   savedStep?: string;
+  /** The course the teacher opened the activity from (checked), kept through its saves (feedback 12b101b4). */
+  from?: string | null;
 }) {
   const [state, action, pending] = useActionState<MaterialsPickState, FormData>(wizardMaterialsAction, {});
   const router = useRouter();
@@ -77,7 +80,7 @@ export function MaterialsPickForm({
       <input type="hidden" name="courseId" value={courseId} />
       {activityId && <input type="hidden" name="activityId" value={activityId} />}
       <input type="hidden" name="formKey" value={formKey} />
-      <PickerField addToCanvas={addToCanvas} />
+      <PickerField addToCanvas={addToCanvas} from={from} />
       {rows.length === 0 ? (
         <p className="border border-dashed border-border-strong px-6 py-10 text-muted">This course has no materials yet. Add one below.</p>
       ) : (
