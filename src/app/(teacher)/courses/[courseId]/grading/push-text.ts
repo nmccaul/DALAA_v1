@@ -4,7 +4,7 @@
  * URL, and why Canvas refused.
  */
 
-import type { PushFailure, PushSummary, SendResult } from "@/lti/grades";
+import type { PushFailure, PushSummary, RefusedStudent, SendResult } from "@/lti/grades";
 import type { PushCategory } from "@/results/push-plan";
 
 export const CATEGORY: Record<PushCategory, { title: string; detail: string }> = {
@@ -26,7 +26,10 @@ export const CATEGORY: Record<PushCategory, { title: string; detail: string }> =
     detail: "These were graded when the assignment was worth different points. DALAA won't rescale them.",
   },
   unchanged: { title: "Already in Canvas", detail: "Canvas already has this grade." },
-  not_graded: { title: "Not graded yet", detail: "Nothing is sent for them. They don't get a zero." },
+  not_graded: {
+    title: "Not graded yet",
+    detail: "Nothing is sent for them. They don't get a zero, and they don't hold back the others.",
+  },
 };
 
 /** The order the preview lists categories in: what needs a decision first. */
@@ -85,13 +88,47 @@ export function readSummary(q: Record<string, string | string[] | undefined>): P
   return { sent: n("sent"), failed: n("failed"), skipped, ...(why ? { why } : {}) };
 }
 
-/** The result, one sentence per kind, for the line under the assignment. */
-export function summaryLines(s: PushSummary): string[] {
+/** At most this many names in the banner; the rest are counted. */
+const NAMES_SHOWN = 5;
+
+function names(refused: RefusedStudent[]): string {
+  const shown = refused.slice(0, NAMES_SHOWN).map((r) => (r.studentView ? `${r.name} (Student View)` : r.name));
+  const more = refused.length - shown.length;
+  return more > 0 ? `${shown.join(", ")} and ${more} more` : shown.join(", ");
+}
+
+/**
+ * Canvas makes a new Student View test student each time Student View is
+ * reset, and turns down grades for the old one (feedback 1b203924).
+ */
+export const OLD_TEST_STUDENT =
+  "Canvas makes a new Student View test student each time Student View is reset and turns down grades for the old one. Real students aren't affected, and nothing needs fixing.";
+
+/** Canvas refused only Student View test students, all of them named: nothing for the teacher to fix. */
+export function onlyTestStudentsRefused(s: PushSummary, refused: RefusedStudent[]): boolean {
+  return s.failed > 0 && refused.length === s.failed && refused.every((r) => r.studentView);
+}
+
+/**
+ * The result, one sentence per kind, for the line under the assignment.
+ * `refused` names who Canvas didn't take (src/lti/grades.ts lastPushRefused);
+ * when they're all Student View test students, that's said plainly instead
+ * of "try again".
+ */
+export function summaryLines(s: PushSummary, refused: RefusedStudent[] = []): string[] {
   const lines = s.sent ? [`Sent ${plural(s.sent, "grade", "grades")} to Canvas.`] : s.failed ? [] : ["No new grades to send."];
-  if (s.failed) lines.push(`Canvas didn't take ${plural(s.failed, "grade", "grades")}. ${FAILURE[s.why ?? "unavailable"]}`);
+  if (s.failed) {
+    const who = refused.length === s.failed ? `: ${names(refused)}` : "";
+    const why = onlyTestStudentsRefused(s, refused) ? OLD_TEST_STUDENT : FAILURE[s.why ?? "unavailable"];
+    lines.push(`Canvas didn't take ${plural(s.failed, "grade", "grades")}${who}. ${why}`);
+  }
   for (const category of PREVIEW_ORDER) {
     const n = s.skipped[category];
     if (n) lines.push(`${CATEGORY[category].title}: ${plural(n, "student", "students")}.`);
+  }
+  // "Is it not sending because not everyone has submitted?" (feedback 1b203924): no.
+  if (s.skipped.not_graded) {
+    lines.push("Students not graded yet are skipped. Each graded student is sent on their own, so they don't hold back the others.");
   }
   return lines;
 }

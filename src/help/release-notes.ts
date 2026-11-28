@@ -23,6 +23,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "In \"Try it as a student\", the sample student now says goodbye and stops once the chat wraps up, instead of sending messages until time runs out.",
       "On the Help tab, \"I think this is fixed\" next to one of your open feedback reports tells us it looks fixed to you; it shows \"Fixed? Waiting for an admin to confirm\" until we check and close it. A feedback report opened from the Help tab now has ‹ Back to feedback, which returns to the list you were looking at.",
       "In the Gradebook, click an assignment's title to see only its grades; \"Show all assignments\" brings the rest back. The page remembers your choice when you reload it.",
+      "After Send to Canvas, a grade Canvas didn't take now names the student. When it's an old Canvas Student View test student, it says so: Canvas replaced that test student, real students aren't affected, and nothing needs fixing. Students not graded yet never hold back the others; each graded student is sent on their own.",
     ],
   },
   {

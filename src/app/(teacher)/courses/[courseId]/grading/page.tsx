@@ -4,13 +4,14 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
+import { lastPushRefused } from "@/lti/grades";
 import { isLtiCourse } from "@/lti/roster";
 import { getGradebook, type Gradebook } from "@/results/gradebook";
 import { byRecentSubmission, listCourseGrades } from "@/results/grading";
 import { GradePanel } from "./grade-panel";
 import { GradebookGrid, type GridColumn, type GridRow } from "./gradebook-grid";
 import { InsightsView } from "./insights-view";
-import { REFUSAL, readSummary, summaryLines } from "./push-text";
+import { REFUSAL, onlyTestStudentsRefused, readSummary, summaryLines } from "./push-text";
 import { resultsView, type ResultsView } from "./view";
 
 export const metadata: Metadata = { title: "Results" };
@@ -90,8 +91,11 @@ async function GradebookView({
   const assignment = typeof q.assignment === "string" && columns.some((c) => c.activityId === q.assignment) ? q.assignment : null;
   const open = typeof q.open === "string" ? q.open : null;
   const pushed = typeof q.pushed === "string" ? columns.find((c) => c.activityId === q.pushed) : undefined;
-  // Some grades Canvas didn't take: a warning, not a calm note (feedback 3ad0e5ab).
-  const pushFailed = pushed !== undefined && readSummary(q).failed > 0;
+  const summary = readSummary(q);
+  // Who Canvas didn't take, from the stored push (feedback 1b203924).
+  const refused = pushed && summary.failed > 0 ? await lastPushRefused(db(), actor, pushed.activityId) : [];
+  // Some grades Canvas didn't take: a warning, not a calm note (feedback 3ad0e5ab), unless only old test students.
+  const pushFailed = pushed !== undefined && summary.failed > 0 && !onlyTestStudentsRefused(summary, refused);
   const pushError = typeof q.pusherror === "string" ? (REFUSAL[q.pusherror as keyof typeof REFUSAL] ?? REFUSAL.unavailable) : null;
 
   const gridColumns: GridColumn[] = columns.map((c) => ({
@@ -159,7 +163,7 @@ async function GradebookView({
           }`}
         >
           <p className="font-bold">{pushed.title}</p>
-          {pushError ? <p>{pushError}</p> : summaryLines(readSummary(q)).map((line) => <p key={line}>{line}</p>)}
+          {pushError ? <p>{pushError}</p> : summaryLines(summary, refused).map((line) => <p key={line}>{line}</p>)}
         </div>
       )}
       <GradebookGrid courseId={courseId} columns={gridColumns} rows={gridRows} linked={linked} base={base} open={open} initialAssignment={assignment} />

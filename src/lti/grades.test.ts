@@ -4,7 +4,7 @@ import { CanvasError, type AgsLineItem } from "@/canvas/client";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { previewGrades, pushFailure, sendGrades } from "./grades";
+import { lastPushRefused, previewGrades, pushFailure, sendGrades } from "./grades";
 import { loadToolKey, type ToolKey } from "./keys";
 import { ensurePlatform, envRegistration, type Platform } from "./registration";
 import { forgetServiceTokens } from "./services";
@@ -36,6 +36,7 @@ describe("previewGrades / sendGrades", () => {
   let held: Map<string, Map<string, number>>;
   let posted: { column: string; userId: string; scoreGiven: number }[];
   let failPostsFor: Set<string>;
+  let failStatus: number;
 
   const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -59,7 +60,7 @@ describe("previewGrades / sendGrades", () => {
     }
     if (service === "scores" && init?.method === "POST") {
       const score = JSON.parse(String(init.body)) as { userId: string; scoreGiven: number };
-      if (failPostsFor.has(score.userId)) return new Response("", { status: 500 });
+      if (failPostsFor.has(score.userId)) return new Response("", { status: failStatus });
       posted.push({ column, userId: score.userId, scoreGiven: score.scoreGiven });
       if (!held.has(column)) held.set(column, new Map());
       held.get(column)!.set(score.userId, score.scoreGiven);
@@ -80,6 +81,7 @@ describe("previewGrades / sendGrades", () => {
     held = new Map();
     posted = [];
     failPostsFor = new Set();
+    failStatus = 500;
     db = await testDb();
     const [{ id: inst }] = await db.query<{ id: string }>("select id from institutions");
     const [{ id }] = await db.query<{ id: string }>(
@@ -222,6 +224,34 @@ describe("previewGrades / sendGrades", () => {
     expect(await send()).toMatchObject({ ok: true, summary: { sent: 1, failed: 0 } });
     const lines = await db.query<{ status: string }>("select status from grade_push_lines order by sent_at");
     expect(lines.map((l) => l.status)).toEqual(["sent", "failed", "sent"]);
+  });
+
+  it("keeps why Canvas refused each line, and names who on the last push (feedback 1b203924)", async () => {
+    await student("ana", { score: 8 });
+    const old = await student("testview", { score: 9 });
+    await db.query("update course_members set student_view = true where user_id = $1", [old]);
+    await db.query("update users set display_name = 'Test Student' where id = $1", [old]);
+    failPostsFor.add("sub-testview");
+    failStatus = 422;
+    expect(await send()).toEqual({ ok: true, summary: { sent: 1, failed: 1, skipped: {}, why: "rejected" } });
+    const lines = await db.query("select status, failure, canvas_status from grade_push_lines order by status");
+    expect(lines).toEqual([
+      { status: "failed", failure: "rejected", canvas_status: 422 },
+      { status: "sent", failure: null, canvas_status: null },
+    ]);
+    expect(await lastPushRefused(db, prof, activity)).toEqual([{ name: "Test Student", studentView: true, why: "rejected" }]);
+
+    // Only the most recent push counts, and only for a teacher of the course.
+    failPostsFor.clear();
+    await send();
+    expect(await lastPushRefused(db, prof, activity)).toEqual([]);
+    expect(await lastPushRefused(db, { ...prof, userId: randomUUID() }, activity)).toEqual([]);
+  });
+
+  it("refuses a stored reason Canvas never gives", async () => {
+    await expect(
+      db.query("insert into grade_push_lines (push_id, user_id, score, status, failure) values (gen_random_uuid(), gen_random_uuid(), 1, 'failed', 'bogus')"),
+    ).rejects.toThrow();
   });
 
   it("finds the activity's column by resource id when the launch didn't name one", async () => {
