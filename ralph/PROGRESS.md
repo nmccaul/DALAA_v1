@@ -113,3 +113,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - `src/activities/draft-reminder.ts` (tested): `showsReminder`, `reminderText`; the cookie now holds when it ends plus every draft id it was hidden for, so ✕ stays hidden until a draft it hasn't seen appears (finishing or deleting one doesn't bring it back). An old one-draft cookie simply shows the line again once.
 - Browser (local :3001, ralph.t04, BUS M 499) at 1280 and 390: line shows on Assigned, not on the other two views; ✕ then reload keeps it hidden; cookie cleared afterwards. No data changed.
 - Dated bullet under D-037; release note under 2026-11-27.
+
+## 2026-11-28 01:21 UTC · T15 CHECKPOINT B (final) · done
+- Lint, typecheck and tests green locally (105 files, 757 tests) on Node 22; branch pushed and contained origin/main.
+- Two new migrations since checkpoint A, both additive (nullable columns): `20261127211416_feedback_reporter_fixed.sql`, `20261128005622_grade_push_line_failure.sql`. `scripts/migrate-prod.sh` applied both, ended "migrations up to date".
+- PR #197 (https://github.com/nmccaul/DALAA_v1/pull/197) auto-merged on green `ci-ok`; main HEAD 82d09eb. Production deployment READY; /api/health db up, /api/lti/jwks returns a key, / is 200.
+- Resolved T07–T14's reports in production with that sha and PR: 93c4ef12, 04dcbd11, 1cb6be4f, 62dab3f4, 5bae9835, 26038b58, 42c212ac, 2e7b873b, e76cb618, 1b203924, 9256c994, b0f7f57b. 3ad0e5ab and fdec6a2c left open (T12's cause not confirmed). The notes on 04dcbd11 and e76cb618 say filtering by kind/Canvas module isn't included yet.
+- All tasks done; `ralph/STATUS` = DONE. Branch pulled origin/main afterwards.

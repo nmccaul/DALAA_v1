@@ -52,4 +52,4 @@ add a release-notes line when a teacher would notice.
 
 - [x] **T14 Fewer "finish setting up" reminders on the Activities tab.** Report b0f7f57b. Now that *Not assigned* exists, replace the one-reminder-per-draft banners (`courses/[courseId]/draft-reminder.tsx`, the course page) with one line on the *Assigned* view: "2 activities aren't finished. See them ›" linking to `?show=unassigned`; none on *Not assigned* itself. Keep ✕ (hides it until a new draft appears) and "Remind me tomorrow". Dated bullet under D-037 (Nathan, 2026-11-27, Lucy's b0f7f57b). **Done when:** test for when the line shows; browser check.
 
-- [ ] **T15 CHECKPOINT B (final).** Checkpoint procedure, resolve the reports of T07–T14 that are `[x]` (not 3ad0e5ab/fdec6a2c unless T12 confirmed the cause), then write `DONE` to `ralph/STATUS`.
+- [x] **T15 CHECKPOINT B (final).** Checkpoint procedure, resolve the reports of T07–T14 that are `[x]` (not 3ad0e5ab/fdec6a2c unless T12 confirmed the cause), then write `DONE` to `ralph/STATUS`.
