@@ -25,6 +25,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "In the Gradebook, click an assignment's title to see only its grades; \"Show all assignments\" brings the rest back. The page remembers your choice when you reload it.",
       "After Send to Canvas, a grade Canvas didn't take now names the student. When it's an old Canvas Student View test student, it says so: Canvas replaced that test student, real students aren't affected, and nothing needs fixing. Students not graded yet never hold back the others; each graded student is sent on their own.",
       "On an activity's Materials step, what it uses is now listed first, and each material has a View link that opens it in a new tab.",
+      "On the Activities tab, the reminders to finish setting up each draft are now one line on Assigned: \"2 activities aren't finished. See them ›\" opens Not assigned. ✕ hides it until you start another draft; \"Remind me tomorrow\" hides it for a day.",
     ],
   },
   {

@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
-import { REMINDER_COOKIE, reminderHidden } from "@/activities/draft-reminder";
+import { REMINDER_COOKIE, showsReminder } from "@/activities/draft-reminder";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { ActivityMenu } from "@/components/activity-menu";
@@ -60,9 +60,9 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const base = `/courses/${course.id}`;
   const assignOn = assignToCanvasOn();
   const view = activitiesView(q.show, { assigned: assigned.length, notAssigned: notAssigned.length, other: elsewhere.length });
-  // The draft last worked on, so a teacher who stepped away finds it again (feedback 391261a8).
-  const jar = await cookies();
-  const lastDraft = notAssigned.filter((a) => a.status === "draft").sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+  // Unfinished drafts, so a teacher who stepped away finds them again (feedback 391261a8, b0f7f57b).
+  const drafts = notAssigned.filter((a) => a.status === "draft").map((a) => a.id);
+  const remind = showsReminder(view, drafts, (await cookies()).get(REMINDER_COOKIE)?.value);
   const views = [
     { key: "assigned", label: "Assigned", count: assigned.length },
     { key: "unassigned", label: "Not assigned", count: notAssigned.length },
@@ -99,11 +99,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           ))}
         </nav>
       </div>
-      {lastDraft && view !== "unassigned" && !reminderHidden(jar.get(REMINDER_COOKIE)?.value, lastDraft.id) && (
-        <DraftReminder draftId={lastDraft.id} href={teacherActivityPath(course.id, lastDraft)}>
-          You&apos;re still setting up <b>{lastDraft.title}</b>. Drafts are under Not assigned.
-        </DraftReminder>
-      )}
+      {remind && <DraftReminder draftIds={drafts} href={`${base}?show=unassigned`} />}
       {q.deleted && (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
           Activity deleted.
