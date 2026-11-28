@@ -94,3 +94,10 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Old links that already passed `?assignment=` (Insights' "grades", the grade panel's Close/Next, a Send to Canvas redirect) now land on the single column the same way, instead of a prefilled search box.
 - Browser (local :3001, ralph.t04, BUS M 499): title click → one column at 1280; reload keeps it; 390px fine; Show all → all 3 columns. No data changed.
 - Out of scope, still open in e76cb618: filtering the grid by Canvas module. Release note under 2026-11-27.
+
+## 2026-11-28 01:01 UTC · T12 Send to Canvas: keep Canvas's reason and name who it refused · done
+- New additive migration `20261128005622_grade_push_line_failure.sql`: nullable `grade_push_lines.failure` (the PushFailure, checked) and `canvas_status` (HTTP status only; no headers or bodies). `sendGrades` writes them on each failed line. Applied locally; **goes to production at CHECKPOINT B (T15)**.
+- `lastPushRefused` (`src/lti/grades.ts`, teacher-scoped, tested) reads who Canvas didn't take on the assignment's latest finished push. The banner (`grading/page.tsx`, `push-text.ts`) names them (first 5, then "and N more"); when every refused student is a Student View test student it says Canvas replaced that test student, real students aren't affected, nothing needs fixing, and the banner is the calm blue one instead of the warning.
+- Lucy's question: with any "Not graded yet", the banner adds that ungraded students are skipped and each graded student is sent on their own. The preview's Not graded detail says so too.
+- Browser (local :3001, ralph.t04, BUS M 499): inserted a mocked finished push with one refused line (422) and set a student's `student_view` for the check: calm banner with the test-student wording at 1280; with `student_view` set back, warning banner naming the student at 390. Mocked push deleted, `student_view` restored to NULL.
+- The cause (old Student View user replaced by Canvas) is still the likely one, not confirmed: the next refusal in production will have its status stored. 3ad0e5ab and fdec6a2c stay open per the task. Release note under 2026-11-27.
