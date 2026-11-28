@@ -88,3 +88,9 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Stored in new additive migration `20261127211416_feedback_reporter_fixed.sql` (nullable `feedback_reports.reporter_fixed_at`), not a fix status: `feedback_fixes` statuses belong to the bug loop, its check constraint has no room for it, and `fixed` would drop the report from `openReports`. `sayFixed` in `mine.ts` (tested: own open report only, first time kept). **Goes to production at CHECKPOINT B (T15).**
 - Browser (local :3001, ralph.t04): button → label at 1280 and 390; as admin (local flag toggled and set back), filtered Help list → report → ‹ Back to feedback lands on the same filtered list; inbox tag shown. Cleared the test flag afterwards; local data as before.
 - Release note under 2026-11-27.
+
+## 2026-11-28 00:55 UTC · T11 Gradebook: one assignment at a time · done
+- Each column's title in the Gradebook is now a link to `?assignment=<id>` (`gradebookPath`); with one picked, the grid shows only that column (by id, not a title search, so "First Offer" no longer also shows "First Offer, again") and the Assignment search is replaced by its title and "Show all assignments". Pure rule in `grading/columns.ts` (`shownColumns`, tested).
+- Old links that already passed `?assignment=` (Insights' "grades", the grade panel's Close/Next, a Send to Canvas redirect) now land on the single column the same way, instead of a prefilled search box.
+- Browser (local :3001, ralph.t04, BUS M 499): title click → one column at 1280; reload keeps it; 390px fine; Show all → all 3 columns. No data changed.
+- Out of scope, still open in e76cb618: filtering the grid by Canvas module. Release note under 2026-11-27.
