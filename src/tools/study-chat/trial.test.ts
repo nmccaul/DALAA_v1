@@ -10,6 +10,8 @@ import { STUDY_CHAT } from "./create";
 import type { StudyChatSettings } from "./schema";
 import { answering, draft, mirrorMaterials } from "./test-fixtures";
 import {
+  GOODBYE,
+  readGoodbye,
   runTrial,
   studentPrompt,
   trialEnding,
@@ -153,6 +155,35 @@ describe("trying a Study Chat with a sample student", () => {
     expect(open.ok && open.trial.turns).toHaveLength(TRIAL_MAX_TURNS);
   });
 
+  it("stops within one more turn once the chat wraps up and the sample student says goodbye (feedback 26038b58)", async () => {
+    const id = await activity(draft({ completion: completion({ maxTurns: null }) }));
+    const m: TrialModels = {
+      ...models(),
+      student: answering("I'd wait until cash flow is steadier.", `Thanks, that helped. Bye! ${GOODBYE}`, "Still here?"),
+      reply: answering("Good point. That's all for today, thanks for chatting!", "Goodbye!"),
+    };
+    const outcome = await runTrial(db, m, prof, id, "strong");
+    expect(outcome).toMatchObject({ ok: true, trial: { endedBy: "student" } });
+    if (!outcome.ok) return;
+    expect(outcome.trial.turns).toEqual([
+      { message: "I'd wait until cash flow is steadier.", reply: "Good point. That's all for today, thanks for chatting!" },
+      { message: "Thanks, that helped. Bye!", reply: "Goodbye!" },
+    ]);
+    expect(trialEnding(outcome.trial)).toBe("Ended after 2 messages from the sample student: the chat wrapped up and they said goodbye.");
+    expect(sent(m.student)).toContain(GOODBYE);
+    expect((m.grader as MockLanguageModelV4).doGenerateCalls).toHaveLength(1);
+  });
+
+  it("keeps going after a goodbye that comes before the chat's minimum, and checks the question only from the minimum on", async () => {
+    const id = await activity(draft({ completion: completion({ maxTurns: null, minTurns: 3, question: "Should Maya open it?" }) }));
+    const m: TrialModels = { ...models(answered), student: answering(`Bye ${GOODBYE}`, "I'd wait.") };
+    const outcome = await runTrial(db, m, prof, id, "struggling");
+    expect(outcome).toMatchObject({ ok: true, trial: { endedBy: "question" } });
+    expect(outcome.ok && outcome.trial.turns.map((t) => t.message)).toEqual(["Bye", "I'd wait.", "I'd wait."]);
+    // One check, after the third message.
+    expect((m.check as MockLanguageModelV4).doGenerateCalls).toHaveLength(1);
+  });
+
   it("never gives the sample student the guide, the situation, the rubric, touchpoints or positions", async () => {
     const m = models(answered);
     await runTrial(db, m, prof, await activity(draft({ completion: completion({ question: "Should Maya open it?" }) })), "struggling");
@@ -232,6 +263,14 @@ describe("trying a Study Chat with a sample student", () => {
     const id = await activity(draft());
     expect(await runTrial(db, models(), student, id, "strong")).toEqual({ ok: false, reason: "We couldn't find that activity." });
     expect(await db.query("select 1 from sample_trials")).toEqual([]);
+  });
+});
+
+describe("readGoodbye", () => {
+  it("takes the mark out, and a bare mark still says goodbye", () => {
+    expect(readGoodbye("Why is cash tight?")).toEqual({ message: "Why is cash tight?", goodbye: false });
+    expect(readGoodbye(`Thanks, bye! ${GOODBYE}`)).toEqual({ message: "Thanks, bye!", goodbye: true });
+    expect(readGoodbye(` ${GOODBYE}\n`)).toEqual({ message: "Thanks, goodbye!", goodbye: true });
   });
 });
 

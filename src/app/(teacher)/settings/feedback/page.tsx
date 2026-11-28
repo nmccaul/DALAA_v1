@@ -39,6 +39,9 @@ export default async function FeedbackReportsPage() {
                   <span>{r.reporter}</span>
                   <span><LocalTime value={r.createdAt} /></span>
                   {r.status === "resolved" && <span className="rounded-control bg-accent-soft px-2 py-0.5">Resolved</span>}
+                  {r.status === "open" && r.reporterFixedAt && (
+                    <span className="rounded-control bg-warn-soft px-2 py-0.5 font-bold text-warn-text">They think it&apos;s fixed</span>
+                  )}
                   {r.hasScreenshot && <span>Has a picture</span>}
                 </div>
                 <p className="line-clamp-2">{r.note}</p>

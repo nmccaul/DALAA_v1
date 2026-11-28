@@ -14,7 +14,15 @@ import { keepPicker } from "@/lti/picker";
 import { addMaterialPath, materialsQuery, savedIds, type AddKind, type MaterialIds } from "./query";
 import { WIZARD_FORM_ID } from "./steps";
 
-export type PickRow = { value: string; name: string; source: MaterialSource; seenBy: SeenBy; checked: boolean };
+export type PickRow = {
+  value: string;
+  name: string;
+  source: MaterialSource;
+  seenBy: SeenBy;
+  checked: boolean;
+  /** The saved material's page, opened in a new tab (feedback 9256c994); null for an unsaved Canvas item. */
+  view: string | null;
+};
 
 const ADD: { kind: AddKind; label: string }[] = [
   { kind: "upload", label: "Upload a file" },
@@ -119,14 +127,21 @@ export function MaterialsPickForm({
           <fieldset className="flex flex-col" onChange={recount}>
             <legend className="sr-only">Materials</legend>
             {rows.map((r) => (
-              <label key={r.value} hidden={!visible(r)} className="flex items-start gap-3 border-b border-border px-1 py-3 hover:bg-subtle">
-                <input type="checkbox" name="pick" value={r.value} defaultChecked={drawn.includes(r.value)} className="mt-1 size-4 accent-[var(--color-accent)]" />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-bold break-words">{r.name}</span>
-                  <span className="text-[13px] text-muted">{SOURCE_LABEL[r.source]}</span>
-                </span>
+              <div key={r.value} hidden={!visible(r)} className="flex items-start gap-3 border-b border-border px-1 py-3 hover:bg-subtle">
+                <label className="flex min-w-0 flex-1 items-start gap-3">
+                  <input type="checkbox" name="pick" value={r.value} defaultChecked={drawn.includes(r.value)} className="mt-1 size-4 accent-[var(--color-accent)]" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-bold break-words">{r.name}</span>
+                    <span className="text-[13px] text-muted">{SOURCE_LABEL[r.source]}</span>
+                  </span>
+                </label>
+                {r.view && (
+                  <a href={r.view} target="_blank" rel="noopener" className="text-sm text-accent-text hover:underline">
+                    View<span className="sr-only"> {r.name} (opens in a new tab)</span>
+                  </a>
+                )}
                 <SeenByPill seenBy={r.seenBy} />
-              </label>
+              </div>
             ))}
             {shown === 0 && (
               <p role="status" className="border border-dashed border-border-strong px-6 py-10 text-muted">

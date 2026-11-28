@@ -1,15 +1,5 @@
 "use client";
 
-import {
-  ChalkboardTeacher,
-  ChatsCircle,
-  LinkSimple,
-  Lightbulb,
-  Question,
-  Scales,
-  ShieldCheck,
-  type Icon,
-} from "@phosphor-icons/react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button, inputStyles } from "@/components/ui";
@@ -21,17 +11,6 @@ import type { TypeSuggestion } from "../suggest";
 import { WIZARD_FORM_ID } from "./steps";
 import { reasonField } from "./type-request";
 import { groupOf, styleLabel, TYPE_GROUPS, type TypeGroup } from "./types";
-
-/** A picture for each kind, so the seven are easy to tell apart at a glance. */
-const ICONS: Record<string, Icon> = {
-  explain: ChalkboardTeacher,
-  apply: Lightbulb,
-  argue: Scales,
-  question: Question,
-  practice: ChatsCircle,
-  connect: LinkSimple,
-  defend: ShieldCheck,
-};
 
 /**
  * Step 2: how students will work with the AI first, then what they'll be
@@ -124,7 +103,7 @@ export function GoalTypeForm({
 
   const card = (g: TypeGroup, leading: boolean) => {
     const checked = g.key === group;
-    const Icon = ICONS[g.key];
+    const Icon = g.icon;
     const reason = reasonOf(g);
     return (
       <li key={g.key} className={leading ? "sm:col-span-2" : ""}>

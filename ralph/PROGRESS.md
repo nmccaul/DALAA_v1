@@ -55,3 +55,61 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Dialog facts come from `deleteFacts` + `deleteImpact` (`src/activities/delete.ts`, tested): started and finished counts, in Canvas Assignments or not (DALAA doesn't delete the Canvas assignment; students opening it get an error; grades sent stay), materials stay. The tick box wording moved there too.
 - Browser (local :3001, ralph.t04): a throwaway draft (inserted locally, copied from "Second store") on step 3 at 1280 and 390: link top right, dialog lists the four facts; Delete → T04 `?show=unassigned&deleted=1` with "Activity deleted."; row gone. No local assigned activity with attempts to view that wording; covered by the unit test.
 - Deleting an activity opened from another course lands on its own course's list, not the origin's. Release note under 2026-11-27.
+
+## 2026-11-27 20:56 UTC · T06 CHECKPOINT A · done
+- Lint, typecheck and tests green locally (102 files, 736 tests) on Node 22; branch was pushed and contained origin/main.
+- One new migration since the last checkpoint, `20261127203241_activity_copied_from.sql` (nullable column + partial index, additive); `scripts/migrate-prod.sh` applied it, ended "migrations up to date".
+- PR #196 (https://github.com/nmccaul/DALAA_v1/pull/196) auto-merged on green `ci-ok`; main HEAD a8af7d7. Production deployment for it READY; /api/health db up, /api/lti/jwks returns a key, / is 200.
+- Resolved T01–T05's reports in production with that sha and PR: 7f546133, 9432d821, 28111d81, a5b82cc1, 12b101b4, f7026325, 9689e37b, 3f6eb879, 3b4df425.
+- Branch pulled origin/main afterwards.
+
+## 2026-11-27 21:03 UTC · T07 Activity type on each row · done
+- Rows on Assigned, Not assigned and From my other courses now read "Study Chat · Argue · Debate" (the wizard's `typeName`) with the wizard's group icon. 04dcbd11's "icon mismatch" was the list using the tool's chat icon for every row while the wizard showed per-kind icons.
+- Icons moved into `TYPE_GROUPS` (`wizard/types.ts`, `icon` per group; ssr imports) so step 2 and the list share them. Chassis stays tool-blind: `ToolScreens.kind` (`src/tools/screens.ts`, type in `src/tools/kind.ts`) and `describeActivity`; Study Chat's reader is `study-chat/kind.ts` (tested). The list queries now return `settings` whole, unread by the chassis.
+- A draft with no mode yet (or old settings without one) falls back to "Study Chat" and the chat icon (seen on BUS M 499's one assigned activity locally).
+- Browser (local :3001, ralph.t04): BUS M 499 Not assigned shows scales/question/teach-back icons and labels at 1280 and 390; T04's other-courses rows show the kind. No data changed.
+- Not done (out of scope, in 04dcbd11): filtering or grouping the list by kind or Canvas module. Release note under 2026-11-27.
+
+## 2026-11-27 21:08 UTC · T08 Setup page wording · done
+- 1cb6be4f: one sentence, `AI_ONLY_EXPLAINED` in `src/content/guide-label.ts` (what AI-only notes are, with the negotiation example from her report), on the Setup tab's Materials line and in the Materials tab's help paragraph under the list (that tab's "Show" filters are by source, so there's no AI-only filter to attach it to).
+- 62dab3f4: "Publish it to students" now links "Not assigned" (`activityListPath(…, {assigned:false})`) instead of the course page; its line says to open a draft there, try it as a student, then Assign or Publish on its last step. Create still goes to + Activity.
+- 5bae9835: new short "Activities in Canvas modules" section on Setup: once it's in Canvas Assignments (Assign, or added from Canvas), add it to a module like any assignment (Modules, + on the module, Assignment).
+- Browser (local :3001, ralph.t04, BUS M 499 Setup) at 1280 and 390: links go to + Activity and `?show=unassigned`, text wraps fine. No data changed. Release note under 2026-11-27.
+
+## 2026-11-27 21:12 UTC · T09 Practice run: the sample student stops when the chat wraps up · done
+- The trial already stopped at the message limit and the answered question; what it lacked was the real student's Finish. The sample student's prompt now says: once the AI has wrapped up (summed up, thanked, said goodbye) and asks nothing, write a short polite goodbye ending in `[END]` (`GOODBYE`, `readGoodbye` in `src/tools/study-chat/trial.ts`). The goodbye is sent, the AI answers it, and the run stops (`endedBy: "student"`, "the chat wrapped up and they said goodbye"). No extra model calls.
+- Reuses the chat's own rules (`reachedMinimum` from `chat.ts`): a goodbye before the chat's minimum is just a message, and the question check now runs only from the minimum on, as for a real student (before, the trial could end on the question earlier than a real student could).
+- Ends on the goodbye even when the teacher turned off "students can finish": a real student would just stop typing there, and a run that chats on is what Lucy reported.
+- Tests in `trial.test.ts` (AI closes → stops within one more turn; early goodbye ignored; mark stripped). No browser check: nothing on screen changed but the ending line, and a real run costs AI calls; the next real practice run is the check. Release note under 2026-11-27.
+
+## 2026-11-27 21:19 UTC · T10 Feedback inbox: Back, and "I think this is fixed" · done
+- 42c212ac: report links in the Help tab's Everyone's feedback carry `?from=<that list, filters kept>`; the report page's back link reads "‹ Back to feedback" and returns there, else "‹ All feedback reports" to the inbox. `src/feedback/back.ts` (tested) accepts only a `/courses/<uuid>/help` path, nothing else; Mark resolved keeps it.
+- 2e7b873b: "I think this is fixed" on the sender's own open reports (Help → Your feedback). It shows "Fixed? Waiting for an admin to confirm"; the report stays open. Admins see the same label in Everyone's feedback, a "They think it's fixed" tag in the Settings inbox, and "<name> thinks this is fixed (date). Check it, then mark it resolved." above Mark resolved; resolving works as before.
+- Stored in new additive migration `20261127211416_feedback_reporter_fixed.sql` (nullable `feedback_reports.reporter_fixed_at`), not a fix status: `feedback_fixes` statuses belong to the bug loop, its check constraint has no room for it, and `fixed` would drop the report from `openReports`. `sayFixed` in `mine.ts` (tested: own open report only, first time kept). **Goes to production at CHECKPOINT B (T15).**
+- Browser (local :3001, ralph.t04): button → label at 1280 and 390; as admin (local flag toggled and set back), filtered Help list → report → ‹ Back to feedback lands on the same filtered list; inbox tag shown. Cleared the test flag afterwards; local data as before.
+- Release note under 2026-11-27.
+
+## 2026-11-28 00:55 UTC · T11 Gradebook: one assignment at a time · done
+- Each column's title in the Gradebook is now a link to `?assignment=<id>` (`gradebookPath`); with one picked, the grid shows only that column (by id, not a title search, so "First Offer" no longer also shows "First Offer, again") and the Assignment search is replaced by its title and "Show all assignments". Pure rule in `grading/columns.ts` (`shownColumns`, tested).
+- Old links that already passed `?assignment=` (Insights' "grades", the grade panel's Close/Next, a Send to Canvas redirect) now land on the single column the same way, instead of a prefilled search box.
+- Browser (local :3001, ralph.t04, BUS M 499): title click → one column at 1280; reload keeps it; 390px fine; Show all → all 3 columns. No data changed.
+- Out of scope, still open in e76cb618: filtering the grid by Canvas module. Release note under 2026-11-27.
+
+## 2026-11-28 01:01 UTC · T12 Send to Canvas: keep Canvas's reason and name who it refused · done
+- New additive migration `20261128005622_grade_push_line_failure.sql`: nullable `grade_push_lines.failure` (the PushFailure, checked) and `canvas_status` (HTTP status only; no headers or bodies). `sendGrades` writes them on each failed line. Applied locally; **goes to production at CHECKPOINT B (T15)**.
+- `lastPushRefused` (`src/lti/grades.ts`, teacher-scoped, tested) reads who Canvas didn't take on the assignment's latest finished push. The banner (`grading/page.tsx`, `push-text.ts`) names them (first 5, then "and N more"); when every refused student is a Student View test student it says Canvas replaced that test student, real students aren't affected, nothing needs fixing, and the banner is the calm blue one instead of the warning.
+- Lucy's question: with any "Not graded yet", the banner adds that ungraded students are skipped and each graded student is sent on their own. The preview's Not graded detail says so too.
+- Browser (local :3001, ralph.t04, BUS M 499): inserted a mocked finished push with one refused line (422) and set a student's `student_view` for the check: calm banner with the test-student wording at 1280; with `student_view` set back, warning banner naming the student at 390. Mocked push deleted, `student_view` restored to NULL.
+- The cause (old Student View user replaced by Canvas) is still the likely one, not confirmed: the next refusal in production will have its status stored. 3ad0e5ab and fdec6a2c stay open per the task. Release note under 2026-11-27.
+
+## 2026-11-28 01:05 UTC · T13 Wizard materials step: see the material, ticked ones first · done
+- New `pickRows` in `src/tools/study-chat/wizard/picks.ts` (tested in `picks.test.ts`) builds step 1's rows for both the new-chat and the saved-activity step: ticked first, each group in the Materials order, and a `view` link to `/courses/<id>/materials/<savedId>` for saved materials (an unsaved Canvas Page or File has no page, so no link).
+- `materials-form.tsx`: each row is now a div holding the checkbox label, a small "View" (new tab, screen-reader text names the material) and the Students + AI / AI only pill, so clicking View doesn't tick the box.
+- The order is set when the page loads; ticking a box doesn't move rows under the teacher's cursor.
+- Browser (local :3001, ralph.t04, BUS M 499 activity a677ac54 step 1) at 1280 and 390: the two ticked materials listed first, View links open their pages in a new tab. No data changed. Release note under 2026-11-27.
+
+## 2026-11-28 01:09 UTC · T14 Fewer "finish setting up" reminders on the Activities tab · done
+- The per-draft "You're still setting up …" banner is now one line on Assigned only: "5 activities aren't finished. See them ›" (singular "1 activity isn't finished. See it ›") linking to `?show=unassigned`. None on Not assigned or From my other courses.
+- `src/activities/draft-reminder.ts` (tested): `showsReminder`, `reminderText`; the cookie now holds when it ends plus every draft id it was hidden for, so ✕ stays hidden until a draft it hasn't seen appears (finishing or deleting one doesn't bring it back). An old one-draft cookie simply shows the line again once.
+- Browser (local :3001, ralph.t04, BUS M 499) at 1280 and 390: line shows on Assigned, not on the other two views; ✕ then reload keeps it hidden; cookie cleared afterwards. No data changed.
+- Dated bullet under D-037; release note under 2026-11-27.

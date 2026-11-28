@@ -15,6 +15,7 @@ import { getContent, type SavedContent } from "@/content/store";
 import { getTaughtCourse, notTeachingReason } from "@/courses/queries";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
+import type { PickRow } from "./materials-form";
 import type { MaterialIds } from "./query";
 
 export type WizardPicks = MaterialIds & { canvas: CanvasPick[] };
@@ -25,6 +26,23 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function pickValue(row: MaterialRow): string | null {
   if (row.savedId) return `${row.seenBy === "ai" ? "guide" : "content"}:${row.savedId}`;
   return row.canvas ? canvasPickValue(row.canvas) : null;
+}
+
+/**
+ * Step 1's rows: what's ticked first, so the materials an activity uses
+ * aren't buried under the rest (feedback 9256c994), each group keeping the
+ * Materials order. A saved material links to its page (`view`); a Canvas
+ * item nothing has saved yet has no page.
+ */
+export function pickRows(rows: readonly MaterialRow[], courseId: string, ticked: MaterialIds): PickRow[] {
+  const isTicked = new Set([...ticked.contentIds.map((id) => `content:${id}`), ...ticked.guideIds.map((id) => `guide:${id}`)]);
+  const picks = rows.flatMap((r) => {
+    const value = pickValue(r);
+    if (!value) return [];
+    const view = r.savedId ? `/courses/${courseId}/materials/${r.savedId}` : null;
+    return [{ value, name: r.name, source: r.source, seenBy: r.seenBy, checked: isTicked.has(value), view }];
+  });
+  return [...picks.filter((p) => p.checked), ...picks.filter((p) => !p.checked)];
 }
 
 /** The ticked values, sorted into saved readings, saved AI-only notes and Canvas items; anything else is dropped. */

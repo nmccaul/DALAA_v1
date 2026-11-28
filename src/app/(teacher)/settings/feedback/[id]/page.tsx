@@ -9,6 +9,7 @@ import { Button, PageHeader, inputStyles } from "@/components/ui";
 import { db } from "@/db/client";
 import { setPriorityAction } from "@/feedback/actions";
 import type { FixStatus } from "@/feedback/fixes";
+import { feedbackBack } from "@/feedback/back";
 import { kindLabel } from "@/feedback/report";
 import { getReport } from "@/feedback/store";
 import { resolveReportAction } from "../actions";
@@ -37,14 +38,15 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
   const actor = await requireActor();
   if (!actor.isAdmin) notFound();
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, from } = await searchParams;
+  const back = feedbackBack(from);
   const report = await getReport(db(), actor, id);
   if (!report) notFound();
   const { context } = report;
 
   return (
     <>
-      <Link href="/settings/feedback" className="text-sm text-muted hover:text-text">← All feedback reports</Link>
+      <Link href={back.href} className="text-sm text-muted hover:text-text">{back.label}</Link>
       <PageHeader
         title={kindLabel(report.kind)}
         description={<>From {report.reporter}, <LocalTime value={report.createdAt} /></>}
@@ -119,6 +121,12 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
               )}.
             </p>
           ) : (
+            <>
+            {report.reporterFixedAt && (
+              <p className="font-bold text-warn-text">
+                {report.reporter} thinks this is fixed (<LocalTime value={report.reporterFixedAt} style="day" />). Check it, then mark it resolved.
+              </p>
+            )}
             <form action={resolveReportAction} className="flex flex-col items-start gap-3">
               <input type="hidden" name="id" value={report.id} />
               <label className="flex w-full max-w-sm flex-col gap-1 text-sm">
@@ -126,8 +134,10 @@ export default async function FeedbackReportPage({ params, searchParams }: PageP
                 <input name="commit" className={`${inputStyles} font-mono`} placeholder="a1b2c3d" autoComplete="off" />
               </label>
               {error && <p className="text-sm text-danger">That isn&apos;t a commit SHA. Leave it blank or paste the short SHA.</p>}
+              {typeof from === "string" && <input type="hidden" name="from" value={from} />}
               <Button>Mark resolved</Button>
             </form>
+            </>
           )}
         </section>
       </div>

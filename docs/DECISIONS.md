@@ -434,6 +434,12 @@ and bc22f7df asked for the same).
   materials (ticked as they are) and its kind and goal ("Current kind" leads)
   can change in place. Nothing on steps 3–6 is redrafted; Draft and Tweak
   there rewrite for a new kind. Step 3's Back goes to step 2.
+- **One reminder for unfinished drafts, on Assigned only** (*2026-11-27*,
+  Nathan, Lucy's b0f7f57b): the Activities tab's per-draft "You're still
+  setting up …" became one line, "2 activities aren't finished. See them ›",
+  linking to Not assigned, which already lists the drafts (so none shows
+  there or on From my other courses). ✕ hides it until a new draft appears;
+  "Remind me tomorrow" hides it for a day.
 
 ### D-038 · Students can speak their messages (dictation)
 *2026-11-17, Nathan*

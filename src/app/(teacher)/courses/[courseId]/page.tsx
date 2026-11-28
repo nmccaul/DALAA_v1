@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { assignToCanvasOn } from "@/activities/assign";
-import { REMINDER_COOKIE, reminderHidden } from "@/activities/draft-reminder";
+import { REMINDER_COOKIE, showsReminder } from "@/activities/draft-reminder";
 import { listCourseActivities, listOtherCourseActivities, type ActivityRow, type OtherCourseActivity } from "@/activities/queries";
 import { loginIdLabel } from "@/auth/login-id";
 import { ActivityMenu } from "@/components/activity-menu";
@@ -14,7 +14,8 @@ import { loadTaughtCourse } from "@/courses/load";
 import { keepFrom } from "@/courses/origin";
 import { COURSE_MENU_LABEL } from "@/lti/config";
 import { db } from "@/db/client";
-import { editActivityPath, findTool, teacherActivityPath } from "@/tools/catalog";
+import { editActivityPath, teacherActivityPath } from "@/tools/catalog";
+import { describeActivity } from "@/tools/screens";
 import { copyActivityAction } from "./actions";
 import { DeleteActivity } from "./delete-activity";
 import { DraftReminder } from "./draft-reminder";
@@ -59,9 +60,9 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
   const base = `/courses/${course.id}`;
   const assignOn = assignToCanvasOn();
   const view = activitiesView(q.show, { assigned: assigned.length, notAssigned: notAssigned.length, other: elsewhere.length });
-  // The draft last worked on, so a teacher who stepped away finds it again (feedback 391261a8).
-  const jar = await cookies();
-  const lastDraft = notAssigned.filter((a) => a.status === "draft").sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+  // Unfinished drafts, so a teacher who stepped away finds them again (feedback 391261a8, b0f7f57b).
+  const drafts = notAssigned.filter((a) => a.status === "draft").map((a) => a.id);
+  const remind = showsReminder(view, drafts, (await cookies()).get(REMINDER_COOKIE)?.value);
   const views = [
     { key: "assigned", label: "Assigned", count: assigned.length },
     { key: "unassigned", label: "Not assigned", count: notAssigned.length },
@@ -98,11 +99,7 @@ export default async function CourseAssignmentsPage({ params, searchParams }: Pa
           ))}
         </nav>
       </div>
-      {lastDraft && view !== "unassigned" && !reminderHidden(jar.get(REMINDER_COOKIE)?.value, lastDraft.id) && (
-        <DraftReminder draftId={lastDraft.id} href={teacherActivityPath(course.id, lastDraft)}>
-          You&apos;re still setting up <b>{lastDraft.title}</b>. Drafts are under Not assigned.
-        </DraftReminder>
-      )}
+      {remind && <DraftReminder draftIds={drafts} href={`${base}?show=unassigned`} />}
       {q.deleted && (
         <p role="status" className="rounded-control bg-accent-soft px-4 py-3 text-accent-text">
           Activity deleted.
@@ -210,8 +207,7 @@ function SearchableList<T extends { id: string; title: string }>({
 }
 
 function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; courseId: string; actions?: ReactNode }) {
-  const tool = findTool(a.tool);
-  const Icon = tool?.icon;
+  const { label, icon: Icon } = describeActivity(a);
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 pr-4 pl-4 hover:bg-subtle">
       {Icon && (
@@ -227,7 +223,7 @@ function CourseRow({ activity: a, courseId, actions }: { activity: ActivityRow; 
           {a.title}
         </Link>
         <span className="mt-0.5 text-[13px] text-muted">
-          {tool?.name ?? a.tool}
+          {label}
           {points(a.points)}
           {" · "}
           {a.dueAt ? <>Due <LocalTime value={a.dueAt} /></> : "No due date"}
@@ -270,8 +266,7 @@ function OtherCourses({ activities, courseId }: { activities: OtherCourseActivit
             </h2>
             <ul className="flex flex-col divide-y divide-border">
               {rows.map((a) => {
-                const tool = findTool(a.tool);
-                const Icon = tool?.icon;
+                const { label, icon: Icon } = describeActivity(a);
                 return (
                   <SearchItem key={a.id} text={a.title}>
                     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3.5 pr-4 pl-4 hover:bg-subtle">
@@ -288,7 +283,7 @@ function OtherCourses({ activities, courseId }: { activities: OtherCourseActivit
                           {a.title}
                         </Link>
                         <span className="mt-0.5 text-[13px] text-muted">
-                          {tool?.name ?? a.tool}
+                          {label}
                           {points(a.points)}
                           {" · Last edit "}
                           <LocalTime value={a.updatedAt} style="day" />

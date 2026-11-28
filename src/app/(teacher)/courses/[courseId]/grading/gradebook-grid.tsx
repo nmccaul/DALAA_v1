@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { CanvasState } from "@/results/gradebook";
 import { sendGradesAction } from "./actions";
+import { shownColumns } from "./columns";
+import { gradebookPath } from "./view";
 
 export type GridCell = {
   attemptId: string | null;
@@ -64,8 +66,9 @@ function label(row: GridRow, col: GridColumn, cell: GridCell, linked: boolean): 
 /**
  * The Gradebook grid (D-046, after Canvas's): students down, assignments
  * across, each grade with its Canvas mark. Clicking a grade opens it beside
- * the grid (`?open=`), on the same page. Searching and the Show filter run
- * here, without reloading.
+ * the grid (`?open=`), on the same page. Clicking an assignment's title
+ * shows only its column (`?assignment=`, kept on reload). Searching and the
+ * Show filter run here, without reloading.
  */
 export function GradebookGrid({
   courseId,
@@ -85,13 +88,11 @@ export function GradebookGrid({
   initialAssignment: string | null;
 }) {
   const [student, setStudent] = useState("");
-  const [assignment, setAssignment] = useState(columns.find((c) => c.id === initialAssignment)?.title ?? "");
+  const [assignment, setAssignment] = useState("");
   const [show, setShow] = useState<Show>("all");
 
-  const shownCols = useMemo(() => {
-    const q = assignment.trim().toLowerCase();
-    return columns.filter((c) => !q || c.title.toLowerCase().includes(q));
-  }, [columns, assignment]);
+  const picked = columns.find((c) => c.id === initialAssignment) ?? null;
+  const shownCols = useMemo(() => shownColumns(columns, initialAssignment, assignment), [columns, initialAssignment, assignment]);
   const shownRows = useMemo(() => {
     const q = student.trim().toLowerCase();
     return rows.filter((r) => {
@@ -135,19 +136,31 @@ export function GradebookGrid({
             />
           </span>
         </label>
-        <label className="flex min-w-48 flex-[1_1_14rem] flex-col gap-1 text-sm font-bold">
-          Assignment names
-          <span className="relative">
-            <MagnifyingGlass size={16} aria-hidden className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-            <input
-              type="search"
-              value={assignment}
-              onChange={(e) => setAssignment(e.target.value)}
-              placeholder="Search assignments"
-              className="w-full rounded-control border border-border-strong bg-surface py-2 pr-3 pl-9 font-normal"
-            />
-          </span>
-        </label>
+        {picked ? (
+          <div className="flex min-w-48 flex-[1_1_14rem] flex-col gap-1 text-sm">
+            <span className="font-bold">Assignment</span>
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+              <span className="font-medium break-words">{picked.title}</span>
+              <Link href={base} scroll={false} className="text-accent-text hover:underline">
+                Show all assignments
+              </Link>
+            </span>
+          </div>
+        ) : (
+          <label className="flex min-w-48 flex-[1_1_14rem] flex-col gap-1 text-sm font-bold">
+            Assignment names
+            <span className="relative">
+              <MagnifyingGlass size={16} aria-hidden className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+              <input
+                type="search"
+                value={assignment}
+                onChange={(e) => setAssignment(e.target.value)}
+                placeholder="Search assignments"
+                className="w-full rounded-control border border-border-strong bg-surface py-2 pr-3 pl-9 font-normal"
+              />
+            </span>
+          </label>
+        )}
         {/* What needs attention, as filters: click to show only those, click again for everyone (Nathan, 2026-11-22). */}
         <div role="group" aria-label="Show only" className="flex flex-wrap items-center gap-2 pb-0.5">
           {linked &&
@@ -232,9 +245,20 @@ export function GradebookGrid({
                 </th>
                 {shownCols.map((c) => (
                   <th key={c.id} scope="col" className="w-44 min-w-44 border-l border-border px-3 py-2 text-left align-top font-normal">
-                    <span className="line-clamp-2 font-bold break-words" title={c.title}>
-                      {c.title}
-                    </span>
+                    {picked ? (
+                      <span className="line-clamp-2 font-bold break-words" title={c.title}>
+                        {c.title}
+                      </span>
+                    ) : (
+                      <Link
+                        href={gradebookPath(courseId, { assignment: c.id })}
+                        scroll={false}
+                        title={`Show only ${c.title}`}
+                        className="line-clamp-2 font-bold break-words text-accent-text hover:underline"
+                      >
+                        {c.title}
+                      </Link>
+                    )}
                     <span className="block text-[13px] text-muted">Out of {pts.format(c.points)}</span>
                     {linked && c.graded > 0 && (
                       <span className="mt-1.5 block">

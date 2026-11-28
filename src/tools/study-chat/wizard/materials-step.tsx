@@ -5,8 +5,8 @@ import { CANVAS_PROBLEM, loadMaterialRows } from "@/content/materials";
 import { db } from "@/db/client";
 import { afterPublishPath, keepPicker, PICKER_PARAM, pickerRequest } from "@/lti/picker";
 import type { CreateScreenProps } from "@/tools/screens";
-import { MaterialsPickForm, type PickRow } from "./materials-form";
-import { pickValue } from "./picks";
+import { MaterialsPickForm } from "./materials-form";
+import { pickRows } from "./picks";
 import { materialsFromQuery } from "./query";
 import { WizardShell, type SavedStepProps } from "./shell";
 import { setupPath } from "./steps";
@@ -17,11 +17,7 @@ export async function MaterialsStep({ actor, course, searchParams }: CreateScree
   const here = keepPicker(`/courses/${course.id}/activities/new/study-chat?step=materials`, addToCanvas);
   const { rows, canvas } = await loadMaterialRows(db(), actor, course.id);
   const ticked = materialsFromQuery(searchParams);
-  const isTicked = new Set([...ticked.contentIds.map((id) => `content:${id}`), ...ticked.guideIds.map((id) => `guide:${id}`)]);
-  const picks: PickRow[] = rows.flatMap((r) => {
-    const value = pickValue(r);
-    return value ? [{ value, name: r.name, source: r.source, seenBy: r.seenBy, checked: isTicked.has(value) }] : [];
-  });
+  const picks = pickRows(rows, course.id, ticked);
 
   return (
     <WizardShell
@@ -70,11 +66,7 @@ export async function SavedMaterialsStep({ actor, activity, addToCanvas, from, s
     carried.contentIds.length + carried.guideIds.length > 0
       ? carried
       : { contentIds: readings.map((r) => r.id), guideIds: guides.map((g) => g.id) };
-  const isTicked = new Set([...ticked.contentIds.map((id) => `content:${id}`), ...ticked.guideIds.map((id) => `guide:${id}`)]);
-  const picks: PickRow[] = rows.flatMap((r) => {
-    const value = pickValue(r);
-    return value ? [{ value, name: r.name, source: r.source, seenBy: r.seenBy, checked: isTicked.has(value) }] : [];
-  });
+  const picks = pickRows(rows, activity.courseId, ticked);
 
   return (
     <WizardShell

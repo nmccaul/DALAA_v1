@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listCourseActivities } from "@/activities/queries";
 import { PreviewNote } from "@/components/preview-note";
+import { AI_ONLY_EXPLAINED } from "@/content/guide-label";
 import { loadTaughtCourse } from "@/courses/load";
 import { db } from "@/db/client";
 import { isLtiCourse } from "@/lti/roster";
-import { LIVE_TOOLS, newActivityPath } from "@/tools/catalog";
+import { activityListPath, LIVE_TOOLS, newActivityPath } from "@/tools/catalog";
 
 export const metadata: Metadata = { title: "Course setup" };
 
@@ -46,8 +47,9 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
     {
       done: activities.some((a) => a.status === "published"),
       title: "Publish it to students",
-      detail: "Try it with a sample student first, then publish.",
-      link: activities.length ? { href: base, label: "Activities" } : null,
+      detail: "Open a draft under Not assigned, try it as a student, then Assign or Publish it on its last step.",
+      // Not the same link as Create (Lucy's 62dab3f4): drafts wait under Not assigned.
+      link: activities.length ? { href: activityListPath(course.id, { assigned: false }), label: "Not assigned" } : null,
     },
   ];
 
@@ -92,7 +94,7 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
             <b>Activities</b>: create, edit, copy and assign activities, and try them as a student.
           </li>
           <li>
-            <b>Materials</b>: the readings and AI-only notes your activities use.
+            <b>Materials</b>: the readings and AI-only notes your activities use. {AI_ONLY_EXPLAINED}
           </li>
           <li>
             <b>Results</b>: review scores and send them to Canvas.
@@ -108,6 +110,14 @@ export default async function DalaaTabPage({ params }: PageProps<"/courses/[cour
             <b>Help</b>: give feedback and see what&apos;s new.
           </li>
         </ul>
+      </section>
+
+      <section className={section}>
+        <h3 className="text-lg font-bold">Activities in Canvas modules</h3>
+        <p>
+          Once an activity is in Canvas Assignments (Assign on its page, or added from Canvas), add it to a module in
+          Canvas the way you add any assignment: in Modules, press + on the module and pick Assignment.
+        </p>
       </section>
 
       <section className={section}>

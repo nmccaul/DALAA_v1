@@ -239,6 +239,7 @@ export async function sendGrades(
   const summary: PushSummary = { sent: 0, failed: 0, skipped };
   for (const line of lines) {
     let status: "sent" | "failed" = "failed";
+    let failure: { why: PushFailure; status: number | null } | null = null;
     try {
       await client.ags.postScore(lineItem.id, {
         userId: line.sub!,
@@ -252,16 +253,17 @@ export async function sendGrades(
     } catch (e) {
       // Not confirmed, so not recorded as sent; the next push tries again. Logged by status only: never headers or bodies.
       const why = pushFailure(e);
+      const httpStatus = e instanceof CanvasError && e.status ? e.status : null;
+      failure = { why, status: httpStatus };
       summary.why ??= why;
-      console.error(`grade push: Canvas didn't take a score (${why}${e instanceof CanvasError && e.status ? `, ${e.status}` : ""})`);
+      console.error(`grade push: Canvas didn't take a score (${why}${httpStatus ? `, ${httpStatus}` : ""})`);
     }
     summary[status]++;
-    await db.query("insert into grade_push_lines (push_id, user_id, score, status) values ($1, $2, $3, $4)", [
-      push.id,
-      line.userId,
-      line.score,
-      status,
-    ]);
+    // The reason is kept with the line: logs don't last long enough to look it up later (feedback 1b203924).
+    await db.query(
+      "insert into grade_push_lines (push_id, user_id, score, status, failure, canvas_status) values ($1, $2, $3, $4, $5, $6)",
+      [push.id, line.userId, line.score, status, failure?.why ?? null, failure?.status ?? null],
+    );
   }
   // Through text: postgres.js would otherwise send the JSON string as a JSON string.
   await db.query("update grade_pushes set summary = $2::text::jsonb, finished_at = now() where id = $1", [
@@ -269,4 +271,30 @@ export async function sendGrades(
     JSON.stringify(summary),
   ]);
   return { ok: true, summary };
+}
+
+/** A student whose score Canvas didn't take on the last push. */
+export type RefusedStudent = { name: string; studentView: boolean; why: PushFailure | null };
+
+/**
+ * Who Canvas didn't take on the assignment's most recent finished push, for
+ * the banner after it (feedback 1b203924). Empty for an activity the actor
+ * doesn't teach.
+ */
+export async function lastPushRefused(db: Db, actor: Actor, activityId: string): Promise<RefusedStudent[]> {
+  if (!actor.isStaff || !UUID.test(activityId)) return [];
+  const where = and({ text: "a.id = $1", values: [activityId] }, coursesTaughtBy(actor, "c"));
+  return db.query<RefusedStudent>(
+    `with last as (
+       select p.id, a.course_id
+         from grade_pushes p join activities a on a.id = p.activity_id join courses c on c.id = a.course_id
+        where ${where.text} and p.finished_at is not null
+        order by p.finished_at desc limit 1)
+     select u.display_name as name, m.student_view is true as "studentView", l.failure as why
+       from last join grade_push_lines l on l.push_id = last.id and l.status = 'failed'
+       join users u on u.id = l.user_id
+       left join course_members m on m.course_id = last.course_id and m.user_id = l.user_id
+      order by u.display_name, u.external_id`,
+    where.values,
+  );
 }

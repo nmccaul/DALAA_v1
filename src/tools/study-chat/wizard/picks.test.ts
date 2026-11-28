@@ -11,7 +11,7 @@ import { createCourse } from "@/courses/create";
 import type { Actor } from "@/db/scope";
 import type { Db } from "@/db/types";
 import { testDb } from "@/test/db";
-import { parsePicks, pickCreationKey, pickedMaterials, pickValue, savePicks } from "./picks";
+import { parsePicks, pickCreationKey, pickedMaterials, pickRows, pickValue, savePicks } from "./picks";
 import { materialsFromQuery, materialsQuery } from "./query";
 
 const A = "11111111-1111-4111-8111-111111111111";
@@ -36,6 +36,31 @@ describe("pick values", () => {
       { pages: [{ ...page, title: "Other page", url: "other-page" } as never], files: [] },
     );
     expect(rows.map(pickValue).sort()).toEqual([`content:${A}`, `guide:${B}`, "page:other-page"]);
+  });
+
+  it("lists what's ticked first, in the Materials order, and links saved ones to their page (feedback 9256c994)", () => {
+    const C = "33333333-3333-4333-8333-333333333333";
+    const rows = mergeMaterials(
+      [
+        material({ id: A, source: "paste", name: "Newest", createdAt: new Date("2026-11-03") }),
+        material({ id: B, seenBy: "ai", source: "upload", name: "Key", createdAt: new Date("2026-11-02") }),
+        material({ id: C, source: "upload", name: "Oldest", createdAt: new Date("2026-10-30") }),
+      ],
+      { pages: [{ ...page, title: "Other page", url: "other-page", updated_at: "2026-10-31T00:00:00Z" } as never], files: [] },
+    );
+    const picks = pickRows(rows, "course-1", { contentIds: [C], guideIds: [B] });
+    expect(picks.map((p) => [p.name, p.checked])).toEqual([
+      ["Key", true],
+      ["Oldest", true],
+      ["Newest", false],
+      ["Other page", false],
+    ]);
+    expect(picks.map((p) => p.view)).toEqual([
+      `/courses/course-1/materials/${B}`,
+      `/courses/course-1/materials/${C}`,
+      `/courses/course-1/materials/${A}`,
+      null,
+    ]);
   });
 
   it("uses the saved copy of a Canvas page that's already saved, so it isn't fetched again", () => {

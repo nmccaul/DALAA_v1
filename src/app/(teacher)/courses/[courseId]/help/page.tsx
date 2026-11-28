@@ -77,7 +77,7 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
           {everyone
             ? "Every report anyone has sent, and where it stands. Only admins see this; teachers see just their own. Open one for its picture and details."
             : "Everything you've sent, and where it stands."}{" "}
-          When one is fixed, it&apos;s crossed off and moves to Done. Pick a tab to see its feedback; each number is
+          When one is fixed, it&apos;s crossed off and moves to Done.{!everyone && " If one looks fixed to you, say so and an admin will check and close it."} Pick a tab to see its feedback; each number is
           how many are still open there. Release notes below list every change, whether or not someone asked for it.
         </p>
         {all.length > 0 && (
@@ -111,7 +111,7 @@ export default async function HelpTabPage({ params, searchParams }: PageProps<"/
             />
           </>
         )}
-        <YourFeedback reports={reports} everyone={everyone} filtered={reports.length < all.length} />
+        <YourFeedback reports={reports} here={href({})} everyone={everyone} filtered={reports.length < all.length} />
       </section>
 
       <section className={section}>
