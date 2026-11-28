@@ -107,3 +107,9 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - `materials-form.tsx`: each row is now a div holding the checkbox label, a small "View" (new tab, screen-reader text names the material) and the Students + AI / AI only pill, so clicking View doesn't tick the box.
 - The order is set when the page loads; ticking a box doesn't move rows under the teacher's cursor.
 - Browser (local :3001, ralph.t04, BUS M 499 activity a677ac54 step 1) at 1280 and 390: the two ticked materials listed first, View links open their pages in a new tab. No data changed. Release note under 2026-11-27.
+
+## 2026-11-28 01:09 UTC · T14 Fewer "finish setting up" reminders on the Activities tab · done
+- The per-draft "You're still setting up …" banner is now one line on Assigned only: "5 activities aren't finished. See them ›" (singular "1 activity isn't finished. See it ›") linking to `?show=unassigned`. None on Not assigned or From my other courses.
+- `src/activities/draft-reminder.ts` (tested): `showsReminder`, `reminderText`; the cookie now holds when it ends plus every draft id it was hidden for, so ✕ stays hidden until a draft it hasn't seen appears (finishing or deleting one doesn't bring it back). An old one-draft cookie simply shows the line again once.
+- Browser (local :3001, ralph.t04, BUS M 499) at 1280 and 390: line shows on Assigned, not on the other two views; ✕ then reload keeps it hidden; cookie cleared afterwards. No data changed.
+- Dated bullet under D-037; release note under 2026-11-27.
