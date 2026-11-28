@@ -101,3 +101,9 @@ One entry per pass, newest last (PROMPT.md §3). Plan: `ralph/PLAN.md`.
 - Lucy's question: with any "Not graded yet", the banner adds that ungraded students are skipped and each graded student is sent on their own. The preview's Not graded detail says so too.
 - Browser (local :3001, ralph.t04, BUS M 499): inserted a mocked finished push with one refused line (422) and set a student's `student_view` for the check: calm banner with the test-student wording at 1280; with `student_view` set back, warning banner naming the student at 390. Mocked push deleted, `student_view` restored to NULL.
 - The cause (old Student View user replaced by Canvas) is still the likely one, not confirmed: the next refusal in production will have its status stored. 3ad0e5ab and fdec6a2c stay open per the task. Release note under 2026-11-27.
+
+## 2026-11-28 01:05 UTC · T13 Wizard materials step: see the material, ticked ones first · done
+- New `pickRows` in `src/tools/study-chat/wizard/picks.ts` (tested in `picks.test.ts`) builds step 1's rows for both the new-chat and the saved-activity step: ticked first, each group in the Materials order, and a `view` link to `/courses/<id>/materials/<savedId>` for saved materials (an unsaved Canvas Page or File has no page, so no link).
+- `materials-form.tsx`: each row is now a div holding the checkbox label, a small "View" (new tab, screen-reader text names the material) and the Students + AI / AI only pill, so clicking View doesn't tick the box.
+- The order is set when the page loads; ticking a box doesn't move rows under the teacher's cursor.
+- Browser (local :3001, ralph.t04, BUS M 499 activity a677ac54 step 1) at 1280 and 390: the two ticked materials listed first, View links open their pages in a new tab. No data changed. Release note under 2026-11-27.
