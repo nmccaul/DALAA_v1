@@ -22,6 +22,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       "The Setup tab now explains AI-only notes with an example (so does Materials), its \"Publish it to students\" step links to your Not assigned activities instead of the same place as \"Create an activity\", and it says how to put an activity in a Canvas module.",
       "In \"Try it as a student\", the sample student now says goodbye and stops once the chat wraps up, instead of sending messages until time runs out.",
       "On the Help tab, \"I think this is fixed\" next to one of your open feedback reports tells us it looks fixed to you; it shows \"Fixed? Waiting for an admin to confirm\" until we check and close it. A feedback report opened from the Help tab now has ‹ Back to feedback, which returns to the list you were looking at.",
+      "In the Gradebook, click an assignment's title to see only its grades; \"Show all assignments\" brings the rest back. The page remembers your choice when you reload it.",
     ],
   },
   {
